@@ -1,0 +1,4 @@
+patchright
+python-jobspy
+reportlab
+flask

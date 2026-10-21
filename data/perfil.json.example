@@ -1,0 +1,360 @@
+{
+  "_nota": "Example data — replace with your own. The real file (data/perfil.json) is gitignored.",
+  "fuentes": [
+    "/path/to/your/sources/perfil_maestro.md",
+    "/path/to/your/curriculums/cv-es.pdf",
+    "/path/to/your/curriculums/cv-en.pdf"
+  ],
+  "identity": {
+    "nombre": "Jane Doe",
+    "email": "jane.doe@example.com",
+    "telefono": "+00 000 000 000",
+    "ubicacion_cv": "Your City, Country",
+    "linkedin": "https://linkedin.com/in/janedoe",
+    "portfolio": "https://example.com",
+    "nacionalidad": "Your nationality"
+  },
+  "headline": "Product Designer (UI/UX) & Front-End Developer",
+  "positioning_emphasis": {
+    "declaracion_principal": "Product designer working across retail projects: defines flows and prototypes in Figma, writes code, coordinates a small team and uses coding agents daily to run several projects in parallel.",
+    "roles": [
+      "Product Designer (Figma)",
+      "Front-end development",
+      "Product decisions",
+      "Team leadership"
+    ],
+    "matiz_liderazgo": "Functional leadership of a small team; exact scope to be confirmed.",
+    "evidencia": "PLACEHOLDER"
+  },
+  "experience": [
+    {
+      "empresa": "Acme Corp",
+      "titulo_cv": "Frontend Developer / Senior Frontend & Full Stack Developer",
+      "periodo": "2023 — Present",
+      "ubicacion": "Your City, Country",
+      "modalidad": "Hybrid",
+      "descripcion": "Frontend and full-stack work on active B2B and SaaS products, with an expanded senior frontend scope.",
+      "bullets": [
+        "Frontend and full-stack responsibilities across active B2B and SaaS projects.",
+        "Design and implementation of production interfaces, combining Figma flows with Angular frontend development.",
+        "Built the complete frontend of a B2B product, translating process requirements into usable flows and reusable UI components.",
+        "Built a SaaS platform from scratch, contributing to architecture, interface design and platform structure.",
+        "Integrated payment gateways into the company's e-commerce products."
+      ],
+      "nota": "Contractual title is Frontend Developer; the functional scope also includes product design decisions and team coordination.",
+      "evidencia": "DOC: CV-ES, CV-EN"
+    },
+    {
+      "empresa": "Globex University",
+      "titulo_cv": "Full Stack Developer / Erasmus+ Intern",
+      "periodo": "2022 — 2023",
+      "ubicacion": "Your City, Country",
+      "modalidad": null,
+      "descripcion": "Full-stack internship for European project teams.",
+      "bullets": [
+        "Developed internal research applications using React and Python for European project teams.",
+        "Designed and implemented a project management system with dashboards, indicators, milestones and task tracking.",
+        "Built REST API integrations and data structures feeding status and performance dashboards.",
+        "Collaborated with the research team to adapt custom tools to each project context."
+      ],
+      "nota": "Internship; do not present it as permanent employment or senior experience.",
+      "evidencia": "DOC: CV-ES, CV-EN"
+    },
+    {
+      "empresa": "Initech",
+      "titulo_cv": "Network Support Technician / IT Technician",
+      "periodo": "2021 — 2022",
+      "ubicacion": "Your City, Country",
+      "modalidad": null,
+      "descripcion": "Remote technical support for online exams and university platforms.",
+      "bullets": [
+        "Provided remote technical support for online exams and university platforms, prioritizing incidents with Jira.",
+        "Documented procedures and internal guidance to reduce recurring incidents and improve response quality.",
+        "Supported students and academic users, strengthening technical communication and service continuity."
+      ],
+      "nota": "Transferable skills (incident sensitivity, user communication); not contracted product design experience.",
+      "evidencia": "DOC: CV-ES, CV-EN"
+    },
+    {
+      "empresa": "Hooli",
+      "titulo_cv": "IT Technician Level 2",
+      "periodo": "2020 — 2021",
+      "ubicacion": "Your City, Country",
+      "modalidad": null,
+      "descripcion": "Level 2 IT support for internal users and project teams.",
+      "bullets": [
+        "Resolved hardware, software and connectivity incidents for internal users and project teams.",
+        "Provided IT support for an office client in English- and French-speaking work contexts.",
+        "Collaborated cross-functionally to prioritize incidents and maintain service quality."
+      ],
+      "nota": "Using French in a work context does not certify a French level.",
+      "evidencia": "DOC: CV-ES, CV-EN"
+    },
+    {
+      "empresa": "Umbrella Group",
+      "titulo_cv": "Systems Technician Intern",
+      "periodo": "2020",
+      "ubicacion": "Your City, Country",
+      "modalidad": null,
+      "descripcion": "Support with system configuration and UI/CSS adjustments on internal tools.",
+      "bullets": [
+        "Assisted with Linux/Apache configuration and basic system administration tasks.",
+        "Contributed UI/CSS fixes for internal web tools."
+      ],
+      "nota": null,
+      "evidencia": "DOC: CV-ES, CV-EN"
+    },
+    {
+      "empresa": "Vandelay Foundation",
+      "titulo_cv": "Trainer — Example Foundation",
+      "periodo": "2019 — 2020",
+      "ubicacion": "Your City, Country",
+      "modalidad": null,
+      "descripcion": "Design and delivery of basic cybersecurity and safe internet workshops for children.",
+      "bullets": [
+        "Designed and delivered workshops for children on basic cybersecurity and safe internet use.",
+        "Hands-on activities and simple prototypes to introduce digital design fundamentals."
+      ],
+      "nota": "Only present in an older CV. Confirm whether to include it in future applications; do not assume contract, pay or volunteer status.",
+      "evidencia": "HIST: CV-PREV"
+    }
+  ],
+  "projects": [
+    {
+      "nombre": "StorePOS",
+      "rol": "Product Design & UI Design",
+      "url": "example.com",
+      "descripcion": "Complete POS system in Figma: sales, payment, refunds and cash drawer across desktop, compact and mobile surfaces.",
+      "bullets": [
+        "Designed a complete POS system (login, sales, payment, tickets, refunds, cash drawer, end-of-day reconciliation, auxiliary windows) with desktop, compact and mobile variants, light/dark themes.",
+        "Built a design system with reusable component sets."
+      ],
+      "nota": "Company project (not a personal portfolio piece). Inspected in Figma. No implementation metrics.",
+      "evidencia": "VIS: FIG-POS (Figma)"
+    },
+    {
+      "nombre": "SwapDeck",
+      "rol": "Product Design & UI Design",
+      "url": "example.com",
+      "descripcion": "Mobile collecting and trading experience: catalogue, collection, listings, chat and trades.",
+      "bullets": [
+        "UI kit with reusable components and sections for catalogue, listings, chats/trades, profile/collection and onboarding.",
+        "Tokens and guidelines for implementation, connecting design and frontend development."
+      ],
+      "nota": "Personal portfolio project. Inspected in Figma. No real users or metrics.",
+      "evidencia": "VIS: FIG-SWAP (Figma)"
+    },
+    {
+      "nombre": "Nimbus Coworking Experience",
+      "rol": "UX/UI Design & Product Design",
+      "url": "example.com",
+      "descripcion": "Mobile-first coworking experience for young professionals in your city.",
+      "bullets": [
+        "Designed a mobile-first coworking experience focused on booking, exploring the space and community connection.",
+        "Created personas, information architecture, low-fidelity wireframes and a cohesive design system for a premium, usable experience."
+      ],
+      "nota": "Personal portfolio project. Documented case; no publication or metrics.",
+      "evidencia": "DOC: CV-ES, CV-EN"
+    },
+    {
+      "nombre": "TimeTrack System",
+      "rol": "UX/UI Design & Interface Design",
+      "url": "example.com",
+      "descripcion": "Time entry and visualisation interface for a research institute.",
+      "bullets": [
+        "Designed a time entry and visualisation interface focused on daily entries, consumption per work package and monthly reconciliation.",
+        "Created minimal capture flows, inline editing, validation states and review steps to reduce errors and improve clarity."
+      ],
+      "nota": "Do not merge with the project management system without confirming the relationship. No quantified metrics.",
+      "evidencia": "DOC: CV-ES, CV-EN"
+    },
+    {
+      "nombre": "Northwind",
+      "rol": "Product/UI Design & Front-End Development",
+      "url": "example.com/northwind",
+      "descripcion": "Digital platform for real clients in your city, designed and built end-to-end.",
+      "bullets": [
+        "Led end-to-end design and development of a digital platform for real clients, from wireframes and prototypes to a Figma design system and frontend implementation with backend integration.",
+        "Created additional visual content and social media assets adapted to different brands."
+      ],
+      "nota": "Personal project. No date, named clients or metrics. Do not describe as founder/CEO.",
+      "evidencia": "DOC: CV-ES, CV-EN"
+    },
+    {
+      "nombre": "ClipForge",
+      "rol": "UI-UX Designer & Front-End Developer",
+      "url": "example.com/clipforge",
+      "descripcion": "Collaborative student project on short-video automation.",
+      "bullets": [
+        "Led the visual design of the landing page and analytics dashboard in a collaborative student project on short-video automation.",
+        "Implemented frontend components and REST API integrations using Angular and Node.js.",
+        "Presented the project at the university, demonstrating API integration and product flow design."
+      ],
+      "nota": "Collaborative student project; it does not prove enrolment or a degree at that university, nor a founding role.",
+      "evidencia": "DOC: CV-ES, CV-EN"
+    },
+    {
+      "nombre": "Portfolio Website",
+      "rol": "UX/UI Designer & Developer",
+      "url": "example.com",
+      "descripcion": "Responsive personal site showcasing UX cases, full-stack projects and the learning process.",
+      "bullets": [
+        "Designed and built a responsive personal website from scratch to showcase UX cases, full-stack projects and the learning process.",
+        "Implemented responsive layouts, custom animations and modular frontend components."
+      ],
+      "nota": "No specific framework, analytics or accessibility audit documented.",
+      "evidencia": "DOC: CV-ES, CV-EN"
+    }
+  ],
+  "education": [
+    {
+      "institucion": "Example Open University (EOU)",
+      "titulo": "Bachelor's Degree in Digital Design and Creation",
+      "periodo": "2024 — Present",
+      "modalidad": "Remote",
+      "estado": "In progress",
+      "nota": "Do not present the degree as completed. Fully online: compatible with a full-time job.",
+      "evidencia": "DOC: CV-ES, CV-EN"
+    },
+    {
+      "institucion": "Example University (Summer School)",
+      "titulo": "AI Reliability & Safety (summer course)",
+      "periodo": "1 month (exact dates TBD)",
+      "modalidad": "On-site",
+      "estado": "Completed",
+      "nota": "One-month summer school on AI reliability and safety. International exposure; exact dates to confirm.",
+      "evidencia": "USR + PEND"
+    },
+    {
+      "institucion": "Example Community College",
+      "titulo": "Higher Vocational Diploma (CFGS) in Web Application Development (DAW)",
+      "periodo": "2022 — 2024",
+      "modalidad": null,
+      "estado": "Diploma not verified",
+      "nota": "Dates taken from the newest CV; diploma not verified.",
+      "evidencia": "DOC: CV-ES, CV-EN"
+    },
+    {
+      "institucion": "Example Secondary School",
+      "titulo": "Intermediate Vocational Training (CFGM) in Computer Systems and Networks",
+      "periodo": "2020 — 2022",
+      "modalidad": null,
+      "estado": null,
+      "nota": null,
+      "evidencia": "DOC: CV-ES, CV-EN"
+    }
+  ],
+  "languages": {
+    "espanol": {"nivel": "Native", "evidencia": "DOC: CV-ES, CV-EN"},
+    "ingles": {"nivel": "C1", "nota": "Level as declared in the CV; certificate not reviewed.", "evidencia": "DOC: CV-ES, CV-EN + USR"},
+    "catalan": {"nivel": "Fluent", "nota": "Do not translate to a numeric CEFR level", "evidencia": "DOC: CV-ES, CV-EN"},
+    "frances": {"nivel": "Basic (A2)", "nota": "Not enough to work in French; occasional use in a support role.", "evidencia": "USR"},
+    "aleman": {"nivel": null, "evidencia": "PEND"},
+    "chino_mandarin": {"nivel": "Does not speak", "nota": "Does not speak Chinese.", "evidencia": "USR"}
+  },
+  "certifications": [
+    {
+      "nombre": "Example UX Design Professional Certificate",
+      "emisor": "Example Institute",
+      "fecha": null,
+      "url_credencial": null,
+      "nota": "Appears in all CV versions; no date, ID or link reviewed.",
+      "evidencia": "DOC"
+    }
+  ],
+  "skills": {
+    "producto_diseno": [
+      "Product Design / UX/UI",
+      "User flows",
+      "Wireframing",
+      "Prototyping",
+      "Figma",
+      "Design systems",
+      "User research",
+      "Usability testing",
+      "Accessibility",
+      "Responsive design",
+      "Visual hierarchy",
+      "Personas",
+      "Information architecture",
+      "States/validation/inline editing"
+    ],
+    "ia_llm": [
+      "LLM prompting",
+      "LLM model analysis and calibration (intermediate, self-declared)",
+      "Coding agents / AI agents (daily use at work)",
+      "Agent orchestration to run several projects in parallel"
+    ],
+    "frontend": [
+      "Angular",
+      "React",
+      "TypeScript",
+      "JavaScript",
+      "HTML5",
+      "CSS3",
+      "Component architecture",
+      "API integration",
+      "State management",
+      "Custom animations",
+      "Production-ready interfaces"
+    ],
+    "backend_datos": [
+      "Node.js",
+      "Python",
+      "REST APIs",
+      "SQL",
+      "NoSQL/MongoDB",
+      "Docker",
+      "Git",
+      "GitHub",
+      "Jira",
+      "Linux",
+      "Nginx",
+      "Apache"
+    ],
+    "monetizacion": [
+      "Payment gateway integration",
+      "E-commerce with live payments"
+    ],
+    "transferibles": [
+      "Technical and user communication",
+      "Requirements interpretation",
+      "Combining design and implementation",
+      "Documentation",
+      "Adapting to project contexts",
+      "Incident resolution",
+      "Cross-functional collaboration",
+      "Team leadership (self-declared; scope TBD)",
+      "International experience",
+      "Shipping products at scale (self-declared)"
+    ]
+  },
+  "compensation": {
+    "minimo": null,
+    "moneda": "EUR",
+    "concepto": "annual gross",
+    "objetivo": "Your target range",
+    "salario_actual": null,
+    "nota": "Set your own minimum; keep currency and gross/annual units explicit."
+  },
+  "search_criteria": {
+    "rol_prioritario": "Product Designer",
+    "modalidad": "Fully remote",
+    "salario_minimo": "Your minimum salary",
+    "salario_objetivo": "Your target range",
+    "geografia": "Your countries / regions. State your work authorization explicitly.",
+    "zona_horaria": "Your time-zone flexibility",
+    "tipo_contrato": "Employment or B2B"
+  },
+  "pendientes": {
+    "ubicacion_fisica_actual": "Your City, Country",
+    "autorizacion_laboral": "Describe your work authorization per country.",
+    "relacion_proyectos_retail_con_empleador": "Which projects belong to an employer and which are personal.",
+    "preaviso": "Your notice period.",
+    "nacionalidad": "Your nationality",
+    "disponibilidad_incorporacion": "Your availability.",
+    "nivel_frances": "Your real French level.",
+    "enlace_credencial_google": null,
+    "git_personal": null
+  }
+}

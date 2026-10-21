@@ -1,0 +1,191 @@
+# jobautomat — ejecución nocturna en servidor Linux headless.
+#
+# No usa la clave `version:` (obsoleta en Compose v2).
+#
+#   docker compose up -d --build      # arranca el scheduler (02:00 por defecto)
+#   docker compose run --rm app once  # force-run inmediato
+#
+# Imagen publicada en GHCR; el `build` local queda como fallback (si la
+# imagen no se puede descargar, Compose la construye). Fijar otra con
+#   JOBAUTOMAT_IMAGE=jobautomat:local docker compose up -d
+x-imagen: &imagen ${JOBAUTOMAT_IMAGE:-ghcr.io/kauman189/jobautomat:latest}
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: *imagen
+    # Usa la imagen del registro si existe; si no, construye en local.
+    pull_policy: missing
+    container_name: jobautomat
+
+    # Reinicia si el proceso muere, pero no en cada `docker compose run`.
+    restart: unless-stopped
+
+    # Secretos: el .env real NO se commitea (.gitignore ya lo excluye).
+    env_file:
+      - ./service/.env
+
+    environment:
+      # Hora local del planificador nocturno.
+      TZ: ${TZ:-Europe/Madrid}
+      CRON_HOUR: ${CRON_HOUR:-2}
+      CRON_MINUTE: ${CRON_MINUTE:-0}
+      RUN_ON_START: ${RUN_ON_START:-false}
+
+      # Rutas dentro del contenedor. El entrypoint las escribe en
+      # /app/service/.env (config.py lee ese archivo, no os.environ).
+      JOB_ENV_FILE: /run/jobautomat/.env
+      DATA_DIR: /data
+      DB_PATH: /data/state.db
+      PERFIL_PATH: /data/perfil.json
+      JOB_LOG_PATH: /data/logs/jobautomat.log
+
+      # Buscador (service/search/linkedin.py): lee SESSION_PATH y
+      # LINKEDIN_HEADLESS del entorno. Chromium ya se lanza con --no-sandbox
+      # y --disable-dev-shm-usage desde el módulo.
+      SESSION_PATH: /data/linkedin_session.json
+      LINKEDIN_SESSION_PATH: /data/linkedin_session.json
+      LINKEDIN_STATE_PATH: /data/linkedin_session.json
+      LINKEDIN_HEADLESS: "1"
+      LINKEDIN_TIMEZONE: ${TZ:-Europe/Madrid}
+
+      # Navegadores de patchright servidos desde el volumen persistente.
+      PLAYWRIGHT_BROWSERS_PATH: /ms-playwright
+      PATCHRIGHT_BROWSERS_PATH: /ms-playwright
+
+    volumes:
+      # .env en sólo lectura; el entrypoint genera /app/service/.env a partir
+      # de él forzando las rutas del volumen /data.
+      - ./service/.env:/run/jobautomat/.env:ro
+      # Estado persistente: state.db, perfil.json, linkedin_session.json, logs.
+      - ./data:/data
+      # Caché de navegadores de patchright (se siembra desde la imagen).
+      - patchright-browsers:/ms-playwright
+
+    # Chromium necesita más /dev/shm que los 64 MB por defecto.
+    shm_size: "1gb"
+
+    # Chromium abre muchos descriptores y procesos.
+    ulimits:
+      nofile:
+        soft: 4096
+        hard: 8192
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    # Sin puertos: el servicio sólo sale a internet (DeepSeek, Telegram,
+    # LinkedIn) y escribe en /data.
+
+  # Panel web de revisión (Flask). Sólo entrega materiales: nunca aplica.
+  #   http://<servidor>:8085  (usuario: casa, contraseña: WEB_PASSWORD)
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: *imagen
+    pull_policy: missing
+    container_name: jobautomat-web
+
+    restart: unless-stopped
+
+    # El entrypoint despacha `python web.py` tal cual (WORKDIR /app/service).
+    command: ["python", "web.py"]
+
+    env_file:
+      - ./service/.env
+
+    environment:
+      TZ: ${TZ:-Europe/Madrid}
+      # Vacío = sin autenticación básica: expón este puerto sólo en la LAN.
+      WEB_PASSWORD: ${WEB_PASSWORD:-}
+      WEB_PORT: "8085"
+      # Rutas dentro del contenedor (config.py lee /app/service/.env, que el
+      # entrypoint materializa desde el .env montado en sólo lectura).
+      JOB_ENV_FILE: /run/jobautomat/.env
+      DATA_DIR: /data
+      DB_PATH: /data/state.db
+      PERFIL_PATH: /data/perfil.json
+      # Mismo log que el scheduler: la búsqueda lanzada desde el panel (POST
+      # /api/buscar corre main.py aquí) deja su actividad visible en vivo.
+      JOB_LOG_PATH: /data/logs/jobautomat.log
+      # generate.py escribe los PDF en <raíz>/candidaturas; en el contenedor se
+      # redirige al volumen persistente para que sobrevivan al reinicio.
+      CANDIDATURAS_DIR: /data/candidaturas
+      PLAYWRIGHT_BROWSERS_PATH: /ms-playwright
+      PATCHRIGHT_BROWSERS_PATH: /ms-playwright
+
+    ports:
+      - "8085:8085"
+
+    # El panel expone GET /healthz (web.py) que devuelve {"ok": true}.
+    # curl viene en la imagen (Dockerfile), así que sirve sin wget.
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8085/healthz || exit 1"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+    volumes:
+      - ./service/.env:/run/jobautomat/.env:ro
+      # Mismo volumen que `app`: state.db y perfil.json compartidos.
+      - ./data:/data
+      - patchright-browsers:/ms-playwright
+
+    shm_size: "1gb"
+
+    ulimits:
+      nofile:
+        soft: 4096
+        hard: 8192
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Bot de Telegram: escucha los botones Aprobar/Descartar de los mensajes.
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: *imagen
+    pull_policy: missing
+    container_name: jobautomat-bot
+
+    restart: unless-stopped
+
+    command: ["python", "notify.py"]
+
+    env_file:
+      - ./service/.env
+
+    environment:
+      TZ: ${TZ:-Europe/Madrid}
+      JOB_ENV_FILE: /run/jobautomat/.env
+      DATA_DIR: /data
+      DB_PATH: /data/state.db
+      PERFIL_PATH: /data/perfil.json
+      # Mismo sitio que el panel web: los materiales sobreviven al reinicio.
+      CANDIDATURAS_DIR: /data/candidaturas
+
+    volumes:
+      - ./service/.env:/run/jobautomat/.env:ro
+      - ./data:/data
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  patchright-browsers:
+    name: jobautomat-patchright

@@ -1,0 +1,192 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    # Los tags v* solo se usan para publicar la imagen en GHCR (job publish).
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # 1) La imagen se construye tal cual la usa docker compose (sin secretos).
+  docker:
+    name: Build imagen Docker
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: docker build
+        run: docker build --tag jobautomat:ci .
+
+      - name: Comprobar la imagen
+        run: |
+          docker image inspect jobautomat:ci --format '{{.Id}} {{.Config.User}} {{.Config.WorkingDir}}'
+          docker run --rm --entrypoint python jobautomat:ci -c "import sys; print(sys.version)"
+
+  # 2) Dependencias Python + smoke de import de los módulos del servicio.
+  python:
+    name: Smoke de import (Python 3.12)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: service/requirements.txt
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r service/requirements.txt
+
+      - name: Smoke de import
+        env:
+          PYTHONPATH: service
+        run: |
+          python - <<'PY'
+          import importlib
+
+          modulos = [
+              "config",
+              "db",
+              "llm",
+              "rate",
+              "offer",
+              "scoring",
+              "generate",
+              "pdf_gen",
+              "notify",
+              "apply",
+              "apply_form",
+              "followup",
+              "first_run",
+              "web",
+              "main",
+              "search",
+              "search.boards",
+              "search.jobspy",
+              "search.linkedin",
+          ]
+          for nombre in modulos:
+              importlib.import_module(nombre)
+              print("import ok:", nombre)
+          PY
+
+  # 3) Lint ligero: todo service/ compila.
+  lint:
+    name: py_compile
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: py_compile de service/
+        run: |
+          find service -name '*.py' -not -path '*/.venv/*' -print0 \
+            | xargs -0 python -m py_compile
+          echo "Todos los módulos de service/ compilan."
+
+  # 4) Tests con pytest. Dependencias en requirements-dev.txt (pytest + flask).
+  test:
+    name: Tests (pytest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: Instalar dependencias de test
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-dev.txt
+
+      - name: pytest
+        env:
+          PYTHONPATH: service
+        run: python -m pytest tests/ -q
+
+  # 5) Publicación de la imagen multi-arch en GHCR.
+  #    Solo en push de tags v* y en ejecución manual (workflow_dispatch):
+  #    nunca en los pushes normales a main, para no gastar minutos de CI.
+  publish:
+    name: Publicar imagen en GHCR (amd64+arm64)
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    needs: [docker, python, lint, test]
+    if: >-
+      startsWith(github.ref, 'refs/tags/v') ||
+      github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: QEMU (emulación arm64)
+        uses: docker/setup-qemu-action@v3
+
+      - name: Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login en GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Metadatos (tags de la imagen)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/kauman189/jobautomat
+          # Siempre ':latest'; además ':<git tag>' (p. ej. :v1.2.0) cuando el
+          # disparador es un tag. En workflow_dispatch solo se publica :latest.
+          tags: |
+            type=raw,value=latest
+            type=ref,event=tag
+          labels: |
+            org.opencontainers.image.title=jobautomat
+            org.opencontainers.image.description=Servicio de búsqueda de empleo (Python 3.12 + patchright/Chromium)
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+      - name: Build y push multi-arch
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Resumen
+        run: |
+          echo "Imagen publicada con los tags:" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "${{ steps.meta.outputs.tags }}" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"

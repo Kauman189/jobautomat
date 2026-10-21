@@ -1,0 +1,31 @@
+{
+  "_nota": "Copy this file to data/settings.json. Keys starting with '_' are comments and are ignored. This JSON WINS over service/.env.",
+
+  "TOPICS": [],
+  "ROLES": ["Product Designer", "UI-UX Designer", "Product Design"],
+  "KEYWORDS_NEGATIVAS": [],
+  "UBICACIONES": [],
+  "MODALIDAD": "remoto",
+  "HORA_BUSQUEDA": "02:00",
+  "DIAS_BUSQUEDA": [],
+  "FUENTES_LINKEDIN": true,
+  "FUENTES_BOARDS": true,
+  "FUENTES_JOBSPY": true,
+  "TEMPERATURA": 0.4,
+  "_nota_idioma": "IDIOMA_SCORING: language of the descriptive scoring texts ('en' by default, 'es'). 'recomendacion' is never translated (aplicar/dudoso/descartar).",
+  "IDIOMA_SCORING": "en",
+  "RANGO_DUDOSO_MIN": 55,
+  "RANGO_DUDOSO_MAX": 79,
+  "SCORE_THRESHOLD": 80,
+  "DEEPSEEK_MODEL": "deepseek-flash",
+
+  "_nota_telegram": "TELEGRAM_HABILITADO=false lets the service run on webhook/panel only (it does not require TELEGRAM_BOT_TOKEN).",
+  "TELEGRAM_HABILITADO": true,
+
+  "_nota_webhook": "Generic ntfy/Discord/Slack webhook. Empty string = no webhook.",
+  "WEBHOOK_URL": "",
+
+  "_nota_sesion": "Warn when the LinkedIn session (cookies) is about to expire; SESION_LINKEDIN_MAX_DIAS accepts 1-365.",
+  "ALERTAR_SESION_LINKEDIN": true,
+  "SESION_LINKEDIN_MAX_DIAS": 14
+}

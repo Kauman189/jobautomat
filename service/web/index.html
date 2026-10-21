@@ -1,0 +1,2512 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>jobautomat · panel de ofertas</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Oswald:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  body { -webkit-font-smoothing: antialiased; }
+  .score-alto  { color: #0d927d; border-color: #0d927d33; background: #0d927d0f; }
+  .score-medio { color: #999;    border-color: #ddd;       background: #f4f4f4; }
+  .score-bajo  { color: #f66d6d; border-color: #f66d6d33; background: #f66d6d0f; }
+  .fade-in { animation: fade .18s ease-out; }
+  @keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  textarea { field-sizing: content; }
+  summary::-webkit-details-marker { display: none; }
+  .filtro.activo { background: #2d325b; color: #fff; }
+  .vista.activo { background: #2d325b; color: #fff; }
+  .vista.activo:hover { color: #fff; }
+  /* "Buscar ahora" button while a search is running. */
+  #btn-buscar.buscando { animation: pulso 1.3s ease-in-out infinite; }
+  @keyframes pulso { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+</style>
+</head>
+<body class="h-full bg-[#fafafa] font-['Inter'] text-[#2d325b]">
+
+<header class="sticky top-0 z-10 border-b border-[#ddd] bg-white/95 backdrop-blur">
+  <div class="mx-auto flex max-w-[86rem] items-center gap-x-3 px-6 py-3">
+    <h1 class="font-['Oswald'] text-xl font-medium uppercase tracking-[0.08em] text-[#2d325b]">jobautomat</h1>
+
+    <nav id="vistas" class="flex shrink-0 items-center gap-1 rounded-full border border-[#ddd] bg-white p-1 text-sm">
+      <button data-vista="ofertas" data-i18n="nav_ofertas" class="vista rounded-full px-3 py-1.5 whitespace-nowrap text-[#999] transition hover:text-[#2d325b]">Ofertas</button>
+      <button data-vista="perfil" data-i18n="nav_perfil" class="vista rounded-full px-3 py-1.5 whitespace-nowrap text-[#999] transition hover:text-[#2d325b]">Mi perfil</button>
+      <button data-vista="preguntar" data-i18n="nav_preguntar" class="vista rounded-full px-3 py-1.5 whitespace-nowrap text-[#999] transition hover:text-[#2d325b]">Preguntar</button>
+      <button data-vista="config" data-i18n="nav_config" class="vista rounded-full px-3 py-1.5 whitespace-nowrap text-[#999] transition hover:text-[#2d325b]">Configuración</button>
+    </nav>
+
+    <nav id="filtros" class="flex shrink-0 items-center gap-1 rounded-full border border-[#ddd] bg-white p-1 text-sm">
+      <button data-estado="pendientes" data-i18n="filtro_pendientes" class="filtro rounded-full px-3 py-1.5 whitespace-nowrap text-[#999] transition hover:text-[#2d325b]">Pendientes</button>
+      <button data-estado="aprobadas" data-i18n="filtro_aprobadas" class="filtro rounded-full px-3 py-1.5 whitespace-nowrap text-[#999] transition hover:text-[#2d325b]">Aprobadas</button>
+      <button data-estado="descartadas" data-i18n="filtro_descartadas" class="filtro rounded-full px-3 py-1.5 whitespace-nowrap text-[#999] transition hover:text-[#2d325b]">Descartadas</button>
+      <button data-estado="todas" data-i18n="filtro_todas" class="filtro rounded-full px-3 py-1.5 whitespace-nowrap text-[#999] transition hover:text-[#2d325b]">Todas</button>
+    </nav>
+
+    <div class="ml-auto flex shrink-0 items-center gap-2 text-sm text-[#999]">
+      <button id="btn-buscar" type="button" title="Buscar ahora" aria-label="Buscar ahora"
+        class="flex items-center gap-1.5 rounded-full border border-[#0d927d]/50 bg-[#0d927d]/5 px-3 py-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-[#0d927d] transition hover:border-[#0d927d] hover:bg-[#0d927d]/10 disabled:cursor-not-allowed disabled:opacity-60">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 4 20 12 6 20 6 4"/></svg>
+        <span data-i18n="btn_buscar">Buscar ahora</span>
+      </button>
+      <button id="btn-idioma" type="button" title="Idioma / Language" aria-label="Idioma / Language"
+        class="flex items-center gap-1.5 rounded-full border border-[#ddd] bg-white px-3 py-1.5 text-[#2d325b] transition hover:border-[#3898ec] hover:text-[#3898ec]">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        <span id="idioma-label" class="text-[0.68rem] font-semibold uppercase tracking-[0.12em]">ES</span>
+      </button>
+      <button data-vista="ayuda" type="button" title="Ayuda / Help" aria-label="Ayuda / Help"
+        class="vista rounded-full border border-[#ddd] bg-white p-2 text-[#2d325b] transition hover:border-[#3898ec] hover:text-[#3898ec]">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+      </button>
+      <span id="contador" class="tabular-nums">—</span>
+      <button id="refrescar" title="Recargar"
+        class="rounded-full border border-[#ddd] px-3 py-1.5 text-[#2d325b] transition hover:border-[#3898ec] hover:text-[#3898ec]">↻</button>
+    </div>
+  </div>
+</header>
+
+<!-- ===================== View: offers ===================== -->
+<div id="vista-ofertas">
+
+<!-- Live activity -->
+<div class="mx-auto max-w-[86rem] px-6 pt-8">
+  <details open class="rounded-xl border border-[#ddd] bg-white">
+    <summary class="flex cursor-pointer items-center gap-3 px-5 py-3">
+      <span id="estado-run" class="h-2.5 w-2.5 rounded-full bg-[#999]"></span>
+      <h2 class="font-['Oswald'] text-sm uppercase tracking-[0.18em] text-[#999]" data-i18n="titulo_actividad">Actividad en vivo</h2>
+      <span id="estado-run-texto" class="text-xs text-[#999]">…</span>
+      <span class="ml-auto text-[0.68rem] uppercase tracking-[0.18em] text-[#999]" data-i18n="auto_actualiza">se actualiza solo</span>
+    </summary>
+    <pre id="log" class="max-h-72 overflow-y-auto border-t border-[#ddd] bg-[#2d325b] p-4 font-mono text-[11px] leading-relaxed text-[#c9cdf0] whitespace-pre-wrap">(sin actividad todavía)</pre>
+  </details>
+</div>
+
+<!-- Metrics -->
+<div class="mx-auto max-w-[86rem] px-6 pt-4">
+  <section id="metricas" class="rounded-xl border border-[#ddd] bg-white px-5 py-4">
+    <div class="flex flex-wrap items-center gap-3">
+      <h2 class="font-['Oswald'] text-sm uppercase tracking-[0.18em] text-[#999]" data-i18n="metricas_titulo">Métricas</h2>
+      <span class="text-sm text-[#2d325b] tabular-nums"><span data-i18n="metricas_total">Total</span>
+        <strong id="metricas-total" class="font-semibold">—</strong></span>
+      <span id="metricas-fecha" class="ml-auto text-[0.68rem] uppercase tracking-[0.18em] text-[#999]">
+        <span data-i18n="metricas_ultima">Última actualización</span>: —
+      </span>
+      <button id="metricas-refrescar" type="button" title="Recargar métricas"
+        class="rounded-full border border-[#ddd] px-2.5 py-1 text-xs text-[#999] transition hover:border-[#3898ec] hover:text-[#3898ec]">↻</button>
+    </div>
+    <div id="metricas-estados" class="mt-3 flex flex-wrap items-center gap-2 text-xs text-[#999]">Cargando métricas…</div>
+    <div id="metricas-fuentes" class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.7rem] text-[#999]"></div>
+    <div id="metricas-error" class="mt-2 hidden text-xs text-[#c94f4f]"></div>
+  </section>
+</div>
+
+<main class="mx-auto grid max-w-[86rem] gap-8 px-6 py-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,33rem)]">
+
+  <!-- List -->
+  <section>
+    <div class="mb-4 flex items-baseline justify-between">
+      <h2 class="font-['Oswald'] text-sm uppercase tracking-[0.18em] text-[#999]" data-i18n="titulo_ofertas">Ofertas</h2>
+    </div>
+    <div id="estado-carga" class="hidden rounded-xl border border-[#ddd] bg-white px-5 py-4 text-sm text-[#999]">Cargando ofertas…</div>
+    <div id="sin-ofertas" class="hidden rounded-xl border border-dashed border-[#ddd] bg-white px-5 py-16 text-center text-sm text-[#999]">
+      No hay ofertas con este filtro.
+    </div>
+    <ul id="lista" class="flex flex-col gap-3"></ul>
+  </section>
+
+  <!-- Detail -->
+  <aside id="panel" class="lg:sticky lg:top-[5.4rem] lg:self-start scroll-mt-24">
+    <div id="panel-vacio" class="rounded-xl border border-dashed border-[#ddd] bg-white px-6 py-16 text-center text-sm text-[#999]">
+      Selecciona una oferta para ver el detalle y su justificación.
+    </div>
+
+    <article id="panel-detalle" class="hidden overflow-hidden rounded-xl border border-[#ddd] bg-white shadow-[0_2px_18px_rgba(45,50,91,0.06)]">
+      <div class="flex items-start gap-4 border-b border-[#ddd] px-6 py-5">
+        <div class="min-w-0 flex-1">
+          <h2 id="d-titulo" class="font-['Oswald'] text-xl font-medium leading-snug tracking-[0.02em] text-[#2d325b]"></h2>
+          <p id="d-empresa" class="mt-1 text-sm text-[#999]"></p>
+          <div class="mt-3 flex flex-wrap items-center gap-2 text-xs text-[#999]">
+            <span id="d-score" class="rounded-full border px-2.5 py-1 font-semibold tabular-nums"></span>
+            <span id="d-estado" class="rounded-full bg-[#f9c5d1]/40 px-2.5 py-1 text-[#2d325b]"></span>
+            <span id="d-ubicacion"></span>
+            <span id="d-salario"></span>
+          </div>
+        </div>
+        <button id="cerrar" class="rounded-full px-2 py-1 text-[#999] transition hover:bg-[#fafafa] hover:text-[#2d325b]" title="Cerrar">✕</button>
+      </div>
+
+      <div class="max-h-[72vh] space-y-5 overflow-y-auto px-6 py-5 text-sm">
+        <div class="flex flex-wrap gap-2">
+          <button id="btn-aprobar"
+            class="rounded-full bg-[#3898ec] px-5 py-2.5 font-medium text-white transition hover:bg-[#2b83d1] disabled:opacity-50">Aprobar y generar pack</button>
+          <button id="btn-descartar"
+            class="rounded-full border border-[#f66d6d] px-5 py-2.5 font-medium text-[#f66d6d] transition hover:bg-[#f66d6d] hover:text-white disabled:opacity-40">Descartar</button>
+          <a id="d-url" href="#" target="_blank" rel="noopener"
+            class="rounded-full border border-[#ddd] px-5 py-2.5 font-medium text-[#2d325b] transition hover:border-[#3898ec] hover:text-[#3898ec]">Abrir oferta ↗</a>
+        </div>
+
+        <div id="aviso" class="hidden rounded-lg border px-4 py-3 text-xs"></div>
+
+        <details class="rounded-lg border border-[#ddd] bg-[#fafafa]/60">
+          <summary class="cursor-pointer px-4 py-3 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#999]">Descripción y requisitos</summary>
+          <div class="space-y-4 px-4 pb-4 text-[#2d325b]/90">
+            <p id="d-descripcion" class="whitespace-pre-wrap leading-relaxed"></p>
+            <div id="d-requisitos-wrap" class="hidden">
+              <h3 class="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#999]">Requisitos</h3>
+              <p id="d-requisitos" class="whitespace-pre-wrap leading-relaxed"></p>
+            </div>
+          </div>
+        </details>
+
+        <!-- Score rationale -->
+        <div id="justificacion" class="hidden space-y-2">
+          <h3 class="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#999]">Por qué este score</h3>
+          <ul id="j-motivos" class="space-y-1.5"></ul>
+          <ul id="j-gaps" class="space-y-1.5"></ul>
+        </div>
+
+        <!-- Materials -->
+        <div id="materiales" class="hidden space-y-5">
+          <div>
+            <div class="mb-1.5 flex items-center justify-between">
+              <h3 class="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#999]">Carta de presentación</h3>
+              <button data-copiar="cover" class="text-xs font-medium text-[#3898ec] hover:underline">Copiar</button>
+            </div>
+            <textarea id="m-cover" readonly rows="1"
+              class="w-full resize-y rounded-lg border border-[#ddd] bg-[#fafafa]/60 p-4 text-sm leading-relaxed text-[#2d325b] focus:border-[#3898ec] focus:outline-none"></textarea>
+          </div>
+
+          <div id="m-mensaje-wrap">
+            <div class="mb-1.5 flex items-center justify-between">
+              <h3 class="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#999]">Mensaje de contacto</h3>
+              <button data-copiar="mensaje" class="text-xs font-medium text-[#3898ec] hover:underline">Copiar</button>
+            </div>
+            <textarea id="m-mensaje" readonly rows="2"
+              class="w-full resize-y rounded-lg border border-[#ddd] bg-[#fafafa]/60 p-4 text-sm leading-relaxed text-[#2d325b] focus:border-[#3898ec] focus:outline-none"></textarea>
+          </div>
+
+          <div>
+            <h3 class="mb-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#999]">Descargas</h3>
+            <div id="m-enlaces" class="flex flex-wrap gap-2"></div>
+          </div>
+
+          <div id="m-respuestas-wrap" class="hidden">
+            <h3 class="mb-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#999]">Respuestas del formulario</h3>
+            <p class="mb-2 text-xs text-[#999]">Pégalas tú: este panel nunca envía la candidatura.</p>
+            <div id="m-respuestas" class="space-y-3"></div>
+          </div>
+        </div>
+      </div>
+    </article>
+  </aside>
+</main>
+
+</div><!-- /offers-view -->
+
+<!-- ===================== View: My profile ===================== -->
+<div id="vista-perfil" class="mx-auto hidden max-w-[86rem] px-6 py-10">
+  <div class="mb-8 flex flex-wrap items-center justify-between gap-3">
+    <h1 class="font-['Oswald'] text-2xl font-medium uppercase tracking-[0.08em] text-[#2d325b]">Mi perfil</h1>
+    <div class="flex flex-wrap items-center gap-2">
+      <button id="btn-perfil-nuevo" type="button"
+        class="flex items-center gap-2 rounded-full bg-[#3898ec] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#2b83d1]">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+        Añadir dato
+      </button>
+      <button id="btn-perfil-borrar-abrir" type="button"
+        class="flex items-center gap-2 rounded-full border border-[#f66d6d] px-4 py-2 text-sm font-medium text-[#f66d6d] transition hover:bg-[#f66d6d] hover:text-white">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+        Eliminar
+      </button>
+      <button id="btn-perfil-json-abrir" type="button"
+        class="flex items-center gap-2 rounded-full border border-[#ddd] px-4 py-2 text-sm text-[#2d325b] transition hover:border-[#3898ec] hover:text-[#3898ec]">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5c0 1.1.9 2 2 2h1"/><path d="M16 21h1a2 2 0 0 0 2-2v-5c0-1.1.9-2 2-2a2 2 0 0 1-2-2V5a2 2 0 0 0-2-2h-1"/></svg>
+        Editar JSON
+      </button>
+    </div>
+  </div>
+
+  <div id="perfil-aviso" class="mb-6 hidden rounded-lg border px-4 py-3 text-sm"></div>
+
+  <div id="perfil-carga" class="rounded-xl border border-[#ddd] bg-white px-5 py-4 text-sm text-[#999]">Cargando perfil…</div>
+  <div id="perfil-error" class="hidden rounded-xl border border-[#f66d6d]/50 bg-[#f66d6d]/10 px-5 py-4 text-sm text-[#c94f4f]"></div>
+  <div id="perfil-contenido" class="hidden space-y-10"></div>
+</div>
+
+<!-- Modal: add/update a profile field -->
+<div id="perfil-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-[#2d325b]/40 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="perfil-modal-titulo">
+  <div class="w-full max-w-xl rounded-2xl border border-[#ddd] bg-white p-6 shadow-2xl">
+    <div class="flex items-start justify-between gap-4">
+      <h2 id="perfil-modal-titulo" class="font-['Oswald'] text-lg font-medium tracking-[0.02em] text-[#2d325b]">Añadir o actualizar un dato</h2>
+      <button id="btn-perfil-modal-cerrar" type="button" class="-mr-1 -mt-1 rounded-full p-1.5 text-[#999] transition hover:bg-[#fafafa] hover:text-[#2d325b]" aria-label="Cerrar">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+    <p class="mt-2 text-xs leading-relaxed text-[#999]">
+      Escríbelo en lenguaje natural. DeepSeek lo analiza y lo integra en tu perfil
+      <strong class="font-semibold text-[#2d325b]/80">sin inventar nada</strong>, marcado como declarado por ti
+      (evidencia <code class="rounded bg-[#fafafa] px-1 py-0.5 text-[#2d325b]">USR</code>).
+      Ej: «ahora lidero 4 personas en [empresa]» o «mi inglés es C1 certificado».
+    </p>
+    <textarea id="perfil-texto" rows="5" maxlength="4000"
+      placeholder="Ej: mi inglés es C1 certificado&#10;Ej: ahora lidero 4 personas en [empresa]"
+      class="mt-4 w-full resize-y rounded-lg border border-[#ddd] bg-[#fafafa]/60 p-4 text-sm leading-relaxed text-[#2d325b] placeholder:text-[#bbb] focus:border-[#3898ec] focus:outline-none"></textarea>
+    <div class="mt-4 flex flex-wrap items-center gap-3">
+      <button id="btn-perfil-agregar" type="button"
+        class="rounded-full bg-[#3898ec] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#2b83d1] disabled:opacity-50">Analizar y añadir</button>
+      <button id="btn-perfil-modal-cancelar" type="button"
+        class="rounded-full border border-[#ddd] px-5 py-2.5 text-sm text-[#2d325b] transition hover:border-[#3898ec] hover:text-[#3898ec]">Cancelar</button>
+      <span id="perfil-agregar-estado" class="text-xs text-[#999]"></span>
+    </div>
+    <div id="perfil-agregar-aviso" class="mt-4 hidden whitespace-pre-line rounded-lg border px-4 py-3 text-xs"></div>
+  </div>
+</div>
+
+<!-- Modal: delete entries (sections and rows with checkboxes) -->
+<div id="perfil-modal-borrar" class="fixed inset-0 z-50 hidden items-center justify-center bg-[#2d325b]/40 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="perfil-borrar-titulo">
+  <div class="flex max-h-[90vh] w-full max-w-xl flex-col rounded-2xl border border-[#ddd] bg-white shadow-2xl">
+    <div class="flex items-start justify-between gap-4 border-b border-[#ddd] p-6 pb-4">
+      <div>
+        <h2 id="perfil-borrar-titulo" class="font-['Oswald'] text-lg font-medium tracking-[0.02em] text-[#2d325b]">Eliminar datos</h2>
+        <p class="mt-1 text-xs leading-relaxed text-[#999]">Marca los apartados o líneas que quieras borrar. Se guarda copia en <code class="rounded bg-[#fafafa] px-1 py-0.5">perfil.json.bak</code>.</p>
+      </div>
+      <button id="btn-perfil-borrar-cerrar" type="button" class="-mr-1 -mt-1 rounded-full p-1.5 text-[#999] transition hover:bg-[#fafafa] hover:text-[#2d325b]" aria-label="Cerrar">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+    <div id="perfil-borrar-lista" class="flex-1 overflow-y-auto p-6 pt-4"></div>
+    <div class="flex flex-wrap items-center gap-3 border-t border-[#ddd] p-6 pt-4">
+      <button id="btn-perfil-borrar-confirmar" type="button"
+        class="rounded-full bg-[#f66d6d] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#d95454] disabled:opacity-50">Eliminar seleccionados</button>
+      <button id="btn-perfil-borrar-cancelar" type="button"
+        class="rounded-full border border-[#ddd] px-5 py-2.5 text-sm text-[#2d325b] transition hover:border-[#3898ec] hover:text-[#3898ec]">Cancelar</button>
+      <span id="perfil-borrar-estado" class="text-xs text-[#999]"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: edit JSON (advanced / technical) -->
+<div id="perfil-modal-json" class="fixed inset-0 z-50 hidden items-center justify-center bg-[#2d325b]/40 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="perfil-json-titulo">
+  <div class="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-2xl border border-[#ddd] bg-white shadow-2xl">
+    <div class="flex items-start justify-between gap-4 border-b border-[#ddd] p-6 pb-4">
+      <div>
+        <h2 id="perfil-json-titulo" class="font-['Oswald'] text-lg font-medium tracking-[0.02em] text-[#2d325b]">Editar JSON</h2>
+        <p class="mt-1 text-xs leading-relaxed text-[#999]">El JSON completo de <code class="rounded bg-[#fafafa] px-1 py-0.5">data/perfil.json</code>. Se valida la estructura antes de escribir y se guarda copia en <code class="rounded bg-[#fafafa] px-1 py-0.5">perfil.json.bak</code>.</p>
+      </div>
+      <button id="btn-perfil-json-cerrar" type="button" class="-mr-1 -mt-1 rounded-full p-1.5 text-[#999] transition hover:bg-[#fafafa] hover:text-[#2d325b]" aria-label="Cerrar">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+    <div class="flex-1 overflow-hidden p-6 pt-4">
+      <textarea id="perfil-json-texto" spellcheck="false"
+        class="h-[50vh] w-full resize-y rounded-lg border border-[#ddd] bg-[#fafafa]/60 p-4 font-mono text-xs leading-relaxed text-[#2d325b] focus:border-[#3898ec] focus:outline-none"></textarea>
+    </div>
+    <div class="flex flex-wrap items-center gap-3 border-t border-[#ddd] p-6 pt-4">
+      <button id="btn-perfil-json-guardar" type="button"
+        class="rounded-full bg-[#3898ec] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#2b83d1] disabled:opacity-50">Validar y guardar</button>
+      <button id="btn-perfil-json-cancelar" type="button"
+        class="rounded-full border border-[#ddd] px-5 py-2.5 text-sm text-[#2d325b] transition hover:border-[#3898ec] hover:text-[#3898ec]">Cancelar</button>
+      <span id="perfil-json-estado" class="text-xs text-[#999]"></span>
+    </div>
+    <div id="perfil-json-aviso" class="hidden border-t border-[#ddd] px-6 py-3 text-xs"></div>
+  </div>
+</div>
+
+<!-- ===================== View: Ask ===================== -->
+<div id="vista-preguntar" class="mx-auto hidden max-w-[86rem] px-6 py-10">
+  <div class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,30rem)]">
+    <section class="rounded-xl border border-[#ddd] bg-white p-6">
+      <h2 class="font-['Oswald'] text-sm uppercase tracking-[0.18em] text-[#999]">Asistente de candidatura</h2>
+      <p class="mt-2 text-xs leading-relaxed text-[#999]">
+        Responde con lo que hay en <code class="rounded bg-[#fafafa] px-1 py-0.5 text-[#2d325b]">data/perfil.json</code>
+        (sin inventar: marca PEND lo que falta) y, si le pasas el contexto de la oferta, también contesta
+        preguntas sobre la empresa y el puesto.
+      </p>
+      <div class="mt-4">
+        <label for="empresa-texto" class="mb-1 block text-xs font-medium text-[#999]">Empresa (opcional)</label>
+        <input id="empresa-texto" type="text" placeholder="Joko"
+          class="w-full rounded-lg border border-[#ddd] bg-[#fafafa]/60 px-4 py-2.5 text-sm text-[#2d325b] placeholder:text-[#bbb] focus:border-[#3898ec] focus:outline-none" />
+      </div>
+      <div class="mt-3">
+        <label for="oferta-contexto-texto" class="mb-1 block text-xs font-medium text-[#999]">Contexto de la oferta / empresa (opcional)</label>
+        <textarea id="oferta-contexto-texto" rows="4"
+          placeholder="Pega la descripción del puesto o qué hace la empresa. Necesario para preguntas tipo «what makes X special?» o «what interests you about this role?»."
+          class="w-full resize-y rounded-lg border border-[#ddd] bg-[#fafafa]/60 p-4 text-sm leading-relaxed text-[#2d325b] placeholder:text-[#bbb] focus:border-[#3898ec] focus:outline-none"></textarea>
+      </div>
+      <div class="mt-3">
+        <label for="preguntas-texto" class="mb-1 block text-xs font-medium text-[#999]">Preguntas (una por línea)</label>
+        <textarea id="preguntas-texto" rows="10"
+          placeholder="¿Cuántos años de experiencia tienes con Figma?&#10;Do you need visa sponsorship?&#10;¿Cuál es tu expectativa salarial?"
+          class="mt-2 w-full resize-y rounded-lg border border-[#ddd] bg-[#fafafa]/60 p-4 text-sm leading-relaxed text-[#2d325b] placeholder:text-[#bbb] focus:border-[#3898ec] focus:outline-none"></textarea>
+      </div>
+      <div class="mt-4 flex flex-wrap items-center gap-3">
+        <button id="btn-preguntar" data-i18n="btn_responder"
+          class="rounded-full bg-[#3898ec] px-5 py-2.5 font-medium text-white transition hover:bg-[#2b83d1] disabled:opacity-50">Responder</button>
+        <button id="btn-limpiar-preguntas" data-i18n="btn_limpiar"
+          class="rounded-full border border-[#ddd] px-5 py-2.5 font-medium text-[#2d325b] transition hover:border-[#3898ec] hover:text-[#3898ec]">Limpiar</button>
+        <span id="preguntar-estado" class="text-xs text-[#999]"></span>
+      </div>
+      <div id="preguntar-aviso" class="mt-4 hidden rounded-lg border px-4 py-3 text-xs"></div>
+    </section>
+
+    <aside class="lg:sticky lg:top-[5.4rem] lg:self-start">
+      <div class="rounded-xl border border-dashed border-[#ddd] bg-white px-6 py-6 text-xs leading-relaxed text-[#999]">
+        <p class="mb-2 font-['Oswald'] text-sm uppercase tracking-[0.18em] text-[#2d325b]">Cómo responde</p>
+        <ul class="list-disc space-y-1.5 pl-4">
+          <li>Una llamada al modelo por pregunta (temperatura 0.6).</li>
+          <li>Sin inventar empresas, fechas, métricas ni idiomas.</li>
+          <li>Contesta en el idioma de cada pregunta.</li>
+          <li>Si pasas el contexto de la oferta, responde sobre la empresa y el puesto; si no, te lo pide en vez de inventar.</li>
+          <li>Puedes pegar hasta 12 preguntas de golpe.</li>
+        </ul>
+      </div>
+    </aside>
+  </div>
+
+  <section id="respuestas-wrap" class="mt-8 hidden">
+    <div class="mb-4 flex items-baseline justify-between">
+      <h2 class="font-['Oswald'] text-sm uppercase tracking-[0.18em] text-[#999]">Respuestas</h2>
+      <span id="respuestas-contador" class="text-xs text-[#999]"></span>
+    </div>
+    <div id="respuestas" class="space-y-4"></div>
+  </section>
+</div>
+
+<!-- ===================== View: Settings ===================== -->
+<div id="vista-config" class="mx-auto hidden max-w-[86rem] px-6 py-10">
+  <div class="mb-6 flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h1 class="font-['Oswald'] text-2xl font-medium uppercase tracking-[0.08em] text-[#2d325b]" data-i18n="config_titulo">Configuración</h1>
+      <p class="mt-1 max-w-2xl text-xs leading-relaxed text-[#999]" data-i18n-html="config_sub">
+        Valores efectivos del servicio. Se guardan en <code class="rounded bg-white px-1 py-0.5 text-[#2d325b]">data/settings.json</code>
+        y ganan sobre el <code class="rounded bg-white px-1 py-0.5 text-[#2d325b]">.env</code> sin reiniciar. Sólo se envían las claves que cambian.
+      </p>
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
+      <button id="cfg-guardar" type="button" data-i18n="btn_guardar"
+        class="rounded-full bg-[#3898ec] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#2b83d1] disabled:opacity-50">Guardar</button>
+      <button id="cfg-restablecer" type="button" data-i18n="btn_restablecer"
+        class="rounded-full border border-[#ddd] px-5 py-2.5 text-sm font-medium text-[#2d325b] transition hover:border-[#3898ec] hover:text-[#3898ec]">Restablecer</button>
+      <span id="cfg-estado" class="text-xs text-[#999]"></span>
+    </div>
+  </div>
+
+  <!-- System status + export/import -->
+  <section id="cfg-sistema" class="mb-5 rounded-xl border border-[#ddd] bg-white p-5">
+    <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+      <h2 class="font-['Oswald'] text-sm uppercase tracking-[0.18em] text-[#999]" data-i18n="cfg_salud_titulo">Estado del sistema</h2>
+      <button id="btn-salud-refrescar" type="button" data-i18n="btn_actualizar"
+        class="rounded-full border border-[#ddd] px-3 py-1 text-[0.68rem] uppercase tracking-[0.12em] text-[#2d325b] transition hover:border-[#3898ec] hover:text-[#3898ec] disabled:opacity-50">Actualizar</button>
+      <span id="salud-estado" class="text-[0.68rem] uppercase tracking-[0.16em] text-[#999]"></span>
+
+      <div class="ml-auto flex flex-wrap items-center gap-2">
+        <button id="btn-exportar" type="button" data-i18n="btn_exportar"
+          class="rounded-full border border-[#ddd] px-3 py-1.5 text-xs text-[#2d325b] transition hover:border-[#3898ec] hover:text-[#3898ec] disabled:opacity-50">Exportar</button>
+        <label for="import-file" class="sr-only" data-i18n="btn_importar">Importar</label>
+        <input id="import-file" type="file" accept="application/json,.json"
+          class="max-w-[11rem] cursor-pointer rounded-full border border-[#ddd] px-3 py-1 text-[0.68rem] text-[#999] file:mr-2 file:cursor-pointer file:rounded-full file:border-0 file:bg-[#fafafa] file:px-2 file:py-0.5 file:text-[0.68rem] file:text-[#2d325b] focus:outline-none focus:border-[#3898ec]">
+        <button id="btn-importar" type="button" data-i18n="btn_importar"
+          class="rounded-full border border-[#ddd] px-3 py-1.5 text-xs text-[#2d325b] transition hover:border-[#3898ec] hover:text-[#3898ec] disabled:opacity-50">Importar</button>
+      </div>
+    </div>
+
+    <div id="salud-contenedor" class="mt-4 flex flex-wrap items-center gap-2 text-xs text-[#999]">
+      <span data-i18n="cfg_salud_cargando">Comprobando estado…</span>
+    </div>
+    <div id="salud-aviso" class="mt-3 hidden rounded-lg border px-3 py-2 text-xs"></div>
+  </section>
+
+  <div id="cfg-aviso" class="mb-5 hidden rounded-lg border px-4 py-3 text-xs"></div>
+  <div id="cfg-carga" class="rounded-xl border border-[#ddd] bg-white px-5 py-4 text-sm text-[#999]" data-i18n="cfg_cargando">Cargando configuración…</div>
+
+  <form id="cfg-form" class="hidden grid gap-5 lg:grid-cols-2" autocomplete="off">
+
+    <!-- Search -->
+    <section class="rounded-xl border border-[#ddd] bg-white p-5 lg:col-span-2">
+      <h2 class="mb-4 font-['Oswald'] text-sm uppercase tracking-[0.18em] text-[#999]" data-i18n="cfg_sec_busqueda">Búsqueda</h2>
+      <div class="grid gap-4 md:grid-cols-2">
+        <div>
+          <label for="cfg-roles" class="mb-1 block text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#999]" data-i18n="cfg_lbl_roles">Roles</label>
+          <textarea id="cfg-roles" data-cfg="ROLES" data-tipo="lista" rows="2"
+            class="w-full resize-y rounded-lg border border-[#ddd] bg-[#fafafa]/60 px-3 py-2 text-sm leading-relaxed text-[#2d325b] focus:border-[#3898ec] focus:outline-none"></textarea>
+        </div>
+        <div>
+          <label for="cfg-topics" class="mb-1 block text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#999]" data-i18n="cfg_lbl_topics">Topics</label>
+          <textarea id="cfg-topics" data-cfg="TOPICS" data-tipo="lista" rows="2"
+            class="w-full resize-y rounded-lg border border-[#ddd] bg-[#fafafa]/60 px-3 py-2 text-sm leading-relaxed text-[#2d325b] focus:border-[#3898ec] focus:outline-none"></textarea>
+        </div>
+        <div>
+          <label for="cfg-keywords" class="mb-1 block text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#999]" data-i18n="cfg_lbl_keywords">Keywords negativas</label>
+          <textarea id="cfg-keywords" data-cfg="KEYWORDS_NEGATIVAS" data-tipo="lista" rows="2"
+            class="w-full resize-y rounded-lg border border-[#ddd] bg-[#fafafa]/60 px-3 py-2 text-sm leading-relaxed text-[#2d325b] focus:border-[#3898ec] focus:outline-none"></textarea>
+        </div>
+        <div>
+          <label for="cfg-ubicaciones" class="mb-1 block text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#999]" data-i18n="cfg_lbl_ubicaciones">Ubicaciones</label>
+          <textarea id="cfg-ubicaciones" data-cfg="UBICACIONES" data-tipo="lista" rows="2"
+            class="w-full resize-y rounded-lg border border-[#ddd] bg-[#fafafa]/60 px-3 py-2 text-sm leading-relaxed text-[#2d325b] focus:border-[#3898ec] focus:outline-none"></textarea>
+        </div>
+        <div>
+          <label for="cfg-modalidad" class="mb-1 block text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#999]" data-i18n="cfg_lbl_modalidad">Modalidad</label>
+          <select id="cfg-modalidad" data-cfg="MODALIDAD" data-tipo="texto"
+            class="w-full rounded-lg border border-[#ddd] bg-[#fafafa]/60 px-3 py-2 text-sm text-[#2d325b] focus:border-[#3898ec] focus:outline-none">
+            <option value="remoto">remoto</option>
+            <option value="hibrido">híbrido</option>
+            <option value="presencial">presencial</option>
+            <option value="indiferente">indiferente</option>
+          </select>
+        </div>
+        <p class="self-end text-[0.68rem] leading-relaxed text-[#999]" data-i18n="cfg_hint_listas">
+          Las listas se separan por comas. Vacío = sin filtro / valor por defecto del servicio.
+        </p>
+      </div>
+    </section>
+
+    <!-- Sources -->
+    <section id="cfg-sec-fuentes" class="rounded-xl border border-[#ddd] bg-white p-5">
+      <h2 class="mb-4 font-['Oswald'] text-sm uppercase tracking-[0.18em] text-[#999]" data-i18n="cfg_sec_fuentes">Fuentes</h2>
+      <div class="space-y-3 text-sm">
+        <label class="flex items-center gap-3">
+          <input type="checkbox" id="cfg-fuentes-linkedin" data-cfg="FUENTES_LINKEDIN" data-tipo="bool" class="h-4 w-4 accent-[#3898ec]">
+          <span>LinkedIn</span>
+          <span class="ml-auto text-[0.68rem] uppercase tracking-[0.16em] text-[#999]" data-i18n="cfg_conservador">ritmo conservador</span>
+        </label>
+        <label class="flex items-center gap-3">
+          <input type="checkbox" id="cfg-fuentes-boards" data-cfg="FUENTES_BOARDS" data-tipo="bool" class="h-4 w-4 accent-[#3898ec]">
+          <span>Job boards</span>
+        </label>
+        <label class="flex items-center gap-3">
+          <input type="checkbox" id="cfg-fuentes-jobspy" data-cfg="FUENTES_JOBSPY" data-tipo="bool" class="h-4 w-4 accent-[#3898ec]">
+          <span>JobSpy</span>
+        </label>
+      </div>
+
+      <div class="mt-4 border-t border-[#ddd] pt-4">
+        <p class="mb-2 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#999]" data-i18n="cfg_probar_fuente">Probar fuente</p>
+        <div class="space-y-2">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="w-32 shrink-0 text-xs text-[#2d325b]">workable</span>
+            <input type="text" data-slug="workable" placeholder="slug" aria-label="slug workable"
+              class="w-28 rounded-lg border border-[#ddd] bg-[#fafafa]/60 px-2 py-1 text-xs text-[#2d325b] placeholder:text-[#bbb] focus:border-[#3898ec] focus:outline-none">
+            <button type="button" data-fuente="workable" data-i18n="btn_probar"
+              class="rounded-full border border-[#ddd] px-2.5 py-1 text-[0.68rem] text-[#2d325b] transition hover:border-[#3898ec] hover:text-[#3898ec] disabled:opacity-50">probar</button>
+            <span data-resultado="workable" class="text-[0.68rem] text-[#999]"></span>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="w-32 shrink-0 text-xs text-[#2d325b]">bamboohr</span>
+            <input type="text" data-slug="bamboohr" placeholder="slug" aria-label="slug bamboohr"
+              class="w-28 rounded-lg border border-[#ddd] bg-[#fafafa]/60 px-2 py-1 text-xs text-[#2d325b] placeholder:text-[#bbb] focus:border-[#3898ec] focus:outline-none">
+            <button type="button" data-fuente="bamboohr" data-i18n="btn_probar"
+              class="rounded-full border border-[#ddd] px-2.5 py-1 text-[0.68rem] text-[#2d325b] transition hover:border-[#3898ec] hover:text-[#3898ec] disabled:opacity-50">probar</button>
+            <span data-resultado="bamboohr" class="text-[0.68rem] text-[#999]"></span>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="w-32 shrink-0 text-xs text-[#2d325b]">recruitee</span>
+            <input type="text" data-slug="recruitee" placeholder="slug" aria-label="slug recruitee"
+              class="w-28 rounded-lg border border-[#ddd] bg-[#fafafa]/60 px-2 py-1 text-xs text-[#2d325b] placeholder:text-[#bbb] focus:border-[#3898ec] focus:outline-none">
+            <button type="button" data-fuente="recruitee" data-i18n="btn_probar"
+              class="rounded-full border border-[#ddd] px-2.5 py-1 text-[0.68rem] text-[#2d325b] transition hover:border-[#3898ec] hover:text-[#3898ec] disabled:opacity-50">probar</button>
+            <span data-resultado="recruitee" class="text-[0.68rem] text-[#999]"></span>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="w-32 shrink-0 text-xs text-[#2d325b]">greenhouse</span>
+            <input type="text" data-slug="greenhouse" placeholder="slug" aria-label="slug greenhouse"
+              class="w-28 rounded-lg border border-[#ddd] bg-[#fafafa]/60 px-2 py-1 text-xs text-[#2d325b] placeholder:text-[#bbb] focus:border-[#3898ec] focus:outline-none">
+            <button type="button" data-fuente="greenhouse" data-i18n="btn_probar"
+              class="rounded-full border border-[#ddd] px-2.5 py-1 text-[0.68rem] text-[#2d325b] transition hover:border-[#3898ec] hover:text-[#3898ec] disabled:opacity-50">probar</button>
+            <span data-resultado="greenhouse" class="text-[0.68rem] text-[#999]"></span>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="w-32 shrink-0 text-xs text-[#2d325b]">ashby</span>
+            <input type="text" data-slug="ashby" placeholder="slug" aria-label="slug ashby"
+              class="w-28 rounded-lg border border-[#ddd] bg-[#fafafa]/60 px-2 py-1 text-xs text-[#2d325b] placeholder:text-[#bbb] focus:border-[#3898ec] focus:outline-none">
+            <button type="button" data-fuente="ashby" data-i18n="btn_probar"
+              class="rounded-full border border-[#ddd] px-2.5 py-1 text-[0.68rem] text-[#2d325b] transition hover:border-[#3898ec] hover:text-[#3898ec] disabled:opacity-50">probar</button>
+            <span data-resultado="ashby" class="text-[0.68rem] text-[#999]"></span>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="w-32 shrink-0 text-xs text-[#2d325b]">lever</span>
+            <input type="text" data-slug="lever" placeholder="slug" aria-label="slug lever"
+              class="w-28 rounded-lg border border-[#ddd] bg-[#fafafa]/60 px-2 py-1 text-xs text-[#2d325b] placeholder:text-[#bbb] focus:border-[#3898ec] focus:outline-none">
+            <button type="button" data-fuente="lever" data-i18n="btn_probar"
+              class="rounded-full border border-[#ddd] px-2.5 py-1 text-[0.68rem] text-[#2d325b] transition hover:border-[#3898ec] hover:text-[#3898ec] disabled:opacity-50">probar</button>
+            <span data-resultado="lever" class="text-[0.68rem] text-[#999]"></span>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="w-32 shrink-0 text-xs text-[#2d325b]">remotive</span>
+            <input type="text" data-slug="remotive" placeholder="slug (opcional)" aria-label="slug remotive"
+              class="w-28 rounded-lg border border-[#ddd] bg-[#fafafa]/60 px-2 py-1 text-xs text-[#2d325b] placeholder:text-[#bbb] focus:border-[#3898ec] focus:outline-none">
+            <button type="button" data-fuente="remotive" data-i18n="btn_probar"
+              class="rounded-full border border-[#ddd] px-2.5 py-1 text-[0.68rem] text-[#2d325b] transition hover:border-[#3898ec] hover:text-[#3898ec] disabled:opacity-50">probar</button>
+            <span data-resultado="remotive" class="text-[0.68rem] text-[#999]"></span>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="w-32 shrink-0 text-xs text-[#2d325b]">weworkremotely</span>
+            <input type="text" data-slug="weworkremotely" placeholder="slug (opcional)" aria-label="slug weworkremotely"
+              class="w-28 rounded-lg border border-[#ddd] bg-[#fafafa]/60 px-2 py-1 text-xs text-[#2d325b] placeholder:text-[#bbb] focus:border-[#3898ec] focus:outline-none">
+            <button type="button" data-fuente="weworkremotely" data-i18n="btn_probar"
+              class="rounded-full border border-[#ddd] px-2.5 py-1 text-[0.68rem] text-[#2d325b] transition hover:border-[#3898ec] hover:text-[#3898ec] disabled:opacity-50">probar</button>
+            <span data-resultado="weworkremotely" class="text-[0.68rem] text-[#999]"></span>
+          </div>
+        </div>
+        <p class="mt-3 text-[0.68rem] leading-relaxed text-[#999]" data-i18n-html="cfg_hint_probar_fuente">
+          Prueba una fuente con su slug (el identificador de la empresa en su bolsa, p. ej. <code class="rounded bg-[#fafafa] px-1 py-0.5">acme</code>). No guarda nada.
+        </p>
+      </div>
+    </section>
+
+    <!-- Scoring -->
+    <section class="rounded-xl border border-[#ddd] bg-white p-5">
+      <h2 class="mb-4 font-['Oswald'] text-sm uppercase tracking-[0.18em] text-[#999]" data-i18n="cfg_sec_scoring">Scoring</h2>
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label for="cfg-score-threshold" class="mb-1 block text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#999]" data-i18n="cfg_lbl_threshold">Umbral (score)</label>
+          <input type="number" id="cfg-score-threshold" data-cfg="SCORE_THRESHOLD" data-tipo="int" min="0" max="100" step="1"
+            class="w-full rounded-lg border border-[#ddd] bg-[#fafafa]/60 px-3 py-2 text-sm tabular-nums text-[#2d325b] focus:border-[#3898ec] focus:outline-none">
+        </div>
+        <div>
+          <label for="cfg-temperatura" class="mb-1 block text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#999]" data-i18n="cfg_lbl_temperatura">Temperatura</label>
+          <input type="number" id="cfg-temperatura" data-cfg="TEMPERATURA" data-tipo="float" min="0" max="2" step="0.1"
+            class="w-full rounded-lg border border-[#ddd] bg-[#fafafa]/60 px-3 py-2 text-sm tabular-nums text-[#2d325b] focus:border-[#3898ec] focus:outline-none">
+        </div>
+        <div>
+          <label for="cfg-rango-min" class="mb-1 block text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#999]" data-i18n="cfg_lbl_rango_min">Rango dudoso · mínimo</label>
+          <input type="number" id="cfg-rango-min" data-cfg="RANGO_DUDOSO_MIN" data-tipo="int" min="0" max="100" step="1"
+            class="w-full rounded-lg border border-[#ddd] bg-[#fafafa]/60 px-3 py-2 text-sm tabular-nums text-[#2d325b] focus:border-[#3898ec] focus:outline-none">
+        </div>
+        <div>
+          <label for="cfg-rango-max" class="mb-1 block text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#999]" data-i18n="cfg_lbl_rango_max">Rango dudoso · máximo</label>
+          <input type="number" id="cfg-rango-max" data-cfg="RANGO_DUDOSO_MAX" data-tipo="int" min="0" max="100" step="1"
+            class="w-full rounded-lg border border-[#ddd] bg-[#fafafa]/60 px-3 py-2 text-sm tabular-nums text-[#2d325b] focus:border-[#3898ec] focus:outline-none">
+        </div>
+        <div>
+          <label for="cfg-idioma" class="mb-1 block text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#999]" data-i18n="cfg_lbl_idioma">Idioma del scoring</label>
+          <select id="cfg-idioma" data-cfg="IDIOMA_SCORING" data-tipo="texto"
+            class="w-full rounded-lg border border-[#ddd] bg-[#fafafa]/60 px-3 py-2 text-sm text-[#2d325b] focus:border-[#3898ec] focus:outline-none">
+            <option value="en">English</option>
+            <option value="es">Español</option>
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <!-- Scheduled search -->
+    <section class="rounded-xl border border-[#ddd] bg-white p-5">
+      <h2 class="mb-4 font-['Oswald'] text-sm uppercase tracking-[0.18em] text-[#999]" data-i18n="cfg_sec_programada">Búsqueda programada</h2>
+      <div class="space-y-4">
+        <div>
+          <label for="cfg-hora" class="mb-1 block text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#999]" data-i18n="cfg_lbl_hora">Hora (HH:MM)</label>
+          <input type="time" id="cfg-hora" data-cfg="HORA_BUSQUEDA" data-tipo="texto"
+            class="w-full rounded-lg border border-[#ddd] bg-[#fafafa]/60 px-3 py-2 text-sm tabular-nums text-[#2d325b] focus:border-[#3898ec] focus:outline-none">
+        </div>
+        <div>
+          <label for="cfg-dias" class="mb-1 block text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#999]" data-i18n="cfg_lbl_dias">Días activos</label>
+          <input type="text" id="cfg-dias" data-cfg="DIAS_BUSQUEDA" data-tipo="lista" placeholder="lunes, martes (vacío = todos)"
+            class="w-full rounded-lg border border-[#ddd] bg-[#fafafa]/60 px-3 py-2 text-sm text-[#2d325b] placeholder:text-[#bbb] focus:border-[#3898ec] focus:outline-none">
+        </div>
+      </div>
+    </section>
+
+    <!-- Age / cooldown -->
+    <section class="rounded-xl border border-[#ddd] bg-white p-5">
+      <h2 class="mb-4 font-['Oswald'] text-sm uppercase tracking-[0.18em] text-[#999]" data-i18n="cfg_sec_antiguedad">Antigüedad y cooldown</h2>
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label for="cfg-antiguedad" class="mb-1 block text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#999]" data-i18n="cfg_lbl_antiguedad">Máx. antigüedad (días)</label>
+          <input type="number" id="cfg-antiguedad" data-cfg="MAX_ANTIGUEDAD_DIAS" data-tipo="int" min="1" max="365" step="1"
+            class="w-full rounded-lg border border-[#ddd] bg-[#fafafa]/60 px-3 py-2 text-sm tabular-nums text-[#2d325b] focus:border-[#3898ec] focus:outline-none">
+        </div>
+        <div>
+          <label for="cfg-cooldown" class="mb-1 block text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#999]" data-i18n="cfg_lbl_cooldown">Cooldown LinkedIn (s)</label>
+          <input type="number" id="cfg-cooldown" data-cfg="LINKEDIN_COOLDOWN_SEGUNDOS" data-tipo="int" min="0" max="604800" step="60"
+            class="w-full rounded-lg border border-[#ddd] bg-[#fafafa]/60 px-3 py-2 text-sm tabular-nums text-[#2d325b] focus:border-[#3898ec] focus:outline-none">
+        </div>
+      </div>
+      <p class="mt-3 text-[0.68rem] leading-relaxed text-[#999]" data-i18n="cfg_hint_cooldown">
+        21600 s = 6 h entre visitas a LinkedIn. Súbelo si ves avisos de límite.
+      </p>
+    </section>
+
+    <!-- AI -->
+    <section class="rounded-xl border border-[#ddd] bg-white p-5">
+      <h2 class="mb-4 font-['Oswald'] text-sm uppercase tracking-[0.18em] text-[#999]" data-i18n="cfg_sec_ia">IA</h2>
+      <label for="cfg-modelo" class="mb-1 block text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#999]" data-i18n="cfg_lbl_modelo">Modelo DeepSeek</label>
+      <input type="text" id="cfg-modelo" data-cfg="DEEPSEEK_MODEL" data-tipo="texto" placeholder="deepseek-flash"
+        class="w-full rounded-lg border border-[#ddd] bg-[#fafafa]/60 px-3 py-2 text-sm text-[#2d325b] placeholder:text-[#bbb] focus:border-[#3898ec] focus:outline-none">
+      <p class="mt-3 text-[0.68rem] leading-relaxed text-[#999]" data-i18n="cfg_hint_modelo">
+        Se usa para el scoring y las respuestas del asistente. Un modelo más potente tarda y cuesta más.
+      </p>
+    </section>
+
+    <!-- API / notifications -->
+    <section class="rounded-xl border border-[#ddd] bg-white p-5 lg:col-span-2">
+      <h2 class="mb-1 font-['Oswald'] text-sm uppercase tracking-[0.18em] text-[#999]" data-i18n="cfg_sec_api">API y notificaciones</h2>
+      <p class="mb-4 text-[0.68rem] leading-relaxed text-[#999]" data-i18n="cfg_hint_secretos">
+        Los secretos nunca se muestran. Escribe un valor nuevo para reemplazarlo; si dejas el campo vacío no se envía.
+      </p>
+      <div class="grid gap-4 md:grid-cols-3">
+        <div class="rounded-lg border border-[#ddd] bg-[#fafafa]/60 p-4">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <span class="text-xs font-semibold uppercase tracking-[0.14em] text-[#2d325b]">DEEPSEEK_API_KEY</span>
+            <span data-badge="DEEPSEEK_API_KEY" class="rounded-full border border-[#ddd] px-2.5 py-1 text-[0.68rem] text-[#999]">…</span>
+          </div>
+          <input type="password" data-secreto="DEEPSEEK_API_KEY" autocomplete="new-password"
+            placeholder="nuevo valor (vacío = no cambiar)"
+            class="mt-3 w-full rounded-lg border border-[#ddd] bg-white px-3 py-2 text-sm text-[#2d325b] placeholder:text-[#bbb] focus:border-[#3898ec] focus:outline-none">
+        </div>
+        <div class="rounded-lg border border-[#ddd] bg-[#fafafa]/60 p-4">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <span class="text-xs font-semibold uppercase tracking-[0.14em] text-[#2d325b]">TELEGRAM_BOT_TOKEN</span>
+            <span data-badge="TELEGRAM_BOT_TOKEN" class="rounded-full border border-[#ddd] px-2.5 py-1 text-[0.68rem] text-[#999]">…</span>
+          </div>
+          <input type="password" data-secreto="TELEGRAM_BOT_TOKEN" autocomplete="new-password"
+            placeholder="nuevo valor (vacío = no cambiar)"
+            class="mt-3 w-full rounded-lg border border-[#ddd] bg-white px-3 py-2 text-sm text-[#2d325b] placeholder:text-[#bbb] focus:border-[#3898ec] focus:outline-none">
+        </div>
+        <div class="rounded-lg border border-[#ddd] bg-[#fafafa]/60 p-4">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <span class="text-xs font-semibold uppercase tracking-[0.14em] text-[#2d325b]">WEB_PASSWORD</span>
+            <span data-badge="WEB_PASSWORD" class="rounded-full border border-[#ddd] px-2.5 py-1 text-[0.68rem] text-[#999]">…</span>
+          </div>
+          <input type="password" data-secreto="WEB_PASSWORD" autocomplete="new-password"
+            placeholder="nuevo valor (vacío = no cambiar)"
+            class="mt-3 w-full rounded-lg border border-[#ddd] bg-white px-3 py-2 text-sm text-[#2d325b] placeholder:text-[#bbb] focus:border-[#3898ec] focus:outline-none">
+        </div>
+      </div>
+    </section>
+  </form>
+</div>
+
+<!-- ===================== View: Help ===================== -->
+<div id="vista-ayuda" class="mx-auto hidden max-w-[86rem] px-6 py-10">
+  <h1 class="font-['Oswald'] text-2xl font-medium uppercase tracking-[0.08em] text-[#2d325b]" data-i18n="ayuda_titulo">Ayuda</h1>
+  <p class="mt-1 max-w-3xl text-sm leading-relaxed text-[#2d325b]/80" data-i18n="ayuda_intro">
+    jobautomat busca ofertas que encajan con tu perfil, las puntúa con un modelo y te prepara la candidatura.
+    Tú decides: nada se envía solo.
+  </p>
+
+  <div class="mt-8 grid gap-5 lg:grid-cols-2">
+    <section class="rounded-xl border border-[#ddd] bg-white p-6">
+      <h2 class="mb-3 font-['Oswald'] text-sm uppercase tracking-[0.18em] text-[#999]" data-i18n="ayuda_que_es_titulo">Qué es</h2>
+      <p class="text-sm leading-relaxed text-[#2d325b]/90" data-i18n-html="ayuda_que_es_texto">
+        Un panel local para gestionar tu búsqueda de empleo: recoge ofertas de varias fuentes, las puntúa contra
+        <code class="rounded bg-[#fafafa] px-1 py-0.5">data/perfil.json</code> y genera carta, CV y mensaje cuando
+        apruebas una oferta. Todo queda en tu máquina y en tu base de datos.
+      </p>
+    </section>
+
+    <section class="rounded-xl border border-[#ddd] bg-white p-6">
+      <h2 class="mb-3 font-['Oswald'] text-sm uppercase tracking-[0.18em] text-[#999]" data-i18n="ayuda_flujo_titulo">Cómo funciona</h2>
+      <ol class="space-y-2 text-sm leading-relaxed text-[#2d325b]/90">
+        <li><span class="mr-2 font-semibold text-[#3898ec]">1.</span><span data-i18n="ayuda_paso1">Búsqueda: el programador recorre las fuentes activas (LinkedIn, boards, JobSpy) según roles, topics, ubicaciones y keywords negativas.</span></li>
+        <li><span class="mr-2 font-semibold text-[#3898ec]">2.</span><span data-i18n="ayuda_paso2">Scoring: cada oferta recibe un score 0-100. Por encima del umbral va a pendientes; el rango dudoso se marca para que lo mires tú.</span></li>
+        <li><span class="mr-2 font-semibold text-[#3898ec]">3.</span><span data-i18n="ayuda_paso3">Aprobación: te llega el aviso a Telegram y decides en el panel (Aprobar / Descartar).</span></li>
+        <li><span class="mr-2 font-semibold text-[#3898ec]">4.</span><span data-i18n="ayuda_paso4">Pack: se generan carta, CV en PDF, mensaje de contacto y respuestas de formulario. Los copias tú.</span></li>
+      </ol>
+    </section>
+
+    <section class="rounded-xl border border-[#ddd] bg-white p-6">
+      <h2 class="mb-3 font-['Oswald'] text-sm uppercase tracking-[0.18em] text-[#999]" data-i18n="ayuda_config_titulo">Qué configura cada sección</h2>
+      <dl class="space-y-2 text-sm leading-relaxed text-[#2d325b]/90">
+        <div><dt class="font-medium" data-i18n="cfg_sec_busqueda">Búsqueda</dt><dd class="text-xs text-[#999]" data-i18n="ayuda_cfg_busqueda">Qué puestos buscar y qué descartar: roles, topics, keywords negativas, ubicaciones y modalidad.</dd></div>
+        <div><dt class="font-medium" data-i18n="cfg_sec_fuentes">Fuentes</dt><dd class="text-xs text-[#999]" data-i18n="ayuda_cfg_fuentes">Interruptores por fuente. Apaga LinkedIn para bajar el riesgo de baneo.</dd></div>
+        <div><dt class="font-medium" data-i18n="cfg_sec_scoring">Scoring</dt><dd class="text-xs text-[#999]" data-i18n="ayuda_cfg_scoring">Umbral de aprobación automática, banda dudosa y temperatura del modelo (más baja = más estable).</dd></div>
+        <div><dt class="font-medium" data-i18n="cfg_sec_programada">Búsqueda programada</dt><dd class="text-xs text-[#999]" data-i18n="ayuda_cfg_programada">Hora y días en que corre la búsqueda. Vacío en días = todos.</dd></div>
+        <div><dt class="font-medium" data-i18n="cfg_sec_antiguedad">Antigüedad y cooldown</dt><dd class="text-xs text-[#999]" data-i18n="ayuda_cfg_antiguedad">Descarta ofertas viejas y espacia las visitas a LinkedIn.</dd></div>
+        <div><dt class="font-medium" data-i18n="cfg_sec_ia">IA</dt><dd class="text-xs text-[#999]" data-i18n="ayuda_cfg_ia">Modelo DeepSeek usado para puntuar y responder.</dd></div>
+        <div><dt class="font-medium" data-i18n="cfg_sec_api">API y notificaciones</dt><dd class="text-xs text-[#999]" data-i18n="ayuda_cfg_api">Secretos de DeepSeek, bot de Telegram y contraseña del panel. Se guardan enmascarados.</dd></div>
+      </dl>
+    </section>
+
+    <section class="rounded-xl border border-[#f66d6d]/40 bg-[#f66d6d]/5 p-6">
+      <h2 class="mb-3 font-['Oswald'] text-sm uppercase tracking-[0.18em] text-[#c94f4f]" data-i18n="ayuda_legal_titulo">Aviso legal</h2>
+      <ul class="list-disc space-y-2 pl-4 text-sm leading-relaxed text-[#2d325b]/90">
+        <li data-i18n="ayuda_legal1">Automatizar LinkedIn va contra sus términos de uso y puede provocar el baneo de tu cuenta. El riesgo es tuyo.</li>
+        <li data-i18n="ayuda_legal2">Este panel no auto-aplica: no envía candidaturas ni mensajes por ti. Apruebas y copias a mano.</li>
+        <li data-i18n="ayuda_legal3">Mantén un ritmo conservador: pocas visitas, cooldown alto y sin paralelismo agresivo.</li>
+        <li data-i18n="ayuda_legal4">Las respuestas del modelo pueden contener errores. Revísalas antes de enviarlas.</li>
+      </ul>
+    </section>
+  </div>
+</div>
+
+<script>
+const state = { filtro: "pendientes", ofertas: [], actual: null, ocupado: false };
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({
+  "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+}[c]));
+
+const ETIQUETAS = {
+  para_confirmar: "pendiente", pendiente: "pendiente", nueva: "nueva",
+  aprobada: "aprobada", descartada: "descartada", enviada: "enviada",
+};
+
+function claseScore(score) {
+  const n = Number(score ?? 0);
+  if (n >= 65) return "score-alto";
+  if (n >= 55) return "score-medio";
+  return "score-bajo";
+}
+
+function fecha(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d)) return iso;
+  return d.toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+function aviso(texto, tipo = "info") {
+  const el = $("aviso");
+  const tonos = {
+    info: "border-[#ddd] bg-[#fafafa] text-[#2d325b]/80",
+    error: "border-[#f66d6d]/50 bg-[#f66d6d]/10 text-[#c94f4f]",
+    ok: "border-[#0d927d]/40 bg-[#0d927d]/10 text-[#0d927d]",
+  };
+  el.className = "rounded-lg border px-4 py-3 text-xs " + (tonos[tipo] || tonos.info);
+  el.textContent = texto;
+  el.classList.remove("hidden");
+}
+
+function ocultarAviso() { $("aviso").classList.add("hidden"); }
+
+async function cargar() {
+  $("estado-carga").classList.remove("hidden");
+  try {
+    const res = await fetch("/api/ofertas?estado=" + encodeURIComponent(state.filtro));
+    const datos = await res.json();
+    if (!res.ok) throw new Error(datos.error || res.statusText);
+    state.ofertas = datos.ofertas || [];
+    pintarLista();
+  } catch (err) {
+    state.ofertas = [];
+    pintarLista();
+    $("estado-carga").textContent = "Error al cargar: " + err.message;
+    $("estado-carga").classList.remove("hidden");
+    return;
+  }
+  $("estado-carga").classList.add("hidden");
+}
+
+function pintarLista() {
+  const lista = $("lista");
+  lista.innerHTML = "";
+  $("sin-ofertas").classList.toggle("hidden", state.ofertas.length > 0);
+  $("contador").textContent = state.ofertas.length + (state.ofertas.length === 1 ? " oferta" : " ofertas");
+
+  for (const o of state.ofertas) {
+    const activa = state.actual && state.actual.id === o.id;
+    const li = document.createElement("li");
+    li.className = "fade-in";
+    li.innerHTML = `
+      <button class="w-full rounded-xl border px-5 py-4 text-left transition
+        ${activa
+          ? "border-[#3898ec] bg-white shadow-[0_2px_18px_rgba(56,152,236,0.12)]"
+          : "border-[#ddd] bg-white hover:border-[#3898ec]/50 hover:shadow-[0_2px_18px_rgba(45,50,91,0.06)]"}">
+        <div class="flex items-start gap-4">
+          <span class="mt-0.5 rounded-full border px-3 py-1 text-sm font-semibold tabular-nums ${claseScore(o.score)}">${esc(o.score ?? "–")}</span>
+          <div class="min-w-0 flex-1">
+            <p class="truncate font-medium text-[#2d325b]">${esc(o.titulo || "(sin título)")}</p>
+            <p class="truncate text-sm text-[#999]">${esc(o.empresa || "")}</p>
+            <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[#999]">
+              ${o.ubicacion ? `<span>${esc(o.ubicacion)}</span>` : ""}
+              ${o.salario ? `<span>${esc(o.salario)}</span>` : ""}
+              <span>${esc(fecha(o.fecha))}</span>
+              ${o.tiene_materiales ? '<span class="text-[#0d927d]">materiales listos</span>' : ""}
+            </div>
+          </div>
+          <span class="shrink-0 self-center rounded-full bg-[#f9c5d1]/40 px-3 py-1 text-xs text-[#2d325b]">${esc(ETIQUETAS[o.estado] || o.estado || "—")}</span>
+        </div>
+      </button>`;
+    li.querySelector("button").addEventListener("click", () => abrir(o.id));
+    lista.appendChild(li);
+  }
+}
+
+async function abrir(id) {
+  state.actual = { id };
+  pintarLista();
+  $("panel-vacio").classList.add("hidden");
+  $("panel-detalle").classList.remove("hidden");
+  if (window.innerWidth < 1024) {
+    $("panel").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+  $("materiales").classList.add("hidden");
+  $("m-respuestas-wrap").classList.add("hidden");
+  ocultarAviso();
+  $("d-titulo").textContent = "Cargando…";
+
+  try {
+    const res = await fetch("/api/oferta/" + encodeURIComponent(id));
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.error || res.statusText);
+    state.actual = d;
+    pintarDetalle(d);
+  } catch (err) {
+    aviso("No se pudo cargar el detalle: " + err.message, "error");
+  }
+}
+
+/* The backend returns `respuestas` as a list, but when there is no known
+   ATS it returns `{}`. We always normalize to an array so rendering does
+   not break (a `{}` in a for..of throws "resp is not iterable"
+   and aborted the whole post-approval flow: materials, notice and reload). */
+function normalizarRespuestas(r) {
+  if (Array.isArray(r)) return r.filter((x) => x && typeof x === "object");
+  if (r && typeof r === "object") {
+    return Object.entries(r).map(([campo, v]) =>
+      v && typeof v === "object" ? v : { campo, pregunta: campo, respuesta: String(v ?? "") });
+  }
+  return [];
+}
+
+/* Single source of truth for the detail buttons' state.
+   Note: the "Regenerar / ver pack" button IS btn-aprobar once the offer
+   is already approved; only the label changes, the handler is the same. */
+function pintarBotones(estado) {
+  const aprobada = estado === "aprobada";
+  const ap = $("btn-aprobar");
+  const de = $("btn-descartar");
+  ap.textContent = aprobada ? "Regenerar / ver pack" : "Aprobar y generar pack";
+  ap.disabled = false;
+  de.textContent = "Descartar";
+  de.disabled = estado === "descartada";
+  $("d-estado").textContent = ETIQUETAS[estado] || estado || "—";
+}
+
+function pintarDetalle(d) {
+  $("d-titulo").textContent = d.titulo || "(sin título)";
+  $("d-empresa").textContent = d.empresa || "";
+  const sc = $("d-score");
+  sc.textContent = "score " + (d.score ?? "–");
+  sc.className = "rounded-full border px-2.5 py-1 font-semibold tabular-nums " + claseScore(d.score);
+  $("d-estado").textContent = ETIQUETAS[d.estado] || d.estado || "—";
+  $("d-ubicacion").textContent = d.ubicacion || "";
+  $("d-salario").textContent = d.salario || "";
+  $("d-descripcion").textContent = d.descripcion || "Sin descripción guardada.";
+  const req = d.requisitos;
+  $("d-requisitos-wrap").classList.toggle("hidden", !req);
+  $("d-requisitos").textContent = req || "";
+
+  const motivos = d.motivos || [];
+  const gaps = d.gaps || [];
+  const just = $("justificacion");
+  if (motivos.length || gaps.length) {
+    just.classList.remove("hidden");
+    $("j-motivos").innerHTML = motivos.map((m) => `<li class="flex gap-2 text-xs leading-relaxed text-[#0d927d]"><span class="shrink-0 font-semibold">+</span><span>${esc(m)}</span></li>`).join("");
+    $("j-gaps").innerHTML = gaps.map((g) => `<li class="flex gap-2 text-xs leading-relaxed text-[#f66d6d]"><span class="shrink-0 font-semibold">−</span><span>${esc(g)}</span></li>`).join("");
+  } else {
+    just.classList.add("hidden");
+  }
+
+  const url = $("d-url");
+  if (d.url) { url.href = d.url; url.classList.remove("opacity-40", "pointer-events-none"); }
+  else { url.href = "#"; url.classList.add("opacity-40", "pointer-events-none"); }
+
+  if (d.estado) pintarBotones(d.estado);
+  else pintarBotones("pendiente");
+
+  if (d.cover_letter || d.mensaje) {
+    pintarMateriales({
+      cover_letter: d.cover_letter || "",
+      mensaje: d.mensaje || "",
+      enlaces: d.enlaces || {},
+      respuestas: normalizarRespuestas(d.respuestas),
+    });
+  }
+}
+
+function pintarMateriales(pack) {
+  $("materiales").classList.remove("hidden");
+  $("m-cover").value = pack.cover_letter || "(sin carta generada)";
+  $("m-mensaje").value = pack.mensaje || "";
+  $("m-mensaje-wrap").classList.toggle("hidden", !pack.mensaje);
+
+  const caja = $("m-enlaces");
+  caja.innerHTML = "";
+  const nombres = { cv_pdf: "CV (PDF)", cover_pdf: "Carta (PDF)", cover_txt: "Carta (texto)" };
+  const hay = Object.entries(pack.enlaces || {});
+  if (!hay.length) {
+    caja.innerHTML = '<span class="text-xs text-[#999]">Aún no hay PDFs generados.</span>';
+  }
+  for (const [clave, href] of hay) {
+    const a = document.createElement("a");
+    a.href = href;
+    a.target = "_blank";
+    a.rel = "noopener";
+    a.className = "rounded-full border border-[#ddd] px-4 py-1.5 text-xs font-medium text-[#3898ec] transition hover:border-[#3898ec] hover:bg-[#3898ec] hover:text-white";
+    a.textContent = "↓ " + (nombres[clave] || clave);
+    caja.appendChild(a);
+  }
+
+  const resp = normalizarRespuestas(pack.respuestas);
+  $("m-respuestas-wrap").classList.toggle("hidden", !resp.length);
+  $("m-respuestas").innerHTML = "";
+  for (const r of resp) {
+    const div = document.createElement("div");
+    div.className = "rounded-lg border border-[#ddd] bg-[#fafafa]/60 p-4";
+    div.innerHTML = `<p class="mb-1 text-xs font-semibold uppercase tracking-wider text-[#999]">${esc(r.pregunta || r.campo)}</p>
+                     <p class="whitespace-pre-wrap text-[#2d325b]">${esc(r.respuesta || "")}</p>`;
+    $("m-respuestas").appendChild(div);
+  }
+}
+
+const TIEMPO_MAX_ACCION_MS = 5 * 60 * 1000;
+
+async function accion(tipo) {
+  if (!state.actual || !state.actual.id) {
+    aviso("Selecciona una oferta antes de actuar.", "error");
+    return;
+  }
+  if (state.ocupado) {
+    aviso("Ya hay una acción en curso. Espera a que termine.", "info");
+    return;
+  }
+  const id = state.actual.id;
+  state.ocupado = true;
+  const btn = tipo === "aprobar" ? $("btn-aprobar") : $("btn-descartar");
+  btn.disabled = true;
+  btn.textContent = tipo === "aprobar" ? "Generando pack… (puede tardar 1-2 min)" : "Descartando…";
+  aviso(tipo === "aprobar"
+    ? "Generando carta, CV y mensaje. No cierres la pestaña."
+    : "Marcando como descartada…", "info");
+
+  try {
+    // Without a timeout, a hung POST left `state.ocupado` true forever
+    // and the three buttons became silent no-ops.
+    const opciones = { method: "POST" };
+    if (typeof AbortSignal !== "undefined" && AbortSignal.timeout) {
+      opciones.signal = AbortSignal.timeout(TIEMPO_MAX_ACCION_MS);
+    }
+    const res = await fetch(`/api/oferta/${encodeURIComponent(id)}/${tipo}`, opciones);
+    let datos = {};
+    try { datos = await res.json(); } catch (e) { datos = {}; }
+    if (!res.ok) throw new Error(datos.error || ("HTTP " + res.status));
+
+    if (tipo === "aprobar") {
+      const respuestas = normalizarRespuestas(datos.respuestas);
+      const errores = Array.isArray(datos.errores) ? datos.errores.slice() : [];
+      try {
+        pintarMateriales({
+          cover_letter: datos.cover_letter || "",
+          mensaje: datos.mensaje || "",
+          enlaces: datos.enlaces || {},
+          respuestas,
+        });
+      } catch (e) {
+        errores.push("no se pudo pintar el pack: " + e.message);
+      }
+      aviso("Aprobada. Materiales listos" + (respuestas.length ? ` y ${respuestas.length} respuesta(s) de formulario.` : ".")
+            + (errores.length ? " Avisos: " + errores.join("; ") : ""), errores.length ? "info" : "ok");
+    } else {
+      aviso("Oferta descartada.", "ok");
+      $("materiales").classList.add("hidden");
+      if (state.filtro === "pendientes") { $("panel-detalle").classList.add("hidden"); $("panel-vacio").classList.remove("hidden"); }
+    }
+
+    // Reflect the new state in the UI (this is what made it look like
+    // the button "did nothing": the label and the badge never changed).
+    state.actual = { ...(state.actual || {}), id, estado: datos.estado || (tipo === "aprobar" ? "aprobada" : "descartada") };
+  } catch (err) {
+    aviso("Error: " + (err && err.message ? err.message : err), "error");
+  } finally {
+    state.ocupado = false;
+    const estado = (state.actual && state.actual.estado) || "pendiente";
+    pintarBotones(estado);
+    try { await cargar(); } catch (e) { /* the list is retried on the next cycle */ }
+    pintarBotones((state.actual && state.actual.estado) || estado);
+  }
+}
+
+async function copiar(clave) {
+  const el = clave === "cover" ? $("m-cover") : $("m-mensaje");
+  try {
+    await navigator.clipboard.writeText(el.value);
+    aviso("Copiado al portapapeles.", "ok");
+  } catch {
+    el.select(); document.execCommand("copy"); aviso("Copiado.", "ok");
+  }
+}
+
+/* =====================================================================
+   Panel views: offers | profile | ask | config | help
+   ===================================================================== */
+const VISTAS = ["ofertas", "perfil", "preguntar", "config", "ayuda"];
+
+function cambiarVista(nombre, actualizarHash = true) {
+  if (!VISTAS.includes(nombre)) nombre = "ofertas";
+  for (const v of VISTAS) {
+    const el = $("vista-" + v);
+    if (el) el.classList.toggle("hidden", v !== nombre);
+  }
+  document.querySelectorAll(".vista").forEach((b) =>
+    b.classList.toggle("activo", b.dataset.vista === nombre));
+  const esOfertas = nombre === "ofertas";
+  $("filtros").style.display = esOfertas ? "" : "none";
+  $("contador").style.display = esOfertas ? "" : "none";
+  if (nombre === "perfil") cargarPerfil();
+  if (nombre === "config") cargarConfig();
+  if (nombre === "ofertas") cargarMetricas();
+  if (actualizarHash) history.replaceState(null, "", "#" + nombre);
+}
+
+/* ------------------------------ My profile ------------------------------ */
+
+const statePerfil = { datos: null, cargando: false };
+
+const NOMBRES_IDIOMA = {
+  espanol: "Español", ingles: "Inglés", catalan: "Catalán",
+  frances: "Francés", aleman: "Alemán", chino_mandarin: "Chino mandarín",
+};
+
+const NOMBRES_SKILLS = {
+  producto_diseno: "Producto y diseño",
+  ia_llm: "IA y LLM",
+  frontend: "Frontend",
+  backend_datos: "Backend y datos",
+  monetizacion: "Monetización",
+  transferibles: "Transferibles",
+};
+
+const NOMBRES_CRITERIO = {
+  rol_prioritario: "Rol prioritario",
+  modalidad: "Modalidad",
+  salario_minimo: "Salario mínimo",
+  salario_objetivo: "Salario objetivo",
+  geografia: "Geografía",
+  zona_horaria: "Zona horaria",
+  tipo_contrato: "Tipo de contrato",
+};
+
+function listaBullets(items) {
+  if (!Array.isArray(items) || !items.length) return "";
+  return `<ul class="mt-3 space-y-1.5">` + items.map((b) => `
+    <li class="flex gap-2 text-sm leading-relaxed text-[#2d325b]/90">
+      <span class="mt-[0.45rem] h-1.5 w-1.5 shrink-0 rounded-full bg-[#3898ec]"></span>
+      <span>${esc(b)}</span>
+    </li>`).join("") + `</ul>`;
+}
+
+function notaPerfil(texto) {
+  if (!texto) return "";
+  return `<p class="mt-3 border-l-2 border-[#f9c5d1] pl-3 text-xs leading-relaxed text-[#999]">${esc(texto)}</p>`;
+}
+
+function seccion(titulo, contenido) {
+  return `<section>
+    <h2 class="mb-4 font-['Oswald'] text-sm uppercase tracking-[0.18em] text-[#999]">${esc(titulo)}</h2>
+    ${contenido}
+  </section>`;
+}
+
+function tarjetaTitulo(principal, derecha) {
+  return `<div class="flex flex-wrap items-baseline justify-between gap-2">
+    <h3 class="font-medium text-[#2d325b]">${esc(principal || "")}</h3>
+    ${derecha ? `<span class="text-xs tabular-nums text-[#999]">${esc(derecha)}</span>` : ""}
+  </div>`;
+}
+
+function avisoVista(texto, tipo = "info") {
+  const el = $("perfil-aviso");
+  const tonos = {
+    info: "border-[#ddd] bg-[#fafafa] text-[#2d325b]/80",
+    error: "border-[#f66d6d]/50 bg-[#f66d6d]/10 text-[#c94f4f]",
+    ok: "border-[#0d927d]/40 bg-[#0d927d]/10 text-[#0d927d]",
+  };
+  el.className = "mb-6 rounded-lg border px-4 py-3 text-sm " + (tonos[tipo] || tonos.info);
+  el.textContent = texto;
+  el.classList.remove("hidden");
+  clearTimeout(avisoVista._t);
+  avisoVista._t = setTimeout(() => el.classList.add("hidden"), 6000);
+}
+
+function pintarPerfil(p) {
+  const idn = p.identity || {};
+  const pos = p.positioning_emphasis || {};
+
+  // Header
+  const chips = [];
+  if (idn.email) chips.push(`<a href="mailto:${esc(idn.email)}" class="rounded-full border border-[#ddd] px-3 py-1.5 transition hover:border-[#3898ec] hover:text-[#3898ec]">${esc(idn.email)}</a>`);
+  if (idn.telefono) chips.push(`<span class="rounded-full border border-[#ddd] px-3 py-1.5">${esc(idn.telefono)}</span>`);
+  if (idn.ubicacion_cv) chips.push(`<span class="rounded-full border border-[#ddd] px-3 py-1.5">${esc(idn.ubicacion_cv)}</span>`);
+  if (idn.nacionalidad) chips.push(`<span class="rounded-full border border-[#ddd] px-3 py-1.5">${esc(idn.nacionalidad)}</span>`);
+  if (idn.linkedin) chips.push(`<a href="${esc(idn.linkedin)}" target="_blank" rel="noopener" class="rounded-full border border-[#ddd] px-3 py-1.5 text-[#3898ec] transition hover:border-[#3898ec]">LinkedIn ↗</a>`);
+  if (idn.portfolio) chips.push(`<a href="${esc(idn.portfolio)}" target="_blank" rel="noopener" class="rounded-full border border-[#ddd] px-3 py-1.5 text-[#3898ec] transition hover:border-[#3898ec]">Portfolio ↗</a>`);
+
+  const cabecera = `<section class="overflow-hidden rounded-xl border border-[#ddd] bg-white shadow-[0_2px_18px_rgba(45,50,91,0.06)]">
+    <div class="border-b border-[#ddd] bg-[#f9c5d1]/20 px-6 py-6">
+      <p class="text-[0.68rem] uppercase tracking-[0.22em] text-[#999]">Perfil</p>
+      <h2 class="mt-1 font-['Oswald'] text-3xl font-medium tracking-[0.02em] text-[#2d325b]">${esc(idn.nombre || "—")}</h2>
+      <p class="mt-1 text-sm text-[#2d325b]/80">${esc(p.headline || "")}</p>
+      <div class="mt-4 flex flex-wrap items-center gap-2 text-xs text-[#2d325b]/80">${chips.join("")}</div>
+    </div>
+  </section>`;
+
+  // Positioning
+  const roles = Array.isArray(pos.roles) ? pos.roles : [];
+  const posicionamiento = seccion("Posicionamiento", `
+    <div class="rounded-xl border border-[#ddd] bg-white p-6">
+      <p class="text-sm leading-relaxed text-[#2d325b]/90">${esc(pos.declaracion_principal || "—")}</p>
+      ${roles.length ? `<div class="mt-4 flex flex-wrap gap-2">` + roles.map((r) =>
+        `<span class="rounded-full bg-[#2d325b] px-3 py-1 text-xs text-white">${esc(r)}</span>`).join("") + `</div>` : ""}
+      ${pos.matiz_liderazgo ? `<p class="mt-4 text-xs leading-relaxed text-[#999]"><span class="font-semibold uppercase tracking-wider">Liderazgo:</span> ${esc(pos.matiz_liderazgo)}</p>` : ""}
+    </div>`);
+
+  // Experience
+  const experiencia = seccion("Experiencia", `<div class="space-y-3">` +
+    (p.experience || []).map((e) => `
+      <article class="rounded-xl border border-[#ddd] bg-white p-5">
+        ${tarjetaTitulo(e.empresa, e.periodo)}
+        <p class="text-sm text-[#2d325b]/80">${esc(e.titulo_cv || "")}</p>
+        <p class="mt-1 text-xs text-[#999]">${[e.ubicacion, e.modalidad].filter(Boolean).map(esc).join(" · ")}</p>
+        ${e.descripcion ? `<p class="mt-3 text-sm leading-relaxed text-[#2d325b]/90">${esc(e.descripcion)}</p>` : ""}
+        ${listaBullets(e.bullets)}
+        ${notaPerfil(e.nota)}
+      </article>`).join("") + `</div>`);
+
+  // Projects
+  const proyectos = seccion("Proyectos", `<div class="grid gap-3 md:grid-cols-2">` +
+    (p.projects || []).map((pr) => `
+      <article class="rounded-xl border border-[#ddd] bg-white p-5">
+        ${tarjetaTitulo(pr.nombre, "")}
+        <p class="text-sm text-[#2d325b]/80">${esc(pr.rol || "")}</p>
+        ${pr.url ? `<a href="https://${esc(String(pr.url).replace(/^https?:\/\//, ""))}" target="_blank" rel="noopener" class="mt-1 inline-block text-xs text-[#3898ec] hover:underline">${esc(pr.url)} ↗</a>` : ""}
+        ${pr.descripcion ? `<p class="mt-3 text-sm leading-relaxed text-[#2d325b]/90">${esc(pr.descripcion)}</p>` : ""}
+        ${listaBullets(pr.bullets)}
+        ${notaPerfil(pr.nota)}
+      </article>`).join("") + `</div>`);
+
+  // Education
+  const educacion = seccion("Educación", `<div class="space-y-3">` +
+    (p.education || []).map((ed) => `
+      <article class="rounded-xl border border-[#ddd] bg-white p-5">
+        ${tarjetaTitulo(ed.institucion, ed.periodo)}
+        <p class="text-sm text-[#2d325b]/80">${esc(ed.titulo || "")}</p>
+        <div class="mt-2 flex flex-wrap gap-2 text-xs text-[#999]">
+          ${ed.estado ? `<span class="rounded-full bg-[#f9c5d1]/40 px-2.5 py-1 text-[#2d325b]">${esc(ed.estado)}</span>` : ""}
+          ${ed.modalidad ? `<span>${esc(ed.modalidad)}</span>` : ""}
+        </div>
+        ${notaPerfil(ed.nota)}
+      </article>`).join("") + `</div>`);
+
+  // Languages
+  const idiomas = seccion("Idiomas", `<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">` +
+    Object.entries(p.languages || {}).map(([clave, v]) => {
+      const nivel = (v && v.nivel) || "PEND";
+      const nota = (v && v.nota) || "";
+      const esPend = String(nivel).toUpperCase() === "PEND";
+      return `<article class="rounded-xl border border-[#ddd] bg-white p-4">
+        <div class="flex items-baseline justify-between gap-2">
+          <h3 class="text-sm font-medium text-[#2d325b]">${esc(NOMBRES_IDIOMA[clave] || clave)}</h3>
+          <span class="rounded-full border px-2.5 py-1 text-xs ${esPend ? "score-medio" : "score-alto"}">${esc(nivel)}</span>
+        </div>
+        ${nota ? `<p class="mt-2 text-xs leading-relaxed text-[#999]">${esc(nota)}</p>` : ""}
+      </article>`;
+    }).join("") + `</div>`);
+
+  // Certifications
+  const certs = seccion("Certificaciones", `<div class="space-y-3">` +
+    ((p.certifications || []).length
+      ? (p.certifications || []).map((c) => `
+        <article class="rounded-xl border border-[#ddd] bg-white p-5">
+          ${tarjetaTitulo(c.nombre, c.fecha || "")}
+          <p class="text-sm text-[#2d325b]/80">${esc(c.emisor || "")}</p>
+          ${notaPerfil(c.nota)}
+        </article>`).join("")
+      : `<p class="rounded-xl border border-dashed border-[#ddd] bg-white px-5 py-6 text-sm text-[#999]">Sin certificaciones registradas.</p>`)
+    + `</div>`);
+
+  // Skills
+  const skills = seccion("Skills", `<div class="grid gap-3 md:grid-cols-2">` +
+    Object.entries(p.skills || {}).map(([cat, items]) => `
+      <article class="rounded-xl border border-[#ddd] bg-white p-5">
+        <h3 class="mb-3 font-['Oswald'] text-xs uppercase tracking-[0.18em] text-[#999]">${esc(NOMBRES_SKILLS[cat] || cat.replace(/_/g, " "))}</h3>
+        <div class="flex flex-wrap gap-1.5">
+          ${(items || []).map((s) => `<span class="rounded-full border border-[#ddd] bg-[#fafafa] px-2.5 py-1 text-xs text-[#2d325b]/90">${esc(s)}</span>`).join("")}
+        </div>
+      </article>`).join("") + `</div>`);
+
+  // Compensation
+  const comp = p.compensation || {};
+  const compensacion = seccion("Compensación", `
+    <div class="rounded-xl border border-[#ddd] bg-white p-6">
+      <div class="flex flex-wrap items-baseline gap-x-8 gap-y-2">
+        <div>
+          <p class="text-[0.68rem] uppercase tracking-[0.18em] text-[#999]">Mínimo</p>
+          <p class="font-['Oswald'] text-2xl text-[#2d325b]">${esc(comp.minimo ?? "PEND")} <span class="text-sm font-normal">${esc(comp.moneda || "")}</span></p>
+          ${comp.concepto ? `<p class="text-xs text-[#999]">${esc(comp.concepto)}</p>` : ""}
+        </div>
+        <div>
+          <p class="text-[0.68rem] uppercase tracking-[0.18em] text-[#999]">Objetivo</p>
+          <p class="font-['Oswald'] text-2xl text-[#3898ec]">${esc(comp.objetivo || "PEND")}</p>
+        </div>
+      </div>
+      ${notaPerfil(comp.nota)}
+    </div>`);
+
+  // Search criteria
+  const criterios = seccion("Criterios de búsqueda", `
+    <div class="grid gap-px overflow-hidden rounded-xl border border-[#ddd] bg-[#ddd] sm:grid-cols-2">
+      ${Object.entries(p.search_criteria || {}).map(([k, v]) => `
+        <div class="bg-white px-5 py-4">
+          <p class="text-[0.68rem] uppercase tracking-[0.18em] text-[#999]">${esc(NOMBRES_CRITERIO[k] || k.replace(/_/g, " "))}</p>
+          <p class="mt-1 text-sm leading-relaxed text-[#2d325b]/90">${esc(v)}</p>
+        </div>`).join("")}
+    </div>`);
+
+  $("perfil-contenido").innerHTML = [
+    cabecera, posicionamiento, experiencia, proyectos, educacion,
+    idiomas, certs, skills, compensacion, criterios,
+  ].join("");
+  $("perfil-contenido").classList.remove("hidden");
+}
+
+async function cargarPerfil(forzar = false) {
+  if (statePerfil.datos && !forzar) return;
+  if (statePerfil.cargando) return;
+  statePerfil.cargando = true;
+  $("perfil-carga").classList.remove("hidden");
+  $("perfil-error").classList.add("hidden");
+  try {
+    const res = await fetch("/api/perfil");
+    const datos = await res.json();
+    if (!res.ok) throw new Error(datos.error || res.statusText);
+    statePerfil.datos = datos;
+    pintarPerfil(datos);
+    $("perfil-carga").classList.add("hidden");
+  } catch (err) {
+    $("perfil-carga").classList.add("hidden");
+    $("perfil-error").textContent = "No se pudo cargar el perfil: " + err.message;
+    $("perfil-error").classList.remove("hidden");
+  } finally {
+    statePerfil.cargando = false;
+  }
+}
+
+/* ------------------- Profile editing (panel) ------------------- */
+
+const TIEMPO_MAX_PERFIL_MS = 5 * 60 * 1000;
+
+function abrirModalPerfil() {
+  const m = $("perfil-modal");
+  m.classList.remove("hidden");
+  m.classList.add("flex");
+  $("perfil-texto").focus();
+}
+
+function cerrarModalPerfil() {
+  const m = $("perfil-modal");
+  m.classList.add("hidden");
+  m.classList.remove("flex");
+}
+
+/* ------------------- Delete (checklist) and edit JSON ------------------- */
+
+function abrirModalBorrar() {
+  construirListaBorrado();
+  const m = $("perfil-modal-borrar");
+  m.classList.remove("hidden");
+  m.classList.add("flex");
+  $("perfil-borrar-estado").textContent = "";
+}
+
+function cerrarModalBorrar() {
+  const m = $("perfil-modal-borrar");
+  m.classList.add("hidden");
+  m.classList.remove("flex");
+}
+
+async function abrirModalJson() {
+  if (!statePerfil.datos) await cargarPerfil();
+  $("perfil-json-texto").value = JSON.stringify(statePerfil.datos || {}, null, 2);
+  $("perfil-json-aviso").classList.add("hidden");
+  $("perfil-json-estado").textContent = "";
+  const m = $("perfil-modal-json");
+  m.classList.remove("hidden");
+  m.classList.add("flex");
+}
+
+function cerrarModalJson() {
+  const m = $("perfil-modal-json");
+  m.classList.add("hidden");
+  m.classList.remove("flex");
+}
+
+function construirListaBorrado() {
+  const p = statePerfil.datos || {};
+
+  function fila(ruta, etiqueta, detalle) {
+    return `<label class="flex cursor-pointer items-start gap-3 rounded-lg border border-[#ddd] bg-white px-4 py-3 transition hover:border-[#f66d6d]/60">
+      <input type="checkbox" class="mt-0.5 h-4 w-4 shrink-0 accent-[#f66d6d]" data-ruta="${esc(ruta)}" />
+      <span class="min-w-0">
+        <span class="block text-sm text-[#2d325b]">${esc(etiqueta)}</span>
+        ${detalle ? `<span class="block truncate text-xs text-[#999]">${esc(detalle)}</span>` : ""}
+      </span>
+    </label>`;
+  }
+
+  function grupo(nombre, filas) {
+    if (!filas.length) return "";
+    return `<div class="mb-4">
+      <p class="mb-2 font-['Oswald'] text-[0.68rem] uppercase tracking-[0.18em] text-[#999]">${esc(nombre)}</p>
+      <div class="space-y-2">${filas.join("")}</div>
+    </div>`;
+  }
+
+  const otros = [];
+  if (p.headline !== undefined) otros.push(fila("headline", "Titular (headline)", String(p.headline)));
+  if (p.positioning_emphasis) otros.push(fila("positioning_emphasis", "Posicionamiento", ""));
+  if (p.compensation) otros.push(fila("compensation", "Compensación", ""));
+  if (p.search_criteria) otros.push(fila("search_criteria", "Criterios de búsqueda", ""));
+  if (p.pendientes) otros.push(fila("pendientes", "Pendientes", ""));
+
+  const lista = [
+    grupo("Experiencia", (p.experience || []).map((e, i) =>
+      fila(`experience.${i}`, e.empresa || e.titulo_cv || "—", e.titulo_cv || ""))),
+    grupo("Educación", (p.education || []).map((ed, i) =>
+      fila(`education.${i}`, ed.institucion || ed.titulo || "—", ed.titulo || ""))),
+    grupo("Proyectos", (p.projects || []).map((pr, i) =>
+      fila(`projects.${i}`, pr.nombre || pr.rol || "—", pr.rol || ""))),
+    grupo("Certificaciones", (p.certifications || []).map((c, i) =>
+      fila(`certifications.${i}`, c.nombre || c.emisor || "—", c.emisor || ""))),
+    grupo("Idiomas", Object.entries(p.languages || {}).map(([clave, v]) =>
+      fila(`languages.${clave}`, NOMBRES_IDIOMA[clave] || clave, (v && v.nivel) || ""))),
+    grupo("Skills", Object.entries(p.skills || {}).map(([cat, items]) =>
+      fila(`skills.${cat}`, NOMBRES_SKILLS[cat] || cat, (items || []).length + " items"))),
+    grupo("Otros apartados", otros),
+  ].join("");
+
+  $("perfil-borrar-lista").innerHTML = lista ||
+    `<p class="text-sm text-[#999]">No hay nada borrable en el perfil.</p>`;
+}
+
+async function borrarSeleccionados() {
+  const checks = [...document.querySelectorAll("#perfil-borrar-lista input[type=checkbox]:checked")];
+  if (!checks.length) {
+    $("perfil-borrar-estado").textContent = "Marca al menos una línea.";
+    return;
+  }
+  const rutas = checks.map((c) => c.dataset.ruta);
+  const total = rutas.length;
+  const btn = $("btn-perfil-borrar-confirmar");
+  btn.disabled = true;
+  btn.textContent = "Borrando…";
+  $("perfil-borrar-estado").textContent = "";
+
+  let borrados = 0;
+  const fallos = [];
+  for (const ruta of rutas) {
+    try {
+      const opciones = {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ruta }),
+      };
+      if (typeof AbortSignal !== "undefined" && AbortSignal.timeout) {
+        opciones.signal = AbortSignal.timeout(TIEMPO_MAX_PERFIL_MS);
+      }
+      const res = await fetch("/api/perfil/borrar", opciones);
+      let datos = {};
+      try { datos = await res.json(); } catch (e) { /* noop */ }
+      if (!res.ok) throw new Error(datos.error || ("HTTP " + res.status));
+      borrados++;
+    } catch (err) {
+      fallos.push(ruta + ": " + (err && err.message ? err.message : err));
+    }
+  }
+
+  btn.disabled = false;
+  btn.textContent = "Eliminar seleccionados";
+  await cargarPerfil(true);
+  cerrarModalBorrar();
+  if (fallos.length) {
+    avisoVista("Borrados " + borrados + "/" + total + ".\n" + fallos.join("\n"), "error");
+  } else {
+    avisoVista("Borrados " + borrados + " dato(s). Copia anterior en perfil.json.bak.", "ok");
+  }
+}
+
+function mostrarJsonAviso(texto, tipo = "info") {
+  const el = $("perfil-json-aviso");
+  const tonos = {
+    error: "border-[#f66d6d]/50 bg-[#f66d6d]/10 text-[#c94f4f]",
+    ok: "border-[#0d927d]/40 bg-[#0d927d]/10 text-[#0d927d]",
+    info: "border-[#ddd] bg-[#fafafa] text-[#2d325b]/80",
+  };
+  el.className = "border-t px-6 py-3 text-xs " + (tonos[tipo] || tonos.info);
+  el.textContent = texto;
+  el.classList.remove("hidden");
+}
+
+async function guardarJson() {
+  let nuevo;
+  try {
+    nuevo = JSON.parse($("perfil-json-texto").value);
+  } catch (err) {
+    mostrarJsonAviso("JSON no válido: " + err.message, "error");
+    return;
+  }
+  if (!nuevo || typeof nuevo !== "object" || Array.isArray(nuevo)) {
+    mostrarJsonAviso("El perfil debe ser un objeto JSON ({...}).", "error");
+    return;
+  }
+  const btn = $("btn-perfil-json-guardar");
+  btn.disabled = true;
+  $("perfil-json-estado").textContent = "Validando y guardando…";
+  $("perfil-json-aviso").classList.add("hidden");
+  try {
+    const opciones = {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ perfil: nuevo }),
+    };
+    if (typeof AbortSignal !== "undefined" && AbortSignal.timeout) {
+      opciones.signal = AbortSignal.timeout(TIEMPO_MAX_PERFIL_MS);
+    }
+    const res = await fetch("/api/perfil", opciones);
+    let datos = {};
+    try { datos = await res.json(); } catch (e) { /* noop */ }
+    if (!res.ok) throw new Error(datos.error || ("HTTP " + res.status));
+    await cargarPerfil(true);
+    cerrarModalJson();
+    avisoVista("Perfil guardado. Copia anterior en perfil.json.bak.", "ok");
+  } catch (err) {
+    mostrarJsonAviso("No se pudo guardar: " + (err && err.message ? err.message : err), "error");
+  } finally {
+    btn.disabled = false;
+    $("perfil-json-estado").textContent = "";
+  }
+}
+
+function avisoEditor(id, texto, tipo = "info") {
+  const el = $(id);
+  const tonos = {
+    info: "border-[#ddd] bg-[#fafafa] text-[#2d325b]/80",
+    error: "border-[#f66d6d]/50 bg-[#f66d6d]/10 text-[#c94f4f]",
+    ok: "border-[#0d927d]/40 bg-[#0d927d]/10 text-[#0d927d]",
+  };
+  el.className = "mt-4 whitespace-pre-line rounded-lg border px-4 py-3 text-xs " + (tonos[tipo] || tonos.info);
+  el.textContent = texto;
+  el.classList.remove("hidden");
+}
+
+/* A change value can be a whole object (an experience item):
+   it is summarized into one line so the change list stays readable. */
+function valorCorto(valor) {
+  let texto;
+  if (typeof valor === "string") texto = valor;
+  else {
+    try { texto = JSON.stringify(valor); } catch (e) { texto = String(valor); }
+  }
+  texto = String(texto == null ? "" : texto);
+  return texto.length > 180 ? texto.slice(0, 177) + "…" : texto;
+}
+
+async function agregarPerfil() {
+  const texto = $("perfil-texto").value.trim();
+  if (!texto) {
+    avisoEditor("perfil-agregar-aviso", "Escribe primero el dato o el cambio que quieres añadir.", "error");
+    return;
+  }
+  const btn = $("btn-perfil-agregar");
+  const etiqueta = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Analizando…";
+  $("perfil-agregar-estado").textContent = "DeepSeek está leyendo el texto…";
+  $("perfil-agregar-aviso").classList.add("hidden");
+
+  try {
+    const opciones = {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ texto }),
+    };
+    if (typeof AbortSignal !== "undefined" && AbortSignal.timeout) {
+      opciones.signal = AbortSignal.timeout(TIEMPO_MAX_PERFIL_MS);
+    }
+    const res = await fetch("/api/perfil/agregar", opciones);
+    let datos = {};
+    try { datos = await res.json(); } catch (e) { datos = {}; }
+    if (!res.ok) throw new Error(datos.error || ("HTTP " + res.status));
+
+    const cambios = Array.isArray(datos.cambios) ? datos.cambios : [];
+    const nota = String(datos.nota || "").trim();
+
+    if (cambios.length) {
+      const lineas = cambios.map((c) => "· " + c.tipo + " " + c.ruta + ": " + valorCorto(c.valor));
+      $("perfil-texto").value = "";
+      $("perfil-agregar-aviso").classList.add("hidden");
+      cerrarModalPerfil();
+      await cargarPerfil(true);
+      avisoVista(
+        (nota ? nota + "\n\n" : "") +
+        "Cambios aplicados (" + cambios.length + "):\n" + lineas.join("\n"), "ok");
+    } else {
+      avisoEditor("perfil-agregar-aviso",
+        nota || "El texto no aporta ningún dato concreto; no se cambió nada.", "info");
+    }
+  } catch (err) {
+    avisoEditor("perfil-agregar-aviso",
+      "No se pudo actualizar el perfil: " + (err && err.message ? err.message : err), "error");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = etiqueta;
+    $("perfil-agregar-estado").textContent = "";
+  }
+}
+
+/* ------------------------------ Ask ------------------------------ */
+
+let respuestasActuales = [];
+
+function avisoPreguntar(texto, tipo = "info") {
+  const el = $("preguntar-aviso");
+  const tonos = {
+    info: "border-[#ddd] bg-[#fafafa] text-[#2d325b]/80",
+    error: "border-[#f66d6d]/50 bg-[#f66d6d]/10 text-[#c94f4f]",
+    ok: "border-[#0d927d]/40 bg-[#0d927d]/10 text-[#0d927d]",
+  };
+  el.className = "mt-4 rounded-lg border px-4 py-3 text-xs " + (tonos[tipo] || tonos.info);
+  el.textContent = texto;
+  el.classList.remove("hidden");
+}
+
+async function copiarTexto(texto) {
+  try {
+    await navigator.clipboard.writeText(texto);
+    return true;
+  } catch (e) {
+    const area = document.createElement("textarea");
+    area.value = texto;
+    area.style.position = "fixed";
+    area.style.opacity = "0";
+    document.body.appendChild(area);
+    area.select();
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch (e2) { ok = false; }
+    document.body.removeChild(area);
+    return ok;
+  }
+}
+
+function pintarRespuestas(preguntas, respuestas, errores) {
+  respuestasActuales = respuestas.slice();
+  const caja = $("respuestas");
+  caja.innerHTML = "";
+  $("respuestas-wrap").classList.remove("hidden");
+  const conTexto = respuestas.filter((r) => (r || "").trim()).length;
+  $("respuestas-contador").textContent = conTexto + " de " + preguntas.length + " respondidas";
+
+  preguntas.forEach((pregunta, i) => {
+    const respuesta = (respuestas[i] || "").trim();
+    const fallo = !respuesta;
+    const art = document.createElement("article");
+    art.className = "rounded-xl border bg-white p-5 " + (fallo ? "border-[#f66d6d]/50" : "border-[#ddd]");
+    art.innerHTML = `
+      <div class="flex items-start gap-3">
+        <span class="mt-0.5 shrink-0 rounded-full bg-[#f9c5d1]/40 px-2.5 py-1 text-xs font-semibold tabular-nums text-[#2d325b]">${i + 1}</span>
+        <div class="min-w-0 flex-1">
+          <p class="text-sm font-medium leading-snug text-[#2d325b]">${esc(pregunta)}</p>
+          <div class="mt-3 whitespace-pre-wrap rounded-lg bg-[#fafafa]/70 p-4 text-sm leading-relaxed text-[#2d325b]/90">${esc(respuesta || "(sin respuesta)")}</div>
+          ${fallo ? `<p class="mt-2 text-xs text-[#c94f4f]">${esc((errores && errores[0]) || "El modelo no devolvió texto para esta pregunta.")}</p>` : ""}
+        </div>
+        <button data-indice="${i}"
+          class="shrink-0 rounded-full border border-[#ddd] px-3 py-1.5 text-xs font-medium text-[#3898ec] transition hover:border-[#3898ec] hover:bg-[#3898ec] hover:text-white disabled:opacity-40">Copiar</button>
+      </div>`;
+    const btn = art.querySelector("button");
+    btn.disabled = fallo;
+    btn.addEventListener("click", async () => {
+      const ok = await copiarTexto(respuestasActuales[i] || "");
+      btn.textContent = ok ? "Copiado" : "Error";
+      setTimeout(() => { btn.textContent = "Copiar"; }, 1400);
+    });
+    caja.appendChild(art);
+  });
+}
+
+const TIEMPO_MAX_PREGUNTAR_MS = 10 * 60 * 1000;
+
+async function preguntar() {
+  const bruto = $("preguntas-texto").value;
+  const preguntas = bruto.split("\n").map((s) => s.trim()).filter(Boolean);
+  if (!preguntas.length) {
+    avisoPreguntar("Escribe al menos una pregunta (una por línea).", "error");
+    return;
+  }
+  const btn = $("btn-preguntar");
+  btn.disabled = true;
+  const etiqueta = btn.textContent;
+  btn.textContent = "Pensando…";
+  $("preguntar-estado").textContent = preguntas.length + (preguntas.length === 1 ? " pregunta" : " preguntas") + " · puede tardar";
+  $("preguntar-aviso").classList.add("hidden");
+
+  try {
+    const empresa = $("empresa-texto").value.trim();
+    const contexto = $("oferta-contexto-texto").value.trim();
+    const opciones = {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ preguntas, empresa, contexto }),
+    };
+    if (typeof AbortSignal !== "undefined" && AbortSignal.timeout) {
+      opciones.signal = AbortSignal.timeout(TIEMPO_MAX_PREGUNTAR_MS);
+    }
+    const res = await fetch("/api/preguntar", opciones);
+    let datos = {};
+    try { datos = await res.json(); } catch (e) { datos = {}; }
+    if (!res.ok) throw new Error(datos.error || ("HTTP " + res.status));
+    const respuestas = Array.isArray(datos.respuestas) ? datos.respuestas : [];
+    const errores = Array.isArray(datos.errores) ? datos.errores : [];
+    pintarRespuestas(Array.isArray(datos.preguntas) && datos.preguntas.length ? datos.preguntas : preguntas, respuestas, errores);
+    if (errores.length) avisoPreguntar("Algunas preguntas fallaron: " + errores.join("; "), "info");
+    else avisoPreguntar("Listo. Revisa y copia cada respuesta.", "ok");
+  } catch (err) {
+    avisoPreguntar("Error: " + (err && err.message ? err.message : err), "error");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = etiqueta;
+    $("preguntar-estado").textContent = "";
+  }
+}
+
+/* ------------------------------ Metrics ------------------------------ */
+
+let stateMetricas = null;
+
+const COLORES_ESTADO = {
+  pendiente: "border-[#3898ec]/40 bg-[#3898ec]/10 text-[#2b83d1]",
+  para_confirmar: "border-[#3898ec]/40 bg-[#3898ec]/10 text-[#2b83d1]",
+  nueva: "border-[#f9c5d1] bg-[#f9c5d1]/30 text-[#2d325b]",
+  aprobada: "border-[#0d927d]/40 bg-[#0d927d]/10 text-[#0d927d]",
+  enviada: "border-[#2d325b]/30 bg-[#2d325b]/10 text-[#2d325b]",
+  descartada: "border-[#f66d6d]/40 bg-[#f66d6d]/10 text-[#c94f4f]",
+};
+
+function etiquetaEstado(clave) {
+  return tr("estado_" + clave, clave || "—");
+}
+
+function pintarMetricas(m) {
+  if (!m) return;
+  stateMetricas = m;
+  $("metricas-total").textContent = Number(m.total || 0).toLocaleString(idiomaActual === "en" ? "en-GB" : "es-ES");
+
+  let fecha = "—";
+  if (m.ultima_actualizacion) {
+    const d = new Date(m.ultima_actualizacion);
+    if (!isNaN(d)) {
+      fecha = d.toLocaleString(idiomaActual === "en" ? "en-GB" : "es-ES",
+        { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+    } else {
+      fecha = String(m.ultima_actualizacion);
+    }
+  }
+  $("metricas-fecha").innerHTML = `<span>${esc(tr("metricas_ultima"))}</span>: ${esc(fecha)}`;
+
+  const porEstado = m.por_estado && typeof m.por_estado === "object" ? m.por_estado : {};
+  const filas = Object.entries(porEstado);
+  const caja = $("metricas-estados");
+  if (!filas.length) {
+    caja.className = "mt-3 text-xs text-[#999]";
+    caja.textContent = tr("metricas_sin_datos");
+  } else {
+    caja.className = "mt-3 flex flex-wrap items-center gap-2 text-xs";
+    caja.innerHTML = filas.map(([estado, n]) => {
+      const tono = COLORES_ESTADO[estado] || "border-[#ddd] bg-[#fafafa] text-[#999]";
+      return `<span class="rounded-full border px-2.5 py-1 ${tono}">${esc(etiquetaEstado(estado))}
+        <strong class="ml-1 tabular-nums">${esc(n)}</strong></span>`;
+    }).join("");
+  }
+
+  const porFuente = m.por_fuente && typeof m.por_fuente === "object" ? m.por_fuente : {};
+  const fuentes = Object.entries(porFuente).sort((a, b) => b[1] - a[1]);
+  $("metricas-fuentes").innerHTML = fuentes.length
+    ? `<span class="uppercase tracking-[0.16em]">${esc(tr("metricas_fuentes"))}</span>` +
+      fuentes.map(([f, n]) => `<span>${esc(f)} <strong class="tabular-nums text-[#2d325b]">${esc(n)}</strong></span>`).join("")
+    : "";
+}
+
+async function cargarMetricas() {
+  try {
+    const res = await fetch("/api/metrics");
+    const datos = await res.json();
+    if (!res.ok) throw new Error(datos.error || ("HTTP " + res.status));
+    $("metricas-error").classList.add("hidden");
+    pintarMetricas(datos);
+  } catch (err) {
+    $("metricas-error").textContent = tr("metricas_error") + " " + (err && err.message ? err.message : err);
+    $("metricas-error").classList.remove("hidden");
+  }
+}
+
+/* ---------------------------- Settings ---------------------------- */
+
+const SECRETOS_CONFIG = ["DEEPSEEK_API_KEY", "TELEGRAM_BOT_TOKEN", "WEB_PASSWORD"];
+const stateConfig = { original: null, secretos: {}, cargando: false };
+
+function avisoConfig(texto, tipo = "info") {
+  const el = $("cfg-aviso");
+  const tonos = {
+    info: "border-[#ddd] bg-[#fafafa] text-[#2d325b]/80",
+    error: "border-[#f66d6d]/50 bg-[#f66d6d]/10 text-[#c94f4f]",
+    ok: "border-[#0d927d]/40 bg-[#0d927d]/10 text-[#0d927d]",
+  };
+  el.className = "mb-5 rounded-lg border px-4 py-3 text-xs " + (tonos[tipo] || tonos.info);
+  el.textContent = texto;
+  el.classList.remove("hidden");
+}
+
+function listaATexto(valor) {
+  if (Array.isArray(valor)) return valor.join(", ");
+  return valor == null ? "" : String(valor);
+}
+
+function textoALista(texto) {
+  return String(texto || "").split(",").map((s) => s.trim()).filter(Boolean);
+}
+
+function valorCampo(el) {
+  const tipo = el.dataset.tipo || "texto";
+  if (tipo === "bool") return !!el.checked;
+  const bruto = String(el.value == null ? "" : el.value).trim();
+  if (tipo === "lista") return textoALista(bruto);
+  if (tipo === "int" || tipo === "float") {
+    if (bruto === "") return null;
+    const n = Number(bruto.replace(",", "."));
+    if (!Number.isFinite(n)) throw new Error(tr("cfg_numero_invalido") + " " + el.dataset.cfg);
+    return tipo === "int" ? Math.trunc(n) : n;
+  }
+  return String(el.value == null ? "" : el.value);
+}
+
+function fijarCampo(el, valor) {
+  const tipo = el.dataset.tipo || "texto";
+  if (tipo === "bool") { el.checked = !!valor; return; }
+  if (tipo === "lista") { el.value = listaATexto(valor); return; }
+  const texto = valor == null ? "" : String(valor);
+  if (el.tagName === "SELECT") {
+    if (texto && !Array.from(el.options).some((o) => o.value === texto)) {
+      const opt = document.createElement("option");
+      opt.value = texto;
+      opt.textContent = texto;
+      el.appendChild(opt);
+    }
+    el.value = texto;
+    return;
+  }
+  el.value = texto;
+}
+
+function camposConfig() {
+  return Array.from(document.querySelectorAll("#cfg-form [data-cfg]"));
+}
+
+function leerFormulario() {
+  const salida = {};
+  for (const el of camposConfig()) salida[el.dataset.cfg] = valorCampo(el);
+  return salida;
+}
+
+function iguales(a, b) {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+function pintarBadgesSecretos() {
+  for (const clave of SECRETOS_CONFIG) {
+    const badge = document.querySelector(`[data-badge="${clave}"]`);
+    if (!badge) continue;
+    const activo = !!stateConfig.secretos[clave];
+    badge.textContent = activo ? tr("configurada") : tr("sin_configurar");
+    badge.className = "rounded-full border px-2.5 py-1 text-[0.68rem] " + (activo
+      ? "border-[#0d927d]/40 bg-[#0d927d]/10 text-[#0d927d]"
+      : "border-[#f66d6d]/40 bg-[#f66d6d]/10 text-[#c94f4f]");
+  }
+}
+
+function pintarConfig(config, secretos) {
+  config = config || {};
+  for (const el of camposConfig()) fijarCampo(el, config[el.dataset.cfg]);
+
+  // Keep the state "as it arrived" so we only send what changed.
+  stateConfig.original = leerFormulario();
+  stateConfig.secretos = secretos && typeof secretos === "object" ? secretos : {};
+
+  // Secrets are never prefilled: the input is only for a new value.
+  document.querySelectorAll("#cfg-form [data-secreto]").forEach((el) => { el.value = ""; });
+  pintarBadgesSecretos();
+}
+
+async function cargarConfig() {
+  if (stateConfig.cargando) return;
+  stateConfig.cargando = true;
+  cargarSalud();
+  $("cfg-carga").classList.remove("hidden");
+  $("cfg-form").classList.add("hidden");
+  $("cfg-aviso").classList.add("hidden");
+  try {
+    const res = await fetch("/api/config");
+    const datos = await res.json();
+    if (!res.ok) throw new Error(datos.error || res.statusText);
+    pintarConfig(datos.config, datos.secretos);
+    $("cfg-carga").classList.add("hidden");
+    $("cfg-form").classList.remove("hidden");
+  } catch (err) {
+    $("cfg-carga").textContent = tr("cfg_error_carga");
+    avisoConfig(tr("cfg_error_carga") + " " + (err && err.message ? err.message : err), "error");
+  } finally {
+    stateConfig.cargando = false;
+  }
+}
+
+async function guardarConfig() {
+  if (!stateConfig.original) return;
+  let actual;
+  try {
+    actual = leerFormulario();
+  } catch (err) {
+    avisoConfig(err.message, "error");
+    return;
+  }
+
+  const cambios = {};
+  for (const [clave, valor] of Object.entries(actual)) {
+    if (!iguales(valor, stateConfig.original[clave])) cambios[clave] = valor;
+  }
+  // Secrets: only sent if the user types a new value.
+  document.querySelectorAll("#cfg-form [data-secreto]").forEach((el) => {
+    const valor = String(el.value || "").trim();
+    if (valor) cambios[el.dataset.secreto] = valor;
+  });
+
+  if (!Object.keys(cambios).length) {
+    avisoConfig(tr("cfg_sin_cambios"), "info");
+    return;
+  }
+
+  const btn = $("cfg-guardar");
+  btn.disabled = true;
+  $("cfg-estado").textContent = tr("cfg_guardando");
+  try {
+    const res = await fetch("/api/config", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(cambios),
+    });
+    let datos = {};
+    try { datos = await res.json(); } catch (e) { datos = {}; }
+    if (!res.ok) throw new Error(datos.error || ("HTTP " + res.status));
+
+    pintarConfig(datos.config, datos.secretos);
+    const guardadas = Array.isArray(datos.guardado) ? datos.guardado : Object.keys(cambios);
+    avisoConfig(tr("cfg_guardado_ok") + (guardadas.length ? " " + guardadas.join(", ") : ""), "ok");
+  } catch (err) {
+    avisoConfig(tr("cfg_guardado_error") + " " + (err && err.message ? err.message : err), "error");
+  } finally {
+    btn.disabled = false;
+    $("cfg-estado").textContent = "";
+  }
+}
+
+/* ------------------- System status / export / import ------------------- */
+
+const FUENTES_PROBAR = ["workable", "bamboohr", "recruitee", "greenhouse", "ashby", "lever", "remotive", "weworkremotely"];
+
+function avisoSalud(texto, tipo = "info") {
+  const el = $("salud-aviso");
+  if (!el) return;
+  const tonos = {
+    info: "border-[#ddd] bg-[#fafafa] text-[#2d325b]/80",
+    error: "border-[#f66d6d]/50 bg-[#f66d6d]/10 text-[#c94f4f]",
+    ok: "border-[#0d927d]/40 bg-[#0d927d]/10 text-[#0d927d]",
+  };
+  el.className = "mt-3 rounded-lg border px-3 py-2 text-xs " + (tonos[tipo] || tonos.info);
+  el.textContent = texto;
+  el.classList.remove("hidden");
+}
+
+function chipSalud(texto, tono, detalle) {
+  const tonos = {
+    ok: "border-[#0d927d]/40 bg-[#0d927d]/10 text-[#0d927d]",
+    error: "border-[#f66d6d]/40 bg-[#f66d6d]/10 text-[#c94f4f]",
+    gris: "border-[#ddd] bg-[#f4f4f4] text-[#999]",
+  };
+  return `<span title="${esc(detalle || texto)}" class="rounded-full border px-2.5 py-1 text-[0.68rem] ${tonos[tono] || tonos.gris}">${esc(texto)}</span>`;
+}
+
+function pintarSalud(datos) {
+  const d = (datos && datos.deepseek) || {};
+  const t = (datos && datos.telegram) || {};
+  const l = (datos && datos.linkedin) || {};
+  const e = (datos && datos.data_escribible) || {};
+  const c = (datos && datos.chromium) || {};
+  const chips = [];
+
+  chips.push(chipSalud("DeepSeek · " + (d.ok ? "ok" : "error"), d.ok ? "ok" : "error", d.detalle));
+
+  if (t.omitido) chips.push(chipSalud("Telegram · omitido", "gris", t.detalle));
+  else chips.push(chipSalud("Telegram · " + (t.ok ? "ok" : "error"), t.ok ? "ok" : "error", t.detalle));
+
+  let textoSesion = "LinkedIn · " + (l.presente ? "sesión" : "sin sesión");
+  if (l.caducada) textoSesion = "LinkedIn · caducada";
+  if (l.antiguedad_dias != null) textoSesion += " (" + l.antiguedad_dias + " d)";
+  chips.push(chipSalud(textoSesion, l.caducada ? "error" : (l.ok ? "ok" : "error"), l.detalle));
+
+  chips.push(chipSalud("data/ · " + (e.ok ? "escribible" : "no escribible"), e.ok ? "ok" : "error", e.detalle));
+  chips.push(chipSalud("Chromium · " + (c.ok ? "ok" : "error"), c.ok ? "ok" : "error", c.detalle));
+
+  $("salud-contenedor").innerHTML = chips.join("");
+  const est = $("salud-estado");
+  est.textContent = datos && datos.ok ? tr("cfg_salud_ok") : tr("cfg_salud_atencion");
+  est.className = "text-[0.68rem] uppercase tracking-[0.16em] " + (datos && datos.ok ? "text-[#0d927d]" : "text-[#c94f4f]");
+}
+
+let saludCargando = false;
+
+async function cargarSalud() {
+  if (!$("salud-contenedor") || saludCargando) return;
+  saludCargando = true;
+  const btn = $("btn-salud-refrescar");
+  const est = $("salud-estado");
+  if (btn) btn.disabled = true;
+  est.textContent = tr("cfg_salud_comprobando");
+  est.className = "text-[0.68rem] uppercase tracking-[0.16em] text-[#999]";
+  $("salud-aviso").classList.add("hidden");
+  try {
+    const res = await fetch("/api/salud");
+    let datos = {};
+    try { datos = await res.json(); } catch (e) { datos = {}; }
+    if (!res.ok) throw new Error(datos.error || ("HTTP " + res.status));
+    pintarSalud(datos);
+  } catch (err) {
+    $("salud-contenedor").innerHTML = chipSalud(tr("cfg_salud_error"), "error", err && err.message ? err.message : String(err));
+    est.textContent = tr("cfg_salud_atencion");
+    est.className = "text-[0.68rem] uppercase tracking-[0.16em] text-[#c94f4f]";
+  } finally {
+    saludCargando = false;
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function exportarDatos() {
+  const btn = $("btn-exportar");
+  btn.disabled = true;
+  try {
+    const res = await fetch("/api/export");
+    let datos = {};
+    try { datos = await res.json(); } catch (e) { datos = {}; }
+    if (!res.ok) throw new Error(datos.error || ("HTTP " + res.status));
+    const texto = JSON.stringify(datos, null, 2);
+    const blob = new Blob([texto], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const hoy = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = "jobautomat-export-" + hoy + ".json";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    avisoSalud(tr("cfg_export_ok"), "ok");
+  } catch (err) {
+    avisoSalud(tr("cfg_export_error") + " " + (err && err.message ? err.message : err), "error");
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function importarDatos() {
+  const input = $("import-file");
+  const btn = $("btn-importar");
+  const fichero = input && input.files && input.files[0];
+  if (!fichero) {
+    avisoSalud(tr("cfg_import_sin_fichero"), "error");
+    return;
+  }
+  let contenido;
+  try {
+    contenido = await fichero.text();
+    JSON.parse(contenido);
+  } catch (err) {
+    avisoSalud(tr("cfg_import_json_invalido"), "error");
+    return;
+  }
+  if (!window.confirm(tr("cfg_import_confirmar") + " " + fichero.name)) return;
+
+  btn.disabled = true;
+  avisoSalud(tr("cfg_importando"), "info");
+  try {
+    const res = await fetch("/api/import", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: contenido,
+    });
+    let datos = {};
+    try { datos = await res.json(); } catch (e) { datos = {}; }
+    if (!res.ok) throw new Error(datos.error || ("HTTP " + res.status));
+    avisoSalud(tr("cfg_import_ok"), "ok");
+    input.value = "";
+    await cargarConfig();
+    cargarPerfil(true);
+    cargarSalud();
+  } catch (err) {
+    avisoSalud(tr("cfg_import_error") + " " + (err && err.message ? err.message : err), "error");
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function probarFuente(nombre, btn) {
+  if (!nombre) return;
+  const destino = document.querySelector(`[data-resultado="${nombre}"]`);
+  const camposSlug = document.querySelectorAll("[data-slug]");
+  let slug = "";
+  const propio = document.querySelector(`[data-slug="${nombre}"]`);
+  if (propio) slug = String(propio.value || "").trim();
+  else if (!camposSlug.length) {
+    const relevante = document.querySelector("#cfg-sec-fuentes input[type=text]");
+    if (relevante) slug = String(relevante.value || "").trim();
+  }
+
+  const parametros = {};
+  if (slug) parametros.slug = slug;
+
+  const textoOriginal = btn ? btn.textContent : "";
+  if (btn) { btn.disabled = true; btn.textContent = tr("cfg_probando"); }
+  if (destino) {
+    destino.textContent = tr("cfg_probando");
+    destino.className = "text-[0.68rem] text-[#999]";
+  }
+  try {
+    const res = await fetch("/api/fuente/probar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nombre, parametros }),
+    });
+    let datos = {};
+    try { datos = await res.json(); } catch (e) { datos = {}; }
+    const ok = res.ok && datos.ok !== false;
+    if (!ok) throw new Error(datos.error || datos.detalle || ("HTTP " + res.status));
+    let extra = datos.detalle || datos.mensaje || "";
+    if (!extra && Array.isArray(datos.ofertas)) extra = datos.ofertas.length + " ofertas";
+    if (!extra && datos.total != null) extra = datos.total + " ofertas";
+    if (destino) {
+      destino.textContent = "ok" + (extra ? " · " + extra : "");
+      destino.className = "text-[0.68rem] text-[#0d927d]";
+      destino.title = extra || "ok";
+    }
+  } catch (err) {
+    if (destino) {
+      destino.textContent = "error" + (err && err.message ? " · " + err.message : "");
+      destino.className = "text-[0.68rem] text-[#c94f4f]";
+      destino.title = err && err.message ? err.message : "error";
+    }
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = textoOriginal || tr("btn_probar"); }
+  }
+}
+
+/* ------------------------------- i18n ES/EN ------------------------------- */
+
+const I18N = {
+  es: {
+    subtitulo: "panel de ofertas",
+    nav_ofertas: "Ofertas", nav_perfil: "Mi perfil", nav_preguntar: "Preguntar",
+    nav_config: "Configuración", nav_ayuda: "Ayuda",
+    filtro_pendientes: "Pendientes", filtro_aprobadas: "Aprobadas",
+    filtro_descartadas: "Descartadas", filtro_todas: "Todas",
+    titulo_ofertas: "Ofertas", titulo_actividad: "Actividad en vivo",
+    auto_actualiza: "se actualiza solo",
+    btn_buscar: "Buscar ahora", btn_buscando: "buscando…",
+    buscar_lanzada: "búsqueda lanzada — sigue la actividad en vivo",
+    buscar_en_curso: "ya hay una búsqueda en curso",
+    buscar_error: "No se pudo lanzar la búsqueda:",
+    metricas_titulo: "Métricas", metricas_total: "Total",
+    metricas_ultima: "Última actualización", metricas_fuentes: "Por fuente",
+    metricas_sin_datos: "Sin datos todavía.", metricas_error: "No se pudieron cargar las métricas:",
+    estado_pendiente: "pendientes", estado_para_confirmar: "por confirmar",
+    estado_nueva: "nuevas", estado_aprobada: "aprobadas",
+    estado_enviada: "enviadas", estado_descartada: "descartadas",
+    config_titulo: "Configuración",
+    config_sub: "Valores efectivos del servicio. Se guardan en <code class=\"rounded bg-white px-1 py-0.5 text-[#2d325b]\">data/settings.json</code> y ganan sobre el <code class=\"rounded bg-white px-1 py-0.5 text-[#2d325b]\">.env</code> sin reiniciar. Sólo se envían las claves que cambian.",
+    btn_guardar: "Guardar", btn_restablecer: "Restablecer", btn_responder: "Responder",
+    btn_limpiar: "Limpiar",
+    cfg_cargando: "Cargando configuración…",
+    cfg_error_carga: "No se pudo cargar la configuración.",
+    cfg_guardando: "Guardando…", cfg_guardado_ok: "Guardado:",
+    cfg_guardado_error: "No se pudo guardar:", cfg_sin_cambios: "No hay cambios que guardar.",
+    cfg_numero_invalido: "Valor numérico no válido en",
+    configurada: "configurada", sin_configurar: "sin configurar",
+    cfg_sec_busqueda: "Búsqueda", cfg_lbl_roles: "Roles", cfg_lbl_topics: "Topics",
+    cfg_lbl_keywords: "Keywords negativas", cfg_lbl_ubicaciones: "Ubicaciones",
+    cfg_lbl_modalidad: "Modalidad",
+    cfg_hint_listas: "Las listas se separan por comas. Vacío = sin filtro / valor por defecto del servicio.",
+    cfg_sec_fuentes: "Fuentes", cfg_conservador: "ritmo conservador",
+    cfg_sec_scoring: "Scoring", cfg_lbl_threshold: "Umbral (score)",
+    cfg_lbl_temperatura: "Temperatura", cfg_lbl_rango_min: "Rango dudoso · mínimo",
+    cfg_lbl_rango_max: "Rango dudoso · máximo",
+    cfg_lbl_idioma: "Idioma del scoring",
+    cfg_sec_programada: "Búsqueda programada", cfg_lbl_hora: "Hora (HH:MM)",
+    cfg_lbl_dias: "Días activos",
+    cfg_sec_antiguedad: "Antigüedad y cooldown", cfg_lbl_antiguedad: "Máx. antigüedad (días)",
+    cfg_lbl_cooldown: "Cooldown LinkedIn (s)",
+    cfg_hint_cooldown: "21600 s = 6 h entre visitas a LinkedIn. Súbelo si ves avisos de límite.",
+    cfg_sec_ia: "IA", cfg_lbl_modelo: "Modelo DeepSeek",
+    cfg_hint_modelo: "Se usa para el scoring y las respuestas del asistente. Un modelo más potente tarda y cuesta más.",
+    cfg_sec_api: "API y notificaciones",
+    cfg_hint_secretos: "Los secretos nunca se muestran. Escribe un valor nuevo para reemplazarlo; si dejas el campo vacío no se envía.",
+    cfg_salud_titulo: "Estado del sistema",
+    cfg_salud_cargando: "Comprobando estado…",
+    cfg_salud_comprobando: "comprobando…",
+    cfg_salud_ok: "todo en orden",
+    cfg_salud_atencion: "revisar",
+    cfg_salud_error: "no se pudo leer /api/salud",
+    btn_actualizar: "Actualizar",
+    btn_exportar: "Exportar",
+    btn_importar: "Importar",
+    btn_probar: "probar",
+    cfg_probar_fuente: "Probar fuente",
+    cfg_probando: "probando…",
+    cfg_hint_probar_fuente: "Prueba una fuente con su slug (el identificador de la empresa en su bolsa, p. ej. <code class=\"rounded bg-[#fafafa] px-1 py-0.5\">acme</code>). No guarda nada.",
+    cfg_export_ok: "Copia exportada.",
+    cfg_export_error: "No se pudo exportar:",
+    cfg_import_sin_fichero: "Elige antes un fichero JSON.",
+    cfg_import_json_invalido: "El fichero no es un JSON válido.",
+    cfg_import_confirmar: "Se sobrescribirá la configuración y el perfil actuales con el fichero. ¿Continuar?",
+    cfg_importando: "Importando…",
+    cfg_import_ok: "Copia importada. Configuración y perfil recargados.",
+    cfg_import_error: "No se pudo importar:",
+    ayuda_titulo: "Ayuda",
+    ayuda_intro: "jobautomat busca ofertas que encajan con tu perfil, las puntúa con un modelo y te prepara la candidatura. Tú decides: nada se envía solo.",
+    ayuda_que_es_titulo: "Qué es",
+    ayuda_que_es_texto: "Un panel local para gestionar tu búsqueda de empleo: recoge ofertas de varias fuentes, las puntúa contra <code class=\"rounded bg-[#fafafa] px-1 py-0.5\">data/perfil.json</code> y genera carta, CV y mensaje cuando apruebas una oferta. Todo queda en tu máquina y en tu base de datos.",
+    ayuda_flujo_titulo: "Cómo funciona",
+    ayuda_paso1: "Búsqueda: el programador recorre las fuentes activas (LinkedIn, boards, JobSpy) según roles, topics, ubicaciones y keywords negativas.",
+    ayuda_paso2: "Scoring: cada oferta recibe un score 0-100. Por encima del umbral va a pendientes; el rango dudoso se marca para que lo mires tú.",
+    ayuda_paso3: "Aprobación: te llega el aviso a Telegram y decides en el panel (Aprobar / Descartar).",
+    ayuda_paso4: "Pack: se generan carta, CV en PDF, mensaje de contacto y respuestas de formulario. Los copias tú.",
+    ayuda_config_titulo: "Qué configura cada sección",
+    ayuda_cfg_busqueda: "Qué puestos buscar y qué descartar: roles, topics, keywords negativas, ubicaciones y modalidad.",
+    ayuda_cfg_fuentes: "Interruptores por fuente. Apaga LinkedIn para bajar el riesgo de baneo.",
+    ayuda_cfg_scoring: "Umbral de aprobación automática, banda dudosa y temperatura del modelo (más baja = más estable).",
+    ayuda_cfg_programada: "Hora y días en que corre la búsqueda. Vacío en días = todos.",
+    ayuda_cfg_antiguedad: "Descarta ofertas viejas y espacia las visitas a LinkedIn.",
+    ayuda_cfg_ia: "Modelo DeepSeek usado para puntuar y responder.",
+    ayuda_cfg_api: "Secretos de DeepSeek, bot de Telegram y contraseña del panel. Se guardan enmascarados.",
+    ayuda_legal_titulo: "Aviso legal",
+    ayuda_legal1: "Automatizar LinkedIn va contra sus términos de uso y puede provocar el baneo de tu cuenta. El riesgo es tuyo.",
+    ayuda_legal2: "Este panel no auto-aplica: no envía candidaturas ni mensajes por ti. Apruebas y copias a mano.",
+    ayuda_legal3: "Mantén un ritmo conservador: pocas visitas, cooldown alto y sin paralelismo agresivo.",
+    ayuda_legal4: "Las respuestas del modelo pueden contener errores. Revísalas antes de enviarlas.",
+  },
+  en: {
+    subtitulo: "job board panel",
+    nav_ofertas: "Jobs", nav_perfil: "My profile", nav_preguntar: "Ask",
+    nav_config: "Settings", nav_ayuda: "Help",
+    filtro_pendientes: "Pending", filtro_aprobadas: "Approved",
+    filtro_descartadas: "Discarded", filtro_todas: "All",
+    titulo_ofertas: "Jobs", titulo_actividad: "Live activity",
+    auto_actualiza: "auto-refreshing",
+    btn_buscar: "Search now", btn_buscando: "searching…",
+    buscar_lanzada: "search launched — follow the live activity",
+    buscar_en_curso: "a search is already running",
+    buscar_error: "Could not start the search:",
+    metricas_titulo: "Metrics", metricas_total: "Total",
+    metricas_ultima: "Last update", metricas_fuentes: "By source",
+    metricas_sin_datos: "No data yet.", metricas_error: "Could not load metrics:",
+    estado_pendiente: "pending", estado_para_confirmar: "to confirm",
+    estado_nueva: "new", estado_aprobada: "approved",
+    estado_enviada: "sent", estado_descartada: "discarded",
+    config_titulo: "Settings",
+    config_sub: "Effective service values. They are saved to <code class=\"rounded bg-white px-1 py-0.5 text-[#2d325b]\">data/settings.json</code> and override the <code class=\"rounded bg-white px-1 py-0.5 text-[#2d325b]\">.env</code> without a restart. Only changed keys are sent.",
+    btn_guardar: "Save", btn_restablecer: "Reset", btn_responder: "Answer",
+    btn_limpiar: "Clear",
+    cfg_cargando: "Loading settings…",
+    cfg_error_carga: "Could not load settings.",
+    cfg_guardando: "Saving…", cfg_guardado_ok: "Saved:",
+    cfg_guardado_error: "Could not save:", cfg_sin_cambios: "Nothing to save.",
+    cfg_numero_invalido: "Invalid number in",
+    configurada: "configured", sin_configurar: "not configured",
+    cfg_sec_busqueda: "Search", cfg_lbl_roles: "Roles", cfg_lbl_topics: "Topics",
+    cfg_lbl_keywords: "Negative keywords", cfg_lbl_ubicaciones: "Locations",
+    cfg_lbl_modalidad: "Work mode",
+    cfg_hint_listas: "Lists are comma-separated. Empty = no filter / service default.",
+    cfg_sec_fuentes: "Sources", cfg_conservador: "conservative pace",
+    cfg_sec_scoring: "Scoring", cfg_lbl_threshold: "Threshold (score)",
+    cfg_lbl_temperatura: "Temperature", cfg_lbl_rango_min: "Doubtful band · min",
+    cfg_lbl_rango_max: "Doubtful band · max",
+    cfg_lbl_idioma: "Scoring language",
+    cfg_sec_programada: "Scheduled search", cfg_lbl_hora: "Time (HH:MM)",
+    cfg_lbl_dias: "Active days",
+    cfg_sec_antiguedad: "Age and cooldown", cfg_lbl_antiguedad: "Max age (days)",
+    cfg_lbl_cooldown: "LinkedIn cooldown (s)",
+    cfg_hint_cooldown: "21600 s = 6 h between LinkedIn visits. Raise it if you see rate-limit warnings.",
+    cfg_sec_ia: "AI", cfg_lbl_modelo: "DeepSeek model",
+    cfg_hint_modelo: "Used for scoring and assistant answers. A stronger model is slower and costs more.",
+    cfg_sec_api: "API and notifications",
+    cfg_hint_secretos: "Secrets are never displayed. Type a new value to replace one; an empty field is not sent.",
+    cfg_salud_titulo: "System status",
+    cfg_salud_cargando: "Checking status…",
+    cfg_salud_comprobando: "checking…",
+    cfg_salud_ok: "all good",
+    cfg_salud_atencion: "needs attention",
+    cfg_salud_error: "could not read /api/salud",
+    btn_actualizar: "Refresh",
+    btn_exportar: "Export",
+    btn_importar: "Import",
+    btn_probar: "test",
+    cfg_probar_fuente: "Test source",
+    cfg_probando: "testing…",
+    cfg_hint_probar_fuente: "Test a source with its slug (the company identifier in its job board, e.g. <code class=\"rounded bg-[#fafafa] px-1 py-0.5\">acme</code>). Nothing is saved.",
+    cfg_export_ok: "Backup exported.",
+    cfg_export_error: "Export failed:",
+    cfg_import_sin_fichero: "Pick a JSON file first.",
+    cfg_import_json_invalido: "That file is not valid JSON.",
+    cfg_import_confirmar: "Current settings and profile will be overwritten by the file. Continue?",
+    cfg_importando: "Importing…",
+    cfg_import_ok: "Backup imported. Settings and profile reloaded.",
+    cfg_import_error: "Import failed:",
+    ayuda_titulo: "Help",
+    ayuda_intro: "jobautomat finds jobs that fit your profile, scores them with a model and prepares your application. You decide: nothing is sent on its own.",
+    ayuda_que_es_titulo: "What it is",
+    ayuda_que_es_texto: "A local panel to manage your job search: it collects jobs from several sources, scores them against <code class=\"rounded bg-[#fafafa] px-1 py-0.5\">data/perfil.json</code> and generates a cover letter, CV and message when you approve a job. Everything stays on your machine and in your database.",
+    ayuda_flujo_titulo: "How it works",
+    ayuda_paso1: "Search: the scheduler walks the enabled sources (LinkedIn, boards, JobSpy) using roles, topics, locations and negative keywords.",
+    ayuda_paso2: "Scoring: each job gets a 0-100 score. Above the threshold it lands in pending; the doubtful band is flagged for you to review.",
+    ayuda_paso3: "Approval: you get a Telegram notice and decide in the panel (Approve / Discard).",
+    ayuda_paso4: "Pack: cover letter, CV PDF, contact message and form answers are generated. You copy them yourself.",
+    ayuda_config_titulo: "What each section configures",
+    ayuda_cfg_busqueda: "Which roles to look for and what to drop: roles, topics, negative keywords, locations and work mode.",
+    ayuda_cfg_fuentes: "Per-source switches. Turn LinkedIn off to lower the ban risk.",
+    ayuda_cfg_scoring: "Auto-approval threshold, doubtful band and model temperature (lower = steadier).",
+    ayuda_cfg_programada: "Time and days when the search runs. Empty days = every day.",
+    ayuda_cfg_antiguedad: "Skips old jobs and spaces out LinkedIn visits.",
+    ayuda_cfg_ia: "DeepSeek model used to score and answer.",
+    ayuda_cfg_api: "DeepSeek, Telegram bot and panel password secrets. Stored masked.",
+    ayuda_legal_titulo: "Legal notice",
+    ayuda_legal1: "Automating LinkedIn violates its terms of use and can get your account banned. The risk is yours.",
+    ayuda_legal2: "This panel does not auto-apply: it never sends applications or messages for you. You approve and copy by hand.",
+    ayuda_legal3: "Keep a conservative pace: few visits, high cooldown, no aggressive parallelism.",
+    ayuda_legal4: "Model answers can be wrong. Review them before sending.",
+  },
+};
+
+let idiomaActual = "es";
+
+function tr(clave, porDefecto) {
+  const dic = I18N[idiomaActual] || I18N.es;
+  if (dic && dic[clave] != null) return dic[clave];
+  if (I18N.es[clave] != null) return I18N.es[clave];
+  return porDefecto != null ? porDefecto : clave;
+}
+
+function aplicarIdioma(idioma, persistir = true) {
+  idiomaActual = idioma === "en" ? "en" : "es";
+  document.documentElement.lang = idiomaActual;
+  document.querySelectorAll("[data-i18n]").forEach((el) => {
+    const texto = (I18N[idiomaActual] || {})[el.dataset.i18n];
+    if (texto != null) el.textContent = texto;
+  });
+  document.querySelectorAll("[data-i18n-html]").forEach((el) => {
+    const texto = (I18N[idiomaActual] || {})[el.dataset.i18nHtml];
+    if (texto != null) el.innerHTML = texto;
+  });
+  const lbl = $("idioma-label");
+  if (lbl) lbl.textContent = idiomaActual.toUpperCase();
+  // The search button has two labels depending on its state: if it is
+  // "searching", the data-i18n="btn_buscar" text has just been painted and
+  // the in-progress label has to be set again.
+  const btnBuscar = $("btn-buscar");
+  if (btnBuscar && btnBuscar.dataset.activo === "1") {
+    const etiqueta = btnBuscar.querySelector("[data-i18n]");
+    if (etiqueta) etiqueta.textContent = tr("btn_buscando");
+  }
+  if (persistir) {
+    try { localStorage.setItem("jobautomat_idioma", idiomaActual); } catch (e) { /* private mode */ }
+  }
+  pintarBadgesSecretos();
+  if (stateMetricas) pintarMetricas(stateMetricas);
+}
+
+$("btn-idioma").addEventListener("click", () =>
+  aplicarIdioma(idiomaActual === "es" ? "en" : "es"));
+
+let idiomaGuardado = "es";
+try { idiomaGuardado = localStorage.getItem("jobautomat_idioma") || "es"; } catch (e) { idiomaGuardado = "es"; }
+aplicarIdioma(idiomaGuardado, false);
+
+/* ------------------------- Settings: events ------------------------- */
+
+$("cfg-guardar").addEventListener("click", guardarConfig);
+$("cfg-restablecer").addEventListener("click", () => cargarConfig(true));
+$("btn-salud-refrescar").addEventListener("click", cargarSalud);
+$("btn-exportar").addEventListener("click", exportarDatos);
+$("btn-importar").addEventListener("click", importarDatos);
+document.querySelectorAll("[data-fuente]").forEach((b) => {
+  b.addEventListener("click", () => probarFuente(b.dataset.fuente, b));
+});
+$("cfg-form").addEventListener("submit", (ev) => { ev.preventDefault(); guardarConfig(); });
+$("metricas-refrescar").addEventListener("click", cargarMetricas);
+$("btn-perfil-nuevo").addEventListener("click", abrirModalPerfil);
+$("btn-perfil-agregar").addEventListener("click", agregarPerfil);
+$("btn-perfil-modal-cerrar").addEventListener("click", cerrarModalPerfil);
+$("btn-perfil-modal-cancelar").addEventListener("click", cerrarModalPerfil);
+$("btn-perfil-borrar-abrir").addEventListener("click", abrirModalBorrar);
+$("btn-perfil-borrar-cerrar").addEventListener("click", cerrarModalBorrar);
+$("btn-perfil-borrar-cancelar").addEventListener("click", cerrarModalBorrar);
+$("btn-perfil-borrar-confirmar").addEventListener("click", borrarSeleccionados);
+$("btn-perfil-json-abrir").addEventListener("click", abrirModalJson);
+$("btn-perfil-json-cerrar").addEventListener("click", cerrarModalJson);
+$("btn-perfil-json-cancelar").addEventListener("click", cerrarModalJson);
+$("btn-perfil-json-guardar").addEventListener("click", guardarJson);
+$("perfil-modal").addEventListener("click", (ev) => {
+  if (ev.target === $("perfil-modal")) cerrarModalPerfil();
+});
+$("perfil-modal-borrar").addEventListener("click", (ev) => {
+  if (ev.target === $("perfil-modal-borrar")) cerrarModalBorrar();
+});
+$("perfil-modal-json").addEventListener("click", (ev) => {
+  if (ev.target === $("perfil-modal-json")) cerrarModalJson();
+});
+document.addEventListener("keydown", (ev) => {
+  if (ev.key !== "Escape") return;
+  if (!$("perfil-modal").classList.contains("hidden")) cerrarModalPerfil();
+  else if (!$("perfil-modal-borrar").classList.contains("hidden")) cerrarModalBorrar();
+  else if (!$("perfil-modal-json").classList.contains("hidden")) cerrarModalJson();
+});
+
+document.querySelectorAll(".vista").forEach((b) => {
+  b.addEventListener("click", () => cambiarVista(b.dataset.vista));
+});
+$("btn-preguntar").addEventListener("click", preguntar);
+$("btn-limpiar-preguntas").addEventListener("click", () => {
+  $("preguntas-texto").value = "";
+  $("empresa-texto").value = "";
+  $("oferta-contexto-texto").value = "";
+  $("respuestas").innerHTML = "";
+  $("respuestas-wrap").classList.add("hidden");
+  $("preguntar-aviso").classList.add("hidden");
+});
+
+document.querySelectorAll(".filtro").forEach((b) => {
+  b.addEventListener("click", () => {
+    state.filtro = b.dataset.estado;
+    document.querySelectorAll(".filtro").forEach((x) => x.classList.toggle("activo", x === b));
+    cargar();
+  });
+});
+
+$("refrescar").addEventListener("click", cargar);
+$("btn-aprobar").addEventListener("click", () => accion("aprobar"));
+$("btn-descartar").addEventListener("click", () => accion("descartar"));
+$("cerrar").addEventListener("click", () => {
+  $("panel-detalle").classList.add("hidden");
+  $("panel-vacio").classList.remove("hidden");
+  state.actual = null;
+  pintarLista();
+});
+document.querySelectorAll("[data-copiar]").forEach((b) => {
+  b.addEventListener("click", () => copiar(b.dataset.copiar));
+});
+
+document.querySelector('.filtro[data-estado="pendientes"]').classList.add("activo");
+cargar();
+
+// Initial view from the hash (#perfil / #preguntar), offers by default.
+const vistaInicial = (location.hash || "").replace("#", "");
+cambiarVista(VISTAS.includes(vistaInicial) ? vistaInicial : "ofertas", false);
+
+// --- Live activity: log + self-updating list ---
+let logAnterior = "";
+async function pollLog() {
+  try {
+    const res = await fetch("/api/log?n=250");
+    const datos = await res.json();
+    if (!res.ok) return;
+    const texto = (datos.lineas || []).join("\n");
+    const el = $("log");
+    if (texto !== logAnterior) {
+      el.textContent = texto || "(sin actividad todavía)";
+      el.scrollTop = el.scrollHeight;
+      logAnterior = texto;
+    }
+    $("estado-run").className = "h-2.5 w-2.5 rounded-full " + (datos.activo ? "bg-[#0d927d]" : "bg-[#999]");
+    $("estado-run-texto").textContent = datos.activo ? "corriendo" : "en espera";
+  } catch (e) { /* silent */ }
+}
+
+async function refrescarSilencioso() {
+  if (state.ocupado) return;
+  try {
+    const res = await fetch("/api/ofertas?estado=" + encodeURIComponent(state.filtro));
+    const datos = await res.json();
+    if (!res.ok) return;
+    const nuevos = datos.ofertas || [];
+    const firma = (arr) => arr.map((o) => `${o.id}:${o.estado}:${o.score}`).join("|");
+    if (firma(nuevos) !== firma(state.ofertas)) {
+      state.ofertas = nuevos;
+      pintarLista();
+    }
+  } catch (e) { /* silent */ }
+}
+
+pollLog();
+setInterval(pollLog, 3000);
+setInterval(refrescarSilencioso, 5000);
+
+/* ---------------------------- Search now ---------------------------- */
+
+const btnBuscar = $("btn-buscar");
+
+function pintarBotonBuscar(activo) {
+  if (!btnBuscar) return;
+  btnBuscar.dataset.activo = activo ? "1" : "0";
+  btnBuscar.disabled = !!activo;
+  btnBuscar.classList.toggle("buscando", !!activo);
+  const texto = activo ? tr("btn_buscando") : tr("btn_buscar");
+  const etiqueta = btnBuscar.querySelector("[data-i18n]");
+  if (etiqueta) etiqueta.textContent = texto;
+  btnBuscar.title = texto;
+  btnBuscar.setAttribute("aria-label", texto);
+}
+
+async function consultarBusqueda() {
+  try {
+    const res = await fetch("/api/buscar/estado");
+    if (!res.ok) return;
+    const datos = await res.json();
+    pintarBotonBuscar(!!datos.activo);
+  } catch (e) { /* silent */ }
+}
+
+if (btnBuscar) {
+  btnBuscar.addEventListener("click", async () => {
+    if (btnBuscar.disabled) return;
+    btnBuscar.disabled = true;
+    try {
+      const res = await fetch("/api/buscar", { method: "POST" });
+      const datos = await res.json().catch(() => ({}));
+      if (res.status === 202) {
+        aviso(tr("buscar_lanzada"), "ok");
+        pintarBotonBuscar(true);
+      } else if (res.status === 409) {
+        aviso(tr("buscar_en_curso"), "info");
+        pintarBotonBuscar(true);
+      } else {
+        aviso(tr("buscar_error") + " " + (datos.detalle || datos.error || res.statusText), "error");
+        pintarBotonBuscar(false);
+      }
+    } catch (err) {
+      aviso(tr("buscar_error") + " " + err.message, "error");
+      pintarBotonBuscar(false);
+    }
+  });
+}
+
+pintarBotonBuscar(false);
+consultarBusqueda();
+setInterval(consultarBusqueda, 10000);
+</script>
+</body>
+</html>
