@@ -66,6 +66,7 @@ Designed to run on a small home server or your own laptop with Docker: three con
     <li><a href="#contributing">Contributing</a></li>
     <li><a href="#license">License</a></li>
     <li><a href="#contact">Contact</a></li>
+    <li><a href="#support">Support</a></li>
     <li><a href="#legal-notice">Legal notice</a></li>
   </ol>
 </details>
@@ -561,6 +562,15 @@ Distributed under the MIT License. See [`LICENSE`](LICENSE) for more information
 Project link: [https://github.com/Kauman189/jobautomat](https://github.com/Kauman189/jobautomat)
 
 Issues and feature requests: [https://github.com/Kauman189/jobautomat/issues](https://github.com/Kauman189/jobautomat/issues)
+
+<p align="right">(<a href="#jobautomat">back to top</a>)</p>
+
+<!-- SUPPORT -->
+## Support
+
+If this project saves you time in your job search, a coffee keeps it going:
+
+[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/kauman189)
 
 <p align="right">(<a href="#jobautomat">back to top</a>)</p>
 
