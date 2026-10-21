@@ -116,7 +116,7 @@ log = logging.getLogger(__name__)
 # --------------------------------------------------------------------------- #
 
 TIMEOUT_HTTP = 20  # seconds per request
-MAX_HILOS = 8  # max concurrent requests (courtesy towards the APIs)
+MAX_HILOS = 1  # serial requests: lowest CPU on small hosts (slower, but lighter)
 
 # Headers: identify as a regular HTTP client. No cookies, no auth.
 CABECERAS = {

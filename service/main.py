@@ -108,10 +108,10 @@ ORIGEN_LINKEDIN = "linkedin"
 ESTADO_PARA_CONFIRMAR = "para_confirmar"
 
 # Number of threads scoring offers in parallel. Scoring is an LLM call (the
-# bottleneck): with 4 threads a sweep is ~4x faster at the same token cost.
-# Do not raise it much: DeepSeek limits concurrent requests and SQLite
-# tolerates few simultaneous writers.
-HILOS_SCORING = 4
+# bottleneck). 1 keeps a sweep fully serial (lowest CPU/RAM on small hosts);
+# raise it only on beefier machines, and never far: DeepSeek limits concurrent
+# requests and SQLite tolerates few simultaneous writers.
+HILOS_SCORING = 1
 
 # The LinkedIn browser (patchright) is not safe to use from several threads at
 # once; this lock serializes detail requests.
