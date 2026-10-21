@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
-# entrypoint.sh — prepara el entorno y despacha el comando.
+# entrypoint.sh — prepares the environment and dispatches the command.
 #
-# Modos:
-#   scheduler        (por defecto) arranca el planificador nocturno.
-#   once             ejecuta el pipeline una vez en modo cron (force-run).
-#   <comando...>     ejecuta ese comando tal cual dentro de /app/service,
-#                    p. ej.  python main.py --modo manual
+# Modes:
+#   scheduler        (default) starts the nightly scheduler.
+#   once             runs the pipeline once in cron mode (force-run).
+#   <command...>     runs that command as-is inside /app/service,
+#                    e.g.  python main.py --modo manual
 #
-# Responsabilidades:
-#   1. Materializar /app/service/.env a partir del .env montado en sólo
-#      lectura, forzando DB_PATH / PERFIL_PATH al volumen /data para que el
-#      estado sobreviva al contenedor.
-#   2. Sembrar el volumen de navegadores de patchright la primera vez.
-#   3. Comprobar permisos de escritura en /data.
+# Responsibilities:
+#   1. Materialize /app/service/.env from the read-only mounted .env,
+#      forcing DB_PATH / PERFIL_PATH to the /data volume so the state
+#      survives the container.
+#   2. Seed the patchright browser volume the first time.
+#   3. Check write permissions on /data.
 set -euo pipefail
 
 SERVICE_DIR=/app/service
@@ -21,7 +21,7 @@ ENV_DEST="${SERVICE_DIR}/.env"
 log() { printf '%s entrypoint: %s\n' "$(date -Is)" "$*" >&2; }
 
 # --------------------------------------------------------------------------
-# 1. .env del contenedor
+# 1. Container .env
 # --------------------------------------------------------------------------
 preparar_env() {
     local origen="${JOB_ENV_FILE:-/run/jobautomat/.env}"
@@ -32,9 +32,9 @@ preparar_env() {
         return 0
     fi
 
-    # Copia el .env quitando las rutas que gestiona el contenedor: DB_PATH,
-    # PERFIL_PATH y cualquier *_SESSION_PATH apuntan al volumen /data.
-    # (`|| true` porque grep devuelve 1 si no queda ninguna línea.)
+    # Copies the .env dropping the paths managed by the container: DB_PATH,
+    # PERFIL_PATH and any *_SESSION_PATH point to the /data volume.
+    # (`|| true` because grep returns 1 when no line is left.)
     {
         grep -v -E '^[[:space:]]*(DB_PATH|PERFIL_PATH|[A-Z_]*SESSION[A-Z_]*PATH)[[:space:]]*=' \
             "$origen" || true
@@ -47,8 +47,8 @@ preparar_env() {
     chmod 600 "$ENV_DEST" 2>/dev/null || true
     log "configuración materializada en ${ENV_DEST} (origen: ${origen})"
 
-    # Aviso temprano si faltan secretos (config.py fallará igual, pero con
-    # este mensaje se ve antes en los logs del scheduler).
+    # Early warning if secrets are missing (config.py will fail anyway, but
+    # this message shows up earlier in the scheduler logs).
     local faltan=()
     grep -qE '^[[:space:]]*DEEPSEEK_API_KEY[[:space:]]*=[[:space:]]*[^[:space:]]' \
         "$ENV_DEST" || faltan+=("DEEPSEEK_API_KEY")
@@ -60,11 +60,11 @@ preparar_env() {
 }
 
 # --------------------------------------------------------------------------
-# 2. Navegadores de patchright en el volumen persistente
+# 2. patchright browsers on the persistent volume
 # --------------------------------------------------------------------------
 sembrar_navegadores() {
     local destino="${PLAYWRIGHT_BROWSERS_PATH:-/ms-playwright}"
-    [ "$destino" = "/opt/pw-browsers" ] && return 0   # sin volumen: usa la imagen
+    [ "$destino" = "/opt/pw-browsers" ] && return 0   # no volume: use the image
 
     if [ -d "$destino" ] && [ -z "$(ls -A "$destino" 2>/dev/null)" ]; then
         if [ -d /opt/pw-browsers ]; then
@@ -77,7 +77,7 @@ sembrar_navegadores() {
 }
 
 # --------------------------------------------------------------------------
-# 3. Permisos de /data
+# 3. /data permissions
 # --------------------------------------------------------------------------
 comprobar_datos() {
     local datos="${DATA_DIR:-/data}"
@@ -95,7 +95,7 @@ sembrar_navegadores
 comprobar_datos
 
 # --------------------------------------------------------------------------
-# Despacho
+# Dispatch
 # --------------------------------------------------------------------------
 case "${1:-scheduler}" in
     scheduler|serve)

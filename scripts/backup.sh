@@ -1,31 +1,32 @@
 #!/usr/bin/env bash
 #
-# backup.sh — copia de seguridad del estado persistente de jobautomat.
+# backup.sh — backup of jobautomat's persistent state.
 #
-# Empaqueta en un único .tar.gz con marca de tiempo lo que hay en ./data:
+# Packs everything under ./data into a single timestamped .tar.gz:
 #
-#   state.db               oportunidades, scores y materiales generados
-#   perfil.json            perfil del candidato
-#   settings.json          overrides del panel (puede no existir)
-#   linkedin_session.json  cookies de LinkedIn (¡datos sensibles!)
-#   candidaturas/          packs CV/carta ya generados
-#   logs/                  log del pipeline
+#   state.db               opportunities, scores and generated material
+#   perfil.json            candidate profile
+#   settings.json          panel overrides (may not exist)
+#   linkedin_session.json  LinkedIn cookies (sensitive data!)
+#   candidaturas/          CV/cover packs already generated
+#   logs/                  pipeline log
 #
-# Uso:
-#   scripts/backup.sh                       # escribe ./backups/jobautomat-<fecha>.tar.gz
+# Usage:
+#   scripts/backup.sh                       # writes ./backups/jobautomat-<date>.tar.gz
 #   DATA_DIR=/srv/jobautomat/data scripts/backup.sh
 #   BACKUP_DIR=/mnt/nas/jobautomat scripts/backup.sh
 #
-# Notas:
-#   - Si `sqlite3` está disponible, `state.db` se copia con `.backup`, que da
-#     una instantánea consistente aunque el planificador esté escribiendo.
-#     Sin él se copia el fichero (y su -wal/-shm) tal cual: para una copia
-#     garantizada, para el servicio antes (`docker compose stop app bot web`).
-#   - Los avisos de elementos ausentes no abortan: un `data/` recién creado no
-#     tiene `settings.json` ni `logs/` y aun así merece copia.
-#   - `backups/` no está en .gitignore; si versionas el estado, exclúyelo.
+# Notes:
+#   - If `sqlite3` is available, `state.db` is copied with `.backup`, which
+#     yields a consistent snapshot even while the scheduler is writing.
+#     Without it the file (and its -wal/-shm) is copied as-is: for a guaranteed
+#     copy, stop the service first (`docker compose stop app bot web`).
+#   - Warnings about missing items do not abort: a freshly created `data/` has
+#     no `settings.json` or `logs/` and is still worth backing up.
+#   - `backups/` is not in .gitignore; if you version the state, exclude it.
 #
-# Salida: 0 si el archivo se creó, 1 si no había nada que copiar o falló algo.
+# Exit: 0 if the archive was created, 1 if there was nothing to copy or
+# something failed.
 
 set -euo pipefail
 
@@ -63,7 +64,7 @@ for item in "${ELEMENTOS[@]}"; do
   fi
 
   if [[ "$item" == "state.db" ]] && command -v sqlite3 >/dev/null 2>&1; then
-    # Instantánea consistente; si falla (BD corrupta, bloqueo), copia directa.
+    # Consistent snapshot; if it fails (corrupt DB, lock), copy the file directly.
     if sqlite3 "$origen" ".backup '$STAGE/state.db'" >/dev/null 2>&1; then
       incluidos+=("$item")
       continue

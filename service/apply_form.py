@@ -242,7 +242,7 @@ def _bloque_oferta(op: dict) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Extracción del formulario en el DOM
+# Form extraction from the DOM
 # ---------------------------------------------------------------------------
 
 # JS that walks the frame DOM and returns the visible fields. It runs in the
@@ -671,7 +671,7 @@ def analizar_formulario(url: str, headless: bool = True) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
-# Redacción de respuestas
+# Writing the answers
 # ---------------------------------------------------------------------------
 
 _SISTEMA_RESPUESTAS = """Eres un redactor de candidaturas. Escribes respuestas a las \

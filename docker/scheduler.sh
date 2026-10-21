@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
-# scheduler.sh — planificador nocturno dentro del contenedor.
+# scheduler.sh — nightly scheduler inside the container.
 #
-# Ejecuta `python main.py --modo cron` todos los días a la hora indicada por
-# CRON_HOUR:CRON_MINUTE (por defecto 02:00, hora local del contenedor = TZ).
+# Runs `python main.py --modo cron` every day at the time given by
+# CRON_HOUR:CRON_MINUTE (default 02:00, container local time = TZ).
 #
 # Variables:
-#   CRON_HOUR        hora de ejecución, 0-23            (def. 2)
-#   CRON_MINUTE      minuto de ejecución, 0-59          (def. 0)
-#   RUN_ON_START     "true" ejecuta una pasada al arrancar (def. false)
-#   JOB_LOG_PATH     archivo de log (def. /data/logs/jobautomat.log)
-#   JOB_LOG_MAX_MB   tamaño tras el cual se rota a .1     (def. 20)
+#   CRON_HOUR        run hour, 0-23                     (def. 2)
+#   CRON_MINUTE      run minute, 0-59                   (def. 0)
+#   RUN_ON_START     "true" runs one pass at startup    (def. false)
+#   JOB_LOG_PATH     log file (def. /data/logs/jobautomat.log)
+#   JOB_LOG_MAX_MB   size after which it rotates to .1  (def. 20)
 #
-# No usa el daemon cron del sistema: un bucle con `sleep` en PID 1 recibe
-# SIGTERM correctamente (docker stop) y hereda el entorno del contenedor.
+# It does not use the system cron daemon: a `sleep` loop in PID 1 receives
+# SIGTERM correctly (docker stop) and inherits the container environment.
 set -uo pipefail
 
 HORA="${CRON_HOUR:-2}"
@@ -48,7 +48,7 @@ rotar_log() {
 }
 
 ejecutar() {
-    # Evita solapar dos ejecuciones (p. ej. RUN_ON_START + llegada de la hora).
+    # Avoids overlapping two runs (e.g. RUN_ON_START + the hour arriving).
     local rc=0
     if command -v flock >/dev/null 2>&1; then
         flock -n 9 || { log "ya hay una ejecución en curso; se omite"; return 0; }
@@ -62,7 +62,7 @@ ejecutar() {
         rc=$?
         printf '===== %s fin (exit %s) =====\n' "$(date -Is)" "$rc"
     } >> "$LOG" 2>&1
-    # El log va a archivo y también a stdout para `docker logs`.
+    # The log goes to a file and also to stdout for `docker logs`.
     tail -n 40 "$LOG" 2>/dev/null >&2 || true
     log "fin de ejecución (exit $rc)"
     return 0
@@ -88,8 +88,8 @@ while true; do
     espera=$(( objetivo - ahora ))
     log "próxima ejecución: $(date -d "@${objetivo}" -Is) (en ${espera}s)"
 
-    # `sleep` en background + wait: el trap se atiende al instante con
-    # `docker stop` aunque falten horas para la siguiente ejecución.
+    # `sleep` in the background + wait: the trap is served instantly on
+    # `docker stop` even hours before the next run.
     sleep "$espera" &
     wait $! 2>/dev/null || true
 

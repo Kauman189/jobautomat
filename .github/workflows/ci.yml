@@ -3,7 +3,7 @@ name: CI
 on:
   push:
     branches: [main]
-    # Los tags v* solo se usan para publicar la imagen en GHCR (job publish).
+    # The v* tags are only used to publish the image to GHCR (publish job).
     tags: ["v*"]
   pull_request:
   workflow_dispatch:
@@ -16,7 +16,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # 1) La imagen se construye tal cual la usa docker compose (sin secretos).
+  # 1) The image is built exactly as docker compose uses it (no secrets).
   docker:
     name: Build imagen Docker
     runs-on: ubuntu-latest
@@ -32,7 +32,7 @@ jobs:
           docker image inspect jobautomat:ci --format '{{.Id}} {{.Config.User}} {{.Config.WorkingDir}}'
           docker run --rm --entrypoint python jobautomat:ci -c "import sys; print(sys.version)"
 
-  # 2) Dependencias Python + smoke de import de los módulos del servicio.
+  # 2) Python dependencies + import smoke test of the service modules.
   python:
     name: Smoke de import (Python 3.12)
     runs-on: ubuntu-latest
@@ -84,7 +84,7 @@ jobs:
               print("import ok:", nombre)
           PY
 
-  # 3) Lint: ruff (reglas y formato de pyproject.toml) + todo service/ compila.
+  # 3) Lint: ruff (rules and formatting from pyproject.toml) + all of service/ compiles.
   lint:
     name: Ruff + py_compile
     runs-on: ubuntu-latest
@@ -115,9 +115,9 @@ jobs:
             | xargs -0 python -m py_compile
           echo "Todos los módulos de service/ compilan."
 
-  # 4) Tests con pytest + cobertura. Dependencias en requirements-dev.txt
-  #    (pytest, flask, ruff, coverage). El umbral (11 %) está aquí y en
-  #    pyproject.toml se define el alcance ([tool.coverage.*]).
+  # 4) Tests with pytest + coverage. Dependencies in requirements-dev.txt
+  #    (pytest, flask, ruff, coverage). The threshold (11 %) lives here and
+  #    pyproject.toml defines the scope ([tool.coverage.*]).
   test:
     name: Tests (pytest + coverage)
     runs-on: ubuntu-latest
@@ -146,9 +146,9 @@ jobs:
           PYTHONPATH: service
         run: coverage report --fail-under=11
 
-  # 5) Publicación de la imagen multi-arch en GHCR.
-  #    Solo en push de tags v* y en ejecución manual (workflow_dispatch):
-  #    nunca en los pushes normales a main, para no gastar minutos de CI.
+  # 5) Publishing the multi-arch image to GHCR.
+  #    Only on push of v* tags and on manual runs (workflow_dispatch):
+  #    never on regular pushes to main, to avoid burning CI minutes.
   publish:
     name: Publicar imagen en GHCR (amd64+arm64)
     runs-on: ubuntu-latest
@@ -181,8 +181,8 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ghcr.io/kauman189/jobautomat
-          # Siempre ':latest'; además ':<git tag>' (p. ej. :v1.2.0) cuando el
-          # disparador es un tag. En workflow_dispatch solo se publica :latest.
+          # Always ':latest'; plus ':<git tag>' (e.g. :v1.2.0) when the
+          # trigger is a tag. On workflow_dispatch only :latest is published.
           tags: |
             type=raw,value=latest
             type=ref,event=tag

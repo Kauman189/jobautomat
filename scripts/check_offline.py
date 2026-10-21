@@ -1,22 +1,22 @@
 #!/usr/bin/env python3
-"""scripts/check_offline.py — Verificación OFFLINE del scraper (sin red ni navegador).
+"""scripts/check_offline.py — OFFLINE check of the scraper (no network, no browser).
 
-No toca LinkedIn ni abre Chromium: simula el cliente para comprobar que el
-contrato de `search/linkedin.py` se cumple y que los errores de configuración
-salen como `LinkedInError` legible (no como traceback crudo).
+It does not touch LinkedIn nor open Chromium: it simulates the client to verify
+that the contract of `search/linkedin.py` holds and that configuration errors
+surface as a readable `LinkedInError` (not a raw traceback).
 
-Comprueba:
-  1. `from search import search_jobs, get_job_details` funciona y ambos son
-     callables con la firma esperada.
-  2. Sin archivo de sesión -> LinkedInError claro, sin lanzar el navegador.
-  3. Un storage_state con `{"cookies": [...]}` y una lista suelta de cookies
-     se aceptan igual.
-  4. Con un cliente falso: search_jobs deduplica, respeta `limit` y devuelve
-     las 4 claves; get_job_details normaliza salario/modalidad/contrato/
-     requisitos y deja en None lo que no existe.
+It checks:
+  1. `from search import search_jobs, get_job_details` works and both are
+     callables with the expected signature.
+  2. No session file -> clear LinkedInError, without launching the browser.
+  3. A storage_state with `{"cookies": [...]}` and a bare list of cookies are
+     accepted alike.
+  4. With a fake client: search_jobs deduplicates, honors `limit` and returns
+     the 4 keys; get_job_details normalizes salary/mode/contract/requirements
+     and leaves missing data as None.
 
-Uso: python scripts/check_offline.py
-Sale con 0 si todo pasa.
+Usage: python scripts/check_offline.py
+Exits 0 if everything passes.
 """
 
 from __future__ import annotations
@@ -37,7 +37,7 @@ FALLOS: list[str] = []
 
 
 def comprobar(condicion, mensaje):
-    """Registra el resultado de una comprobación."""
+    """Records the result of a single check."""
     if condicion:
         print(f"  OK   {mensaje}")
     else:
@@ -46,14 +46,14 @@ def comprobar(condicion, mensaje):
 
 
 class ClienteFalso:
-    """Doble del ClienteLinkedIn: mismos métodos, cero navegador."""
+    """Test double for ClienteLinkedIn: same methods, no browser."""
 
     def __init__(self):
         self.llamadas = []
 
     def buscar(self, query, maximo):
         self.llamadas.append(("buscar", query, maximo))
-        # Dos tarjetas repetidas a propósito (la segunda es un duplicado).
+        # Two cards repeated on purpose (the second one is a duplicate).
         return [
             {
                 "job_id": "1111111111",
@@ -78,7 +78,7 @@ class ClienteFalso:
     def abrir_oferta(self, job_id):
         self.llamadas.append(("abrir_oferta", job_id))
         if job_id == "2222222222":
-            # Oferta "pelada": todo lo opcional ausente -> None.
+            # Bare offer: every optional field missing -> None.
             return {
                 "job_id": job_id,
                 "titulo": "Senior Product Designer",
@@ -237,7 +237,7 @@ def main() -> int:
         pelada["url"].endswith("/jobs/view/2222222222/"), "url de respaldo si la página no la da"
     )
 
-    # El mismo cliente se ha usado para búsqueda y detalle (un navegador).
+    # The same client was used for both search and detail (one browser).
     tipos = [llamada[0] for llamada in falso.llamadas]
     comprobar(
         tipos.count("buscar") == 1 and tipos.count("abrir_oferta") == 2,

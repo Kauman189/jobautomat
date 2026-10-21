@@ -1,26 +1,28 @@
 #!/usr/bin/env python3
-"""scripts/export_session.py — Copia la sesión de LinkedIn a la ruta que usa el servicio.
+"""scripts/export_session.py — Copies the LinkedIn session to the path used by the service.
 
-`search/linkedin.py` espera un `storage_state` de patchright en la ruta indicada
-por `SESSION_PATH` (por defecto `data/linkedin_session.json`). Este script:
+`search/linkedin.py` expects a patchright `storage_state` at the path given by
+`SESSION_PATH` (default `data/linkedin_session.json`). This script:
 
-1. Lee la sesión que exportó `mcp-server-linkedin` (por defecto
+1. Reads the session exported by `mcp-server-linkedin` (default
    `~/.linkedin-mcp/cookies.json`).
-2. Acepta los dos formatos posibles y los normaliza:
-     * `{"cookies": [...], "origins": [...]}`  (storage_state completo)
-     * `[{...cookie...}, ...]`                 (lista suelta de cookies)
-3. Valida que haya cookies (y avisa si falta `li_at`, la de sesión).
-4. Escribe el destino con permisos 600 (contiene credenciales de sesión).
+2. Accepts both possible formats and normalizes them:
+     * `{"cookies": [...], "origins": [...]}`  (full storage_state)
+     * `[{...cookie...}, ...]`                 (bare list of cookies)
+3. Validates that there are cookies (and warns if `li_at`, the session one, is
+   missing).
+4. Writes the destination with 600 permissions (it holds session credentials).
 
-No imprime NUNCA valores de cookies: sólo recuentos y nombres de campos.
+It NEVER prints cookie values: only counts and field names.
 
-Uso
----
-    python scripts/export_session.py                  # copia con valores por defecto
+Usage
+-----
+    python scripts/export_session.py                  # copy with default values
     python scripts/export_session.py --origen RUTA --destino RUTA
     SESSION_PATH=data/otra.json python scripts/export_session.py
 
-Si el origen no existe, el script imprime cómo generarlo y sale con código 1.
+If the source does not exist, the script prints how to generate it and exits
+with code 1.
 """
 
 from __future__ import annotations
@@ -32,7 +34,7 @@ import sys
 import time
 from pathlib import Path
 
-# Rutas por defecto: la raíz del repo es el padre de scripts/.
+# Default paths: the repo root is the parent of scripts/.
 RAIZ_REPO = Path(__file__).resolve().parents[1]
 ORIGEN_DEFECTO = Path.home() / ".linkedin-mcp" / "cookies.json"
 DESTINO_DEFECTO = RAIZ_REPO / "data" / "linkedin_session.json"
@@ -67,17 +69,17 @@ data/linkedin_session.json (relativo a service/).
 
 
 def _resolver_destino(valor: str | None) -> Path:
-    """Resuelve el destino: CLI > SESSION_PATH > default, relativo a service/."""
+    """Resolves the destination: CLI > SESSION_PATH > default, relative to service/."""
     crudo = valor or os.environ.get("SESSION_PATH") or str(DESTINO_DEFECTO)
     ruta = Path(os.path.expanduser(crudo))
     if not ruta.is_absolute():
-        # SESSION_PATH se interpreta respecto a service/, igual que el módulo.
+        # SESSION_PATH is interpreted relative to service/, same as the module.
         ruta = (RAIZ_REPO / "service" / ruta).resolve()
     return ruta
 
 
 def cargar_cookies(origen: Path) -> tuple[list[dict], list[dict]]:
-    """Devuelve (cookies, origins) normalizados desde el JSON de origen."""
+    """Returns (cookies, origins) normalized from the source JSON."""
     if not origen.exists():
         print(f"ERROR: no existe el origen {origen}", file=sys.stderr)
         print(INSTRUCCIONES, file=sys.stderr)
@@ -114,7 +116,7 @@ def cargar_cookies(origen: Path) -> tuple[list[dict], list[dict]]:
 
 
 def escribir_estado(destino: Path, cookies: list[dict], origins: list[dict]) -> None:
-    """Escribe el storage_state de forma atómica y con permisos 600."""
+    """Writes the storage_state atomically and with 600 permissions."""
     destino.parent.mkdir(parents=True, exist_ok=True)
     temporal = destino.with_suffix(destino.suffix + ".tmp")
     estado = {"cookies": cookies, "origins": origins}
@@ -126,7 +128,7 @@ def escribir_estado(destino: Path, cookies: list[dict], origins: list[dict]) -> 
 
 
 def _resumen(cookies: list[dict]) -> list[str]:
-    """Datos no sensibles para el informe final."""
+    """Non-sensitive data for the final report."""
     nombres = {str(c.get("name") or "") for c in cookies}
     dominios = sorted({str(c.get("domain") or "") for c in cookies})
     lineas = [
@@ -135,7 +137,7 @@ def _resumen(cookies: list[dict]) -> list[str]:
         f"  cookie de sesión 'li_at': {'sí' if 'li_at' in nombres else 'NO'}",
     ]
 
-    # Aviso de caducidad: se compara el máximo 'expires' con ahora (epoch).
+    # Expiry warning: the maximum 'expires' is compared with now (epoch).
     caducidades = [
         float(c["expires"])
         for c in cookies

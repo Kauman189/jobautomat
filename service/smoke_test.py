@@ -13,8 +13,8 @@ import os
 import sys
 import tempfile
 
-# Asegurar que el directorio de este script (service/) esté en sys.path
-# para poder importar config, llm y db sin instalar nada.
+# Make sure this script's directory (service/) is on sys.path so config, llm
+# and db can be imported without installing anything.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import config as config_mod  # noqa: E402

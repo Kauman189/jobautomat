@@ -1,45 +1,48 @@
-# scripts/ — Herramientas CLI
+# scripts/ — CLI tools
 
 ## tracker.py
 
-CLI en Python estándar (sin dependencias externas) para gestionar el tracker de
-oportunidades en [`data/oportunidades.json`](../data/oportunidades.json).
+Pure standard-library Python CLI (no external dependencies) to manage the
+opportunity tracker in [`data/oportunidades.json`](../data/oportunidades.json).
 
-- Respeta el bloque `schema` del JSON (no lo modifica).
-- Valida el **estado** contra la lista permitida que se lee de `schema.estado`.
-- Requiere Python 3.9+ (usa `list[str]`, `dict | None`).
+- Honors the `schema` block of the JSON (does not modify it).
+- Validates the **status** against the allowed list read from `schema.estado`.
+- Requires Python 3.9+ (uses `list[str]`, `dict | None`).
 
-### Requisitos
+### Requirements
 
-Ninguno más allá de Python 3 estándar. Ejecutar desde la raíz del proyecto:
+Nothing beyond standard Python 3. Run from the project root:
 
 ```bash
 python3 scripts/tracker.py --help
 ```
 
-### Comandos
+### Commands
 
-| Comando | Descripción |
+| Command | Description |
 |---|---|
-| `add` | Crea una oportunidad nueva con datos pasados por flags. |
-| `list [--estado X]` | Lista oportunidades, con filtro opcional por estado. |
-| `set-estado <id> <estado>` | Cambia el estado (validado contra el schema). |
-| `score <id> <0-100>` | Asigna el score de compatibilidad. |
-| `nota <id> <texto>` | Fija el campo `notas` (reemplaza el valor anterior). |
-| `export [--out CSV]` | Vuelca todas las oportunidades a CSV (stdout por defecto). |
+| `add` | Creates a new opportunity from the values passed as flags. |
+| `list [--estado X]` | Lists opportunities, with an optional status filter. |
+| `set-estado <id> <estado>` | Changes the status (validated against the schema). |
+| `score <id> <0-100>` | Sets the compatibility score. |
+| `nota <id> <texto>` | Sets the `notas` field (replaces the previous value). |
+| `export [--out CSV]` | Dumps every opportunity to CSV (stdout by default). |
 
-### Estados válidos
+### Valid statuses
+
+Enum values are Spanish on purpose (they are data, not prose — do not
+translate them):
 
 `descubierta` · `filtrada` · `compatible` · `priorizada` · `cv_adaptado` ·
 `cover_lista` · `aprobacion_pendiente` · `enviada` · `respuesta` · `entrevista` ·
 `oferta` · `descartada`
 
-Fuentes: `linkedin` · `indeed` · `web`. Contratos: `laboral` · `b2b` · `desconocido`.
+Sources: `linkedin` · `indeed` · `web`. Contracts: `laboral` · `b2b` · `desconocido`.
 
-### Ejemplos
+### Examples
 
 ```bash
-# Crear una oportunidad
+# Create an opportunity
 python3 scripts/tracker.py add \
   --fuente linkedin \
   --titulo "Product Designer" \
@@ -50,28 +53,29 @@ python3 scripts/tracker.py add \
   --contrato laboral \
   --estado descubierta
 
-# Listar (todas o filtradas)
+# List (all or filtered)
 python3 scripts/tracker.py list
 python3 scripts/tracker.py list --estado priorizada
 
-# Cambiar estado y score
+# Change status and score
 python3 scripts/tracker.py set-estado <id> entrevista
 python3 scripts/tracker.py score <id> 72
 
-# Añadir una nota
-python3 scripts/tracker.py nota <id> "confirmar remoto desde España antes de aplicar"
+# Add a note
+python3 scripts/tracker.py nota <id> "confirm remote setup before applying"
 
-# Exportar a CSV
+# Export to CSV
 python3 scripts/tracker.py export --out data/oportunidades.csv
 ```
 
-### Notas de diseño
+### Design notes
 
-- Si `add` no recibe `--id`, genera uno a partir del hash de `--url`; si tampoco
-  hay URL, usa un id con marca de tiempo. Rechaza ids duplicados.
-- `score` valida el rango 0-100 en `add` y en `score`.
-- `nota` reemplaza el contenido previo de `notas`; no concatena.
-- `export` escribe `skills_match` como JSON y `remoto` como `sí/no/-`; si usas
-  `--out`, el resumen se imprime a stderr para no ensuciar el CSV.
-- Los estados, fuentes y contratos válidos se leen del bloque `schema` del JSON,
-  así que el script se mantiene sincronizado con el schema sin cambios de código.
+- If `add` does not receive `--id`, it generates one from the hash of `--url`;
+  if there is no URL either, it uses a timestamped id. Duplicate ids are
+  rejected.
+- `score` validates the 0-100 range in both `add` and `score`.
+- `nota` replaces the previous content of `notas`; it does not concatenate.
+- `export` writes `skills_match` as JSON and `remoto` as `sí/no/-`; if you use
+  `--out`, the summary is printed to stderr so the CSV stays clean.
+- Valid statuses, sources and contracts are read from the JSON `schema` block,
+  so the script stays in sync with the schema without code changes.

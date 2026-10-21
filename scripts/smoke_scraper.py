@@ -1,31 +1,31 @@
 #!/usr/bin/env python3
-"""scripts/smoke_scraper.py — Prueba EN VIVO del scraper de LinkedIn (patchright).
+"""scripts/smoke_scraper.py — LIVE test of the LinkedIn scraper (patchright).
 
-Hace exactamente el recorrido real del servicio, pero en pequeño:
+It performs exactly the service's real flow, but in miniature:
 
-    1. search_jobs(["Product Designer"], limit=3)   -> 3 ofertas
-    2. get_job_details(<job_id de la primera>)      -> detalle completo
+    1. search_jobs(["Product Designer"], limit=3)   -> 3 offers
+    2. get_job_details(<job_id of the first>)       -> full detail
 
-Comprueba que el contrato se cumple (claves presentes, tipos correctos) e
-imprime un resumen legible. NO imprime cookies, tokens ni el JSON de sesión.
+It checks that the contract holds (keys present, correct types) and prints a
+readable summary. It does NOT print cookies, tokens or the session JSON.
 
-Requisitos
-----------
+Requirements
+------------
     pip install patchright
-    patchright install chromium          # una vez por entorno/máquina
+    patchright install chromium          # once per environment/machine
 
-Antes de ejecutarlo, la sesión tiene que estar en su sitio:
+Before running it, the session must be in place:
 
-    python scripts/export_session.py     # copia ~/.linkedin-mcp/cookies.json
+    python scripts/export_session.py     # copies ~/.linkedin-mcp/cookies.json
 
-Uso
----
+Usage
+-----
     python scripts/smoke_scraper.py
-    SESSION_PATH=/ruta/sesion.json python scripts/smoke_scraper.py
-    LINKEDIN_HEADLESS=0 python scripts/smoke_scraper.py    # ver el navegador
+    SESSION_PATH=/path/session.json python scripts/smoke_scraper.py
+    LINKEDIN_HEADLESS=0 python scripts/smoke_scraper.py    # show the browser
 
-Sale con código 0 si todo cuadra y 1 si falla alguna comprobación. Tarda entre
-30 y 90 segundos (arranque de Chromium + navegación real).
+Exits with code 0 if everything lines up and 1 if any check fails. It takes
+between 30 and 90 seconds (Chromium startup + real navigation).
 """
 
 from __future__ import annotations
@@ -59,7 +59,7 @@ CLAVES_DETALLE = (
 
 
 def _recorte(texto, maximo=400):
-    """Primeras líneas de un texto, para el resumen (sin volcar la oferta entera)."""
+    """First lines of a text, for the summary (without dumping the whole offer)."""
     if not texto:
         return "(vacío)"
     plano = " ".join(str(texto).split())
@@ -83,7 +83,7 @@ def main() -> int:
 
     fallos: list[str] = []
 
-    # --- 1. Búsqueda ------------------------------------------------------ #
+    # --- 1. Search -------------------------------------------------------- #
     try:
         ofertas = search_jobs([QUERY], limit=LIMITE)
     except Exception as exc:  # noqa: BLE001
@@ -110,7 +110,7 @@ def main() -> int:
     if not ofertas[0].get("titulo"):
         fallos.append("search_jobs: la primera oferta no tiene título")
 
-    # --- 2. Detalle ------------------------------------------------------- #
+    # --- 2. Detail -------------------------------------------------------- #
     job_id = ofertas[0].get("job_id")
     print(f"\nget_job_details({job_id!r})...")
     try:
@@ -142,7 +142,7 @@ def main() -> int:
     if detalle.get("job_id") != str(job_id):
         fallos.append("get_job_details: job_id no coincide con el pedido")
 
-    # Cierre explícito del navegador compartido.
+    # Explicit shutdown of the shared browser.
     close()
 
     transcurrido = time.time() - inicio

@@ -1,48 +1,48 @@
 #!/usr/bin/env python3
-"""CLI para gestionar el tracker de oportunidades de empleo.
+"""CLI to manage the job-opportunity tracker.
 
-Gestiona ``data/oportunidades.json`` (campo ``oportunidades`` = lista de
-objetos). Respeta el bloque ``schema`` del archivo, que no se modifica, y valida
-los estados contra la lista permitida que se lee de ``schema.estado``. Solo usa
-la biblioteca estándar de Python (sin dependencias externas).
+Manages ``data/oportunidades.json`` (field ``oportunidades`` = list of
+objects). It honors the file's ``schema`` block, which is never modified, and
+validates the statuses against the allowed list read from ``schema.estado``.
+Standard library only (no external dependencies).
 
-Comandos
+Commands
 --------
 add <flags>
-    Crea una oportunidad nueva. Flags disponibles:
-        --id ID                    identificador (por defecto, hash de --url)
-        --fuente {fuentes}         obligatorio: linkedin | indeed | web
+    Creates a new opportunity. Available flags:
+        --id ID                    identifier (default: hash of --url)
+        --fuente {fuentes}         required: linkedin | indeed | web
         --url URL
-        --titulo TITULO           obligatorio
-        --empresa EMPRESA         obligatorio
-        --salario TEXTO            salario publicado (opcional)
+        --titulo TITULO           required
+        --empresa EMPRESA         required
+        --salario TEXTO            published salary (optional)
         --ubicacion TEXTO
         --remoto true|false
-        --restriccion TEXTO        restricción geográfica (opcional)
-        --aclaracion               marca restriccion_requiere_aclaracion=True
+        --restriccion TEXTO        geographic restriction (optional)
+        --aclaracion               sets restriccion_requiere_aclaracion=True
         --contrato {contratos}     laboral | b2b | desconocido (def: desconocido)
         --estado {estados}         (def: descubierta)
         --score 0-100              (def: 0)
         --notas TEXTO
 list [--estado ESTADO]
-    Lista las oportunidades; --estado filtra por estado.
+    Lists opportunities; --estado filters by status.
 set-estado <id> <estado>
-    Cambia el estado de una oportunidad. El estado se valida contra el schema.
+    Changes an opportunity's status. The status is validated against the schema.
 score <id> <0-100>
-    Asigna el score (0-100) a una oportunidad.
+    Sets the score (0-100) of an opportunity.
 nota <id> <texto>
-    Fija el campo ``notas`` de una oportunidad (reemplaza el valor anterior).
+    Sets the ``notas`` field of an opportunity (replaces the previous value).
 export [--out CSV]
-    Vuelca todas las oportunidades a CSV (stdout por defecto, o a --out).
+    Dumps every opportunity to CSV (stdout by default, or to --out).
 
-Ejemplos
+Examples
 --------
     python scripts/tracker.py add --fuente linkedin --titulo "Product Designer" \
         --empresa "Acme" --url "https://..." --remoto true --estado descubierta
     python scripts/tracker.py list --estado priorizada
     python scripts/tracker.py set-estado op123abc entrevista
     python scripts/tracker.py score op123abc 75
-    python scripts/tracker.py nota op123abc "pedir salario y remoto"
+    python scripts/tracker.py nota op123abc "ask about salary and remote work"
     python scripts/tracker.py export --out oportunidades.csv
 """
 
@@ -96,7 +96,7 @@ CAMPOS_CSV = [
 ]
 
 
-# ---------- acceso a datos ----------
+# ---------- data access ----------
 
 
 def cargar() -> dict:
@@ -115,7 +115,7 @@ def guardar(data: dict) -> None:
 
 
 def opciones_schema(data: dict, clave: str) -> list[str]:
-    """Extrae las opciones permitidas de una línea 'a | b | c' del bloque schema."""
+    """Extract the allowed options from an 'a | b | c' line in the schema block."""
     raw = data.get("schema", {}).get(clave, "")
     return [p.strip() for p in str(raw).split("|") if p.strip()]
 
@@ -146,7 +146,7 @@ def _remoto_str(v) -> str:
     return "-"
 
 
-# ---------- comandos ----------
+# ---------- commands ----------
 
 
 def cmd_add(data: dict, args) -> None:

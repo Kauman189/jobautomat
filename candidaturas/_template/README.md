@@ -1,25 +1,25 @@
-# Candidatura — {empresa} / {titulo}
+# Application — {company} / {title}
 
-- **Fuente:** {linkedin|indeed|web}
+- **Source:** {linkedin|indeed|web}
 - **URL:** {url}
-- **Salario:** {publicado / estimado}
-- **Ubicación / remoto:** {datos}
-- **Restricción geográfica:** {expresa / necesita aclaración / ninguna}
-- **Contrato:** {laboral / b2b / desconocido}
-- **Score compatibilidad:** {0-100}
+- **Salary:** {published / estimated}
+- **Location / remote:** {data}
+- **Geographic restriction:** {explicit / needs clarification / none}
+- **Contract:** {laboral / b2b / desconocido}
+- **Compatibility score:** {0-100}
 
-## Compatibilidad
-{mapeo skills anuncio vs CV/portfolio, gaps, fortalezas}
+## Compatibility
+{job-ad skills vs CV/portfolio mapping, gaps, strengths}
 
-## Requisitos de la candidatura
-{qué pide el anuncio: CV, portfolio, cover letter, formulario, etc.}
+## Application requirements
+{what the ad asks for: CV, portfolio, cover letter, form, etc.}
 
-## Estado
-- [ ] CV adaptado
+## Status
+- [ ] CV tailored
 - [ ] Cover letter
-- [ ] Aprobación usuario
-- [ ] Enviada (fecha + medio)
+- [ ] User approval
+- [ ] Sent (date + channel)
 
-## Archivos
-- cv/{empresa}-cv.pdf
-- cover/{empresa}-cover.md
+## Files
+- cv/{company}-cv.pdf
+- cover/{company}-cover.md

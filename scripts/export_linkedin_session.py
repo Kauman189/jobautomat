@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
-"""export_linkedin_session.py — Exporta la sesión de LinkedIn a storage_state.
+"""export_linkedin_session.py — Exports the LinkedIn session to storage_state.
 
-Se ejecuta **en el Mac** (con GUI) cada vez que caduca la sesión del servidor.
-Abre Chromium con ventana, deja que inicies sesión a mano (incluido 2FA) y
-guarda el ``storage_state`` que consume el buscador headless del contenedor.
+Runs **on the Mac** (with a GUI) whenever the server session expires.
+It opens a Chromium window, lets you sign in by hand (2FA included) and saves
+the ``storage_state`` consumed by the container's headless scraper.
 
-Uso:
+Usage:
     pip install patchright && patchright install chromium
     python scripts/export_linkedin_session.py
-    # ruta alternativa:
+    # alternative path:
     python scripts/export_linkedin_session.py --out /tmp/linkedin_session.json
 
-El JSON resultante (``{"cookies": [...], "origins": [...]}``) se copia al
-servidor como ``data/linkedin_session.json``.
+The resulting JSON (``{"cookies": [...], "origins": [...]}``) is copied to the
+server as ``data/linkedin_session.json``.
 """
 
 from __future__ import annotations
@@ -25,7 +25,7 @@ import sys
 URL_LOGIN = "https://www.linkedin.com/login"
 URL_FEED = "https://www.linkedin.com/feed/"
 
-# Ruta por defecto: <repo>/data/linkedin_session.json
+# Default path: <repo>/data/linkedin_session.json
 _DIR_SCRIPT = os.path.dirname(os.path.abspath(__file__))
 DESTINO_POR_DEFECTO = os.path.normpath(
     os.path.join(_DIR_SCRIPT, "..", "data", "linkedin_session.json")
@@ -33,10 +33,11 @@ DESTINO_POR_DEFECTO = os.path.normpath(
 
 
 def _lanzar(p):
-    """Lanza Chromium con ventana.
+    """Launches Chromium with a visible window.
 
-    patchright recomienda el Chrome real (``channel="chrome"``); si no está
-    instalado en el Mac, cae al Chromium que descarga ``patchright install``.
+    patchright recommends the real Chrome (``channel="chrome"``); if it is not
+    installed on the Mac, fall back to the Chromium downloaded by
+    ``patchright install``.
     """
     try:
         return p.chromium.launch(headless=False, channel="chrome")
@@ -86,7 +87,7 @@ def main() -> int:
             navegador.close()
             return 1
 
-        # Comprobación suave: si sigue en /login, la sesión no sirve.
+        # Soft check: if it is still on /login, the session is useless.
         url_actual = pagina.url
         if "/login" in url_actual or "/authwall" in url_actual:
             print(f"[!] La pestaña sigue en {url_actual}: parece que no hay sesión.")
