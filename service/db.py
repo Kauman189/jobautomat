@@ -125,7 +125,7 @@ def _conectar(path):
     # Idempotent migrations for databases created before these columns.
     for _col in ("descripcion", "justificacion"):
         try:
-            conn.execute("ALTER TABLE oportunidades ADD COLUMN %s TEXT" % _col)
+            conn.execute(f"ALTER TABLE oportunidades ADD COLUMN {_col} TEXT")
         except sqlite3.OperationalError:
             pass
     conn.row_factory = sqlite3.Row
@@ -145,9 +145,7 @@ def is_nueva(o, path=None):
     path = _resolver_path(path)
     conn = _conectar(path)
     try:
-        fila = conn.execute(
-            "SELECT 1 FROM oportunidades WHERE id = ?", (o["id"],)
-        ).fetchone()
+        fila = conn.execute("SELECT 1 FROM oportunidades WHERE id = ?", (o["id"],)).fetchone()
         return fila is None
     finally:
         conn.close()
@@ -184,7 +182,7 @@ def set_estado(id_, estado, path=None):
     import datetime
 
     path = _resolver_path(path)
-    ahora = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    ahora = datetime.datetime.now(datetime.UTC).isoformat()
     conn = _conectar(path)
     try:
         cur = conn.execute(
@@ -212,9 +210,7 @@ def listar(estado=None, path=None):
                 (estado,),
             ).fetchall()
         else:
-            filas = conn.execute(
-                "SELECT * FROM oportunidades ORDER BY created_at DESC"
-            ).fetchall()
+            filas = conn.execute("SELECT * FROM oportunidades ORDER BY created_at DESC").fetchall()
         return [_fila_a_dict(f) for f in filas]
     finally:
         conn.close()
@@ -229,9 +225,7 @@ def get(id_, path=None):
     path = _resolver_path(path)
     conn = _conectar(path)
     try:
-        fila = conn.execute(
-            "SELECT * FROM oportunidades WHERE id = ?", (id_,)
-        ).fetchone()
+        fila = conn.execute("SELECT * FROM oportunidades WHERE id = ?", (id_,)).fetchone()
         return _fila_a_dict(fila)
     finally:
         conn.close()
@@ -246,7 +240,7 @@ def guardar_materiales(id_, cover_letter, cv_adaptado, mensaje, path=None):
     import datetime
 
     path = _resolver_path(path)
-    ahora = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    ahora = datetime.datetime.now(datetime.UTC).isoformat()
     conn = _conectar(path)
     try:
         cur = conn.execute(
@@ -263,6 +257,7 @@ def guardar_materiales(id_, cover_letter, cv_adaptado, mensaje, path=None):
 # ---------------------------------------------------------------------------
 # Score cache (``score_cache`` table)
 # ---------------------------------------------------------------------------
+
 
 def get_score_cache(id_, path=None):
     """Return the cached score for ``id_``, or None if absent.
@@ -323,7 +318,7 @@ def set_score_cache(id_, score, dimensiones, path=None):
         score_int = int(round(float(score)))
     except (TypeError, ValueError):
         score_int = None
-    ahora = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    ahora = datetime.datetime.now(datetime.UTC).isoformat()
 
     conn = _conectar(path)
     try:

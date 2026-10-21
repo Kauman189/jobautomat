@@ -61,6 +61,7 @@ class TelegramError(Exception):
 # Configuration and internal helpers
 # ---------------------------------------------------------------------------
 
+
 def _config():
     """Load the configuration on every call (picks up .env changes)."""
     import config as config_mod
@@ -86,7 +87,7 @@ def _cargar_config_estricta():
     try:
         return config_mod.load_config(estricto=True)
     except RuntimeError as err:
-        print("[notify] Error de configuración: %s" % err, file=sys.stderr)
+        print(f"[notify] Error de configuración: {err}", file=sys.stderr)
         sys.exit(1)
 
 
@@ -160,7 +161,7 @@ def enviar_webhook(cfg, texto):
     except Exception as err:  # noqa: BLE001 — a webhook failure never aborts the flow.
         # Only the error type: the URL itself may carry a token.
         print(
-            "[notify] webhook fallido (%s): %s" % (type(err).__name__, err),
+            f"[notify] webhook fallido ({type(err).__name__}): {err}",
             file=sys.stderr,
         )
         return False
@@ -176,9 +177,7 @@ def _directorio_estado():
     cfg = _config()
     ruta_db = cfg.get("DB_PATH") or "state.db"
     if not os.path.isabs(ruta_db):
-        ruta_db = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), ruta_db
-        )
+        ruta_db = os.path.join(os.path.dirname(os.path.abspath(__file__)), ruta_db)
     return os.path.dirname(ruta_db) or "."
 
 
@@ -214,15 +213,11 @@ def _api(metodo, payload):
             datos = json.loads(resp.read().decode("utf-8"))
     except urllib.error.HTTPError as err:
         detalle = err.read().decode("utf-8", errors="replace")
-        raise TelegramError(
-            "HTTP %s en %s: %s" % (err.code, metodo, detalle[:300])
-        ) from err
+        raise TelegramError(f"HTTP {err.code} en {metodo}: {detalle[:300]}") from err
     except urllib.error.URLError as err:
-        raise TelegramError(
-            "Error de red en %s: %s" % (metodo, err.reason)
-        ) from err
+        raise TelegramError(f"Error de red en {metodo}: {err.reason}") from err
     except json.JSONDecodeError as err:
-        raise TelegramError("Respuesta no-JSON de %s: %s" % (metodo, err)) from err
+        raise TelegramError(f"Respuesta no-JSON de {metodo}: {err}") from err
 
     if not datos.get("ok"):
         descripcion = datos.get("description", "sin detalle")
@@ -232,9 +227,7 @@ def _api(metodo, payload):
                 " Revisa TELEGRAM_CHAT_ID y abre el bot en Telegram para"
                 " pulsar Start: un bot no puede iniciar la conversación."
             )
-        raise TelegramError(
-            "Telegram rechazó %s: %s%s" % (metodo, descripcion, pista)
-        )
+        raise TelegramError(f"Telegram rechazó {metodo}: {descripcion}{pista}")
     return datos.get("result")
 
 
@@ -251,7 +244,7 @@ def _ruta_mapa_callbacks():
 def _leer_mapa():
     """Load the token -> id map (empty dict if missing or corrupt)."""
     try:
-        with open(_ruta_mapa_callbacks(), "r", encoding="utf-8") as fh:
+        with open(_ruta_mapa_callbacks(), encoding="utf-8") as fh:
             datos = json.load(fh)
         return datos if isinstance(datos, dict) else {}
     except (OSError, ValueError):
@@ -282,7 +275,7 @@ def _token_callback(op_id, accion):
         str: the callback_data string.
     """
     identificador = str(op_id)
-    candidato = "%s%s" % (accion, identificador)
+    candidato = f"{accion}{identificador}"
     if len(candidato.encode("utf-8")) <= _MAX_CALLBACK:
         return candidato
 
@@ -292,7 +285,7 @@ def _token_callback(op_id, accion):
     mapa = _leer_mapa()
     mapa[token] = identificador
     _guardar_mapa(mapa)
-    return "%s%s" % (accion, token)
+    return f"{accion}{token}"
 
 
 def _resolver_id(token):
@@ -305,11 +298,12 @@ def _resolver_id(token):
 # Message formatting
 # ---------------------------------------------------------------------------
 
+
 def _formatear_op(op):
     """Return the HTML text of one opportunity for Telegram."""
     titulo = _escapar(op.get("titulo") or "(sin título)")
     empresa = _escapar(op.get("empresa") or "(sin empresa)")
-    lineas = ["<b>%s</b>" % titulo, empresa]
+    lineas = [f"<b>{titulo}</b>", empresa]
 
     detalles = []
     if op.get("ubicacion"):
@@ -322,25 +316,25 @@ def _formatear_op(op):
         lineas.append(" · ".join(detalles))
 
     if op.get("score") is not None:
-        lineas.append("Score: <b>%s</b>/100" % op.get("score"))
+        lineas.append("Score: <b>{}</b>/100".format(op.get("score")))
 
     motivos = [m for m in (op.get("motivos") or []) if m]
     if motivos:
         lineas.append("")
         lineas.append("<b>Encaja</b>")
         for motivo in motivos[:3]:
-            lineas.append("• %s" % _escapar(motivo))
+            lineas.append(f"• {_escapar(motivo)}")
 
     gaps = [g for g in (op.get("gaps") or []) if g]
     if gaps:
         lineas.append("")
         lineas.append("<b>Gaps</b>")
         for gap in gaps[:3]:
-            lineas.append("• %s" % _escapar(gap))
+            lineas.append(f"• {_escapar(gap)}")
 
     if op.get("url"):
         lineas.append("")
-        lineas.append('<a href="%s">Ver oferta</a>' % html.escape(str(op["url"]), quote=True))
+        lineas.append('<a href="{}">Ver oferta</a>'.format(html.escape(str(op["url"]), quote=True)))
 
     texto = "\n".join(lineas)
     # Telegram truncates messages at 4096 characters.
@@ -361,11 +355,11 @@ def _texto_plano_op(op):
     if detalles:
         lineas.append(" · ".join(detalles))
     if op.get("score") is not None:
-        lineas.append("Score: %s/100" % op.get("score"))
+        lineas.append("Score: {}/100".format(op.get("score")))
     for etiqueta, clave in (("Encaja", "motivos"), ("Gaps", "gaps")):
         valores = [str(v) for v in (op.get(clave) or []) if v]
         if valores:
-            lineas.append("%s: %s" % (etiqueta, " | ".join(valores[:3])))
+            lineas.append("{}: {}".format(etiqueta, " | ".join(valores[:3])))
     if op.get("url"):
         lineas.append(str(op["url"]))
     return "\n".join(lineas)
@@ -469,10 +463,7 @@ def enviar_resumen(ops):
             _api("sendMessage", {"chat_id": chat_id, "text": texto})
         return None
 
-    cabecera = "Jobautomat — %d oferta%s para confirmar" % (
-        len(ops),
-        "" if len(ops) == 1 else "s",
-    )
+    cabecera = f"Jobautomat — {len(ops)} oferta{'' if len(ops) == 1 else 's'} para confirmar"
 
     bloques = [cabecera, ""]
     for op in ops:
@@ -516,13 +507,14 @@ def enviar_aviso(texto):
     try:
         _api("sendMessage", {"chat_id": cfg["TELEGRAM_CHAT_ID"], "text": texto})
     except TelegramError as err:
-        print("[notify] aviso no enviado: %s" % err, file=sys.stderr)
+        print(f"[notify] aviso no enviado: {err}", file=sys.stderr)
     return None
 
 
 # ---------------------------------------------------------------------------
 # Bot long-polling
 # ---------------------------------------------------------------------------
+
 
 def _ruta_offset():
     """File where the ``getUpdates`` offset is persisted."""
@@ -532,7 +524,7 @@ def _ruta_offset():
 def _leer_offset():
     """Return the stored offset (0 if missing or corrupt)."""
     try:
-        with open(_ruta_offset(), "r", encoding="utf-8") as fh:
+        with open(_ruta_offset(), encoding="utf-8") as fh:
             datos = json.load(fh)
         return int(datos.get("offset", 0))
     except (OSError, ValueError, TypeError, AttributeError):
@@ -575,7 +567,7 @@ def _procesar_callback(callback):
             )
         return None
 
-    op_id = _resolver_id(datos[len(accion):])
+    op_id = _resolver_id(datos[len(accion) :])
     try:
         actualizada = db.set_estado(op_id, estado)
     except Exception as err:  # noqa: BLE001 — the user is told about it.
@@ -588,14 +580,14 @@ def _procesar_callback(callback):
                     "show_alert": True,
                 },
             )
-        raise TelegramError("No se pudo actualizar %s: %s" % (op_id, err)) from err
+        raise TelegramError(f"No se pudo actualizar {op_id}: {err}") from err
 
     if not actualizada:
         texto = "La oferta ya no existe en la base."
     elif estado == ESTADO_APROBADA:
         texto = "Aprobada — preparando tu pack de candidatura…"
     else:
-        texto = "%s: %s" % (etiqueta, op_id)
+        texto = f"{etiqueta}: {op_id}"
 
     if callback_id:
         _api(
@@ -636,26 +628,21 @@ def _procesar_callback(callback):
                         "sendMessage",
                         {
                             "chat_id": chat_id,
-                            "text": "❌ No pude preparar los materiales: %s"
-                            % type(err).__name__,
+                            "text": f"❌ No pude preparar los materiales: {type(err).__name__}",
                         },
                     )
                 except TelegramError:
                     pass
-                print("[notify] pack fallido para %s: %s" % (op_id, err))
+                print(f"[notify] pack fallido para {op_id}: {err}")
 
             # Answers to the form questions (paste-ready), separately.
             try:
                 _enviar_respuestas_formulario(op, chat_id)
             except Exception as err:  # noqa: BLE001
-                print(
-                    "[notify] respuestas de formulario fallidas para %s: %s"
-                    % (op_id, err)
-                )
+                print(f"[notify] respuestas de formulario fallidas para {op_id}: {err}")
 
     print(
-        "[notify] %s %s (%s)"
-        % (
+        "[notify] {} {} ({})".format(
             etiqueta.lower(),
             op_id,
             datetime.datetime.now().isoformat(timespec="seconds"),
@@ -667,6 +654,7 @@ def _procesar_callback(callback):
 # ---------------------------------------------------------------------------
 # Application pack (on approval)
 # ---------------------------------------------------------------------------
+
 
 def _cargar_perfil():
     """Load ``data/perfil.json`` (same path resolution as ``main.py``).
@@ -683,10 +671,8 @@ def _cargar_perfil():
     cfg = config_mod.load_config()
     ruta = cfg.get("PERFIL_PATH") or "../data/perfil.json"
     if not os.path.isabs(ruta):
-        ruta = os.path.normpath(
-            os.path.join(os.path.dirname(os.path.abspath(__file__)), ruta)
-        )
-    with open(ruta, "r", encoding="utf-8") as fh:
+        ruta = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ruta))
+    with open(ruta, encoding="utf-8") as fh:
         return json.load(fh)
 
 
@@ -713,7 +699,7 @@ def _api_documento(chat_id, ruta, caption=""):
         raise TelegramError("Falta TELEGRAM_BOT_TOKEN en la configuración.")
 
     url = _API_BASE.format(token=token, metodo="sendDocument")
-    boundary = "----jobautomat%s" % int(time.time() * 1000)
+    boundary = f"----jobautomat{int(time.time() * 1000)}"
 
     with open(ruta, "rb") as fh:
         contenido = fh.read()
@@ -727,10 +713,8 @@ def _api_documento(chat_id, ruta, caption=""):
 
     def _campo(nombre_campo, valor):
         return (
-            ("--%s\r\n" % boundary).encode("utf-8")
-            + (
-                'Content-Disposition: form-data; name="%s"\r\n\r\n' % nombre_campo
-            ).encode("utf-8")
+            (f"--{boundary}\r\n").encode()
+            + (f'Content-Disposition: form-data; name="{nombre_campo}"\r\n\r\n').encode()
             + str(valor).encode("utf-8")
             + b"\r\n"
         )
@@ -738,21 +722,20 @@ def _api_documento(chat_id, ruta, caption=""):
     cuerpo = (
         _campo("chat_id", chat_id)
         + _campo("caption", caption)
-        + ("--%s\r\n" % boundary).encode("utf-8")
-        + (
-            'Content-Disposition: form-data; name="document"; '
-            'filename="%s"\r\n' % nombre
-        ).encode("utf-8")
-        + b"Content-Type: " + content_type.encode("utf-8") + b"\r\n\r\n"
+        + (f"--{boundary}\r\n").encode()
+        + (f'Content-Disposition: form-data; name="document"; filename="{nombre}"\r\n').encode()
+        + b"Content-Type: "
+        + content_type.encode("utf-8")
+        + b"\r\n\r\n"
         + contenido
         + b"\r\n"
-        + ("--%s--\r\n" % boundary).encode("utf-8")
+        + (f"--{boundary}--\r\n").encode()
     )
 
     req = urllib.request.Request(
         url,
         data=cuerpo,
-        headers={"Content-Type": "multipart/form-data; boundary=%s" % boundary},
+        headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
         method="POST",
     )
     try:
@@ -760,18 +743,15 @@ def _api_documento(chat_id, ruta, caption=""):
             datos = json.loads(resp.read().decode("utf-8"))
     except urllib.error.HTTPError as err:
         detalle = err.read().decode("utf-8", errors="replace")
-        raise TelegramError(
-            "HTTP %s en sendDocument: %s" % (err.code, detalle[:300])
-        ) from err
+        raise TelegramError(f"HTTP {err.code} en sendDocument: {detalle[:300]}") from err
     except urllib.error.URLError as err:
-        raise TelegramError("Error de red en sendDocument: %s" % err.reason) from err
+        raise TelegramError(f"Error de red en sendDocument: {err.reason}") from err
     except json.JSONDecodeError as err:
-        raise TelegramError("Respuesta no-JSON de sendDocument: %s" % err) from err
+        raise TelegramError(f"Respuesta no-JSON de sendDocument: {err}") from err
 
     if not datos.get("ok"):
         raise TelegramError(
-            "Telegram rechazó sendDocument: %s"
-            % datos.get("description", "sin detalle")
+            "Telegram rechazó sendDocument: {}".format(datos.get("description", "sin detalle"))
         )
     return datos.get("result")
 
@@ -800,7 +780,7 @@ def _enviar_pack(op, chat_id):
         try:
             return func(op, perfil)
         except Exception as err:  # noqa: BLE001 — one document does not sink the rest.
-            print("[notify] generación fallida (%s): %s" % (func.__name__, err))
+            print(f"[notify] generación fallida ({func.__name__}): {err}")
             return ""
 
     cover = op.get("cover_letter") or _gen(generate_mod.generar_cover_letter)
@@ -810,10 +790,10 @@ def _enviar_pack(op, chat_id):
     try:
         db.guardar_materiales(op["id"], cover, cv, mensaje)
     except Exception as err:  # noqa: BLE001 — persistence is secondary.
-        print("[notify] no se guardaron los materiales de %s: %s" % (op["id"], err))
+        print("[notify] no se guardaron los materiales de {}: {}".format(op["id"], err))
 
     lineas = [
-        "✅ <b>Aprobada: %s</b>" % _escapar(op.get("titulo")),
+        "✅ <b>Aprobada: {}</b>".format(_escapar(op.get("titulo"))),
         _escapar(op.get("empresa")),
         "",
     ]
@@ -827,8 +807,7 @@ def _enviar_pack(op, chat_id):
     if op.get("url"):
         lineas.append("")
         lineas.append(
-            '<a href="%s">🔗 Aplicar aquí</a>'
-            % html.escape(str(op["url"]), quote=True)
+            '<a href="{}">🔗 Aplicar aquí</a>'.format(html.escape(str(op["url"]), quote=True))
         )
     _api(
         "sendMessage",
@@ -849,7 +828,7 @@ def _enviar_pack(op, chat_id):
             with open(cover_txt, "w", encoding="utf-8") as fh:
                 fh.write(cover)
         except Exception as err:  # noqa: BLE001 — the .txt file is a bonus.
-            print("[notify] no se escribió cover.txt: %s" % err)
+            print(f"[notify] no se escribió cover.txt: {err}")
             cover_txt = None
 
     for ruta, nombre in (
@@ -866,7 +845,7 @@ def _enviar_pack(op, chat_id):
                         "sendMessage",
                         {
                             "chat_id": chat_id,
-                            "text": "No pude adjuntar %s: %s" % (nombre, err),
+                            "text": f"No pude adjuntar {nombre}: {err}",
                         },
                     )
                 except TelegramError:
@@ -895,13 +874,13 @@ def _enviar_respuestas_formulario(op, chat_id):
     try:
         import apply_form as af
     except Exception as err:  # noqa: BLE001
-        print("[notify] apply_form no disponible: %s" % err)
+        print(f"[notify] apply_form no disponible: {err}")
         return
 
     try:
         formulario = af.analizar_formulario(url)
     except Exception as err:  # noqa: BLE001
-        print("[notify] análisis de formulario fallido para %s: %s" % (op["id"], err))
+        print("[notify] análisis de formulario fallido para {}: {}".format(op["id"], err))
         return
 
     if not formulario:
@@ -911,7 +890,7 @@ def _enviar_respuestas_formulario(op, chat_id):
     try:
         respuestas = af.redactar_respuestas(formulario, perfil, op)
     except Exception as err:  # noqa: BLE001
-        print("[notify] redacción de respuestas fallida: %s" % err)
+        print(f"[notify] redacción de respuestas fallida: {err}")
         return
 
     if not respuestas:
@@ -932,14 +911,12 @@ def _enviar_respuestas_formulario(op, chat_id):
     for campo in formulario:
         clave = (campo.get("nombre") or campo.get("pregunta") or "").strip()
         if clave:
-            pregunta_de[clave] = (
-                campo.get("pregunta") or campo.get("etiqueta") or ""
-            ).strip()
+            pregunta_de[clave] = (campo.get("pregunta") or campo.get("etiqueta") or "").strip()
 
     lineas = ["📋 <b>Respuestas para el formulario</b> (pégalas tú):", ""]
     for clave, respuesta in respuestas.items():
         pregunta = pregunta_de.get(clave) or clave
-        lineas.append("<b>%s</b>" % _escapar(pregunta))
+        lineas.append(f"<b>{_escapar(pregunta)}</b>")
         lineas.append(_escapar(respuesta))
         lineas.append("")
     try:
@@ -953,7 +930,7 @@ def _enviar_respuestas_formulario(op, chat_id):
             },
         )
     except TelegramError as err:
-        print("[notify] no se enviaron las respuestas: %s" % err)
+        print(f"[notify] no se enviaron las respuestas: {err}")
 
 
 def run_bot(poll_timeout=25):
@@ -975,7 +952,7 @@ def run_bot(poll_timeout=25):
     """
     _cargar_config_estricta()
     offset = _leer_offset()
-    print("[notify] bot a la escucha (offset=%s)" % offset)
+    print(f"[notify] bot a la escucha (offset={offset})")
 
     while True:
         try:
@@ -988,7 +965,7 @@ def run_bot(poll_timeout=25):
                 },
             )
         except TelegramError as err:
-            print("[notify] error de polling: %s (reintento en 5s)" % err)
+            print(f"[notify] error de polling: {err} (reintento en 5s)")
             time.sleep(5)
             continue
 
@@ -1004,7 +981,7 @@ def run_bot(poll_timeout=25):
             try:
                 _procesar_callback(callback)
             except TelegramError as err:
-                print("[notify] callback fallido: %s" % err)
+                print(f"[notify] callback fallido: {err}")
 
 
 if __name__ == "__main__":

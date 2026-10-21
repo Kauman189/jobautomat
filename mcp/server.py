@@ -76,7 +76,7 @@ def _url(path):
     Returns:
         The full URL.
     """
-    return "%s%s" % (BASE_URL, path)
+    return f"{BASE_URL}{path}"
 
 
 def _quote(value):
@@ -111,10 +111,8 @@ def _request(path, method="GET", payload=None):
         data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         headers["Content-Type"] = "application/json"
     if AUTH_PASSWORD:
-        token = base64.b64encode(
-            ("%s:%s" % (AUTH_USER, AUTH_PASSWORD)).encode("utf-8")
-        ).decode("ascii")
-        headers["Authorization"] = "Basic %s" % token
+        token = base64.b64encode((f"{AUTH_USER}:{AUTH_PASSWORD}").encode()).decode("ascii")
+        headers["Authorization"] = f"Basic {token}"
 
     request = urllib.request.Request(_url(path), data=data, headers=headers, method=method)
     try:
@@ -127,12 +125,12 @@ def _request(path, method="GET", payload=None):
         except Exception:  # noqa: BLE001 — the status alone is still useful.
             detail = ""
         raise ToolError(
-            "panel answered HTTP %s: %s" % (err.code, (detail or err.reason or "").strip()[:800])
-        )
+            f"panel answered HTTP {err.code}: {(detail or err.reason or '').strip()[:800]}"
+        ) from err
     except urllib.error.URLError as err:
-        raise ToolError("cannot reach %s: %s" % (BASE_URL, err.reason))
+        raise ToolError(f"cannot reach {BASE_URL}: {err.reason}") from err
     except Exception as err:  # noqa: BLE001 — surface any transport problem.
-        raise ToolError("request failed: %s" % err)
+        raise ToolError(f"request failed: {err}") from err
 
     try:
         return json.loads(raw)
@@ -144,6 +142,7 @@ def _request(path, method="GET", payload=None):
 # Tools
 # ---------------------------------------------------------------------------
 
+
 def _tool_listar_ofertas(args):
     """List offers filtered by state.
 
@@ -154,7 +153,7 @@ def _tool_listar_ofertas(args):
         The panel response body.
     """
     estado = str(args.get("estado") or "pendientes").strip() or "pendientes"
-    return _request("/api/ofertas?estado=%s" % _quote(estado))
+    return _request(f"/api/ofertas?estado={_quote(estado)}")
 
 
 def _tool_detalle_oferta(args):
@@ -166,7 +165,7 @@ def _tool_detalle_oferta(args):
     Returns:
         The panel response body.
     """
-    return _request("/api/oferta/%s" % _quote(args["id"]))
+    return _request("/api/oferta/{}".format(_quote(args["id"])))
 
 
 def _tool_aprobar_oferta(args):
@@ -178,7 +177,7 @@ def _tool_aprobar_oferta(args):
     Returns:
         The panel response body (cover letter, CV, message, links).
     """
-    return _request("/api/oferta/%s/aprobar" % _quote(args["id"]), method="POST", payload={})
+    return _request("/api/oferta/{}/aprobar".format(_quote(args["id"])), method="POST", payload={})
 
 
 def _tool_descartar_oferta(args):
@@ -190,7 +189,8 @@ def _tool_descartar_oferta(args):
     Returns:
         The panel response body.
     """
-    return _request("/api/oferta/%s/descartar" % _quote(args["id"]), method="POST", payload={})
+    oferta_id = _quote(args["id"])
+    return _request(f"/api/oferta/{oferta_id}/descartar", method="POST", payload={})
 
 
 def _tool_buscar_ahora(args):
@@ -271,7 +271,7 @@ def _tool_leer_log(args):
     except (TypeError, ValueError):
         n = 50
     n = max(1, min(n, 3000))
-    return _request("/api/log?n=%d" % n)
+    return _request(f"/api/log?n={n}")
 
 
 # name -> (handler, description, input schema)
@@ -405,7 +405,7 @@ def _tools_call(params):
     entry = TOOLS.get(name)
     if entry is None:
         return {
-            "content": [{"type": "text", "text": "unknown tool: %s" % name}],
+            "content": [{"type": "text", "text": f"unknown tool: {name}"}],
             "isError": True,
         }
     if not isinstance(arguments, dict):
@@ -421,12 +421,12 @@ def _tools_call(params):
         return {"content": [{"type": "text", "text": str(err)}], "isError": True}
     except KeyError as err:
         return {
-            "content": [{"type": "text", "text": "missing argument: %s" % err}],
+            "content": [{"type": "text", "text": f"missing argument: {err}"}],
             "isError": True,
         }
     except Exception as err:  # noqa: BLE001 — never kill the server on one tool.
         return {
-            "content": [{"type": "text", "text": "tool failed: %s" % err}],
+            "content": [{"type": "text", "text": f"tool failed: {err}"}],
             "isError": True,
         }
 
@@ -476,7 +476,7 @@ def _handle(message):
     return {
         "jsonrpc": "2.0",
         "id": msg_id,
-        "error": {"code": -32601, "message": "method not found: %s" % method},
+        "error": {"code": -32601, "message": f"method not found: {method}"},
     }
 
 
@@ -499,18 +499,22 @@ def main():
         try:
             message = json.loads(line)
         except ValueError:
-            _send({
-                "jsonrpc": "2.0",
-                "id": None,
-                "error": {"code": -32700, "message": "parse error"},
-            })
+            _send(
+                {
+                    "jsonrpc": "2.0",
+                    "id": None,
+                    "error": {"code": -32700, "message": "parse error"},
+                }
+            )
             continue
         if not isinstance(message, dict):
-            _send({
-                "jsonrpc": "2.0",
-                "id": None,
-                "error": {"code": -32600, "message": "invalid request"},
-            })
+            _send(
+                {
+                    "jsonrpc": "2.0",
+                    "id": None,
+                    "error": {"code": -32600, "message": "invalid request"},
+                }
+            )
             continue
         response = _handle(message)
         if response is not None:

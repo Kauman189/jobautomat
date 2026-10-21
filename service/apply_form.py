@@ -53,7 +53,8 @@ import os
 import re
 import sys
 import unicodedata
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from collections.abc import Iterable
+from typing import Any
 
 import llm
 
@@ -61,7 +62,9 @@ log = logging.getLogger("jobautomat.apply_form")
 
 # Default profile path, relative to service/ (the .env may override it with
 # PERFIL_PATH).
-_PERFIL_POR_DEFECTO = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data", "perfil.json")
+_PERFIL_POR_DEFECTO = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "..", "data", "perfil.json"
+)
 
 # Default navigation/load timeout (ms).
 _TIMEOUT_MS = 45000
@@ -93,6 +96,7 @@ _SELECTOR_ENVIO = (
 # Utilidades de texto
 # ---------------------------------------------------------------------------
 
+
 def _sin_acentos(texto: str) -> str:
     """Return ``texto`` lowercased and without diacritics, for comparison."""
     texto = unicodedata.normalize("NFKD", texto or "")
@@ -104,7 +108,8 @@ def _sin_acentos(texto: str) -> str:
 # Perfil
 # ---------------------------------------------------------------------------
 
-def cargar_perfil(ruta: Optional[str] = None) -> dict:
+
+def cargar_perfil(ruta: str | None = None) -> dict:
     """Load ``data/perfil.json`` (or the given path) and return it as a dict.
 
     If ``ruta`` is None, ``PERFIL_PATH`` from the .env is tried and, if
@@ -127,14 +132,14 @@ def cargar_perfil(ruta: Optional[str] = None) -> dict:
             from config import load_config
 
             ruta = load_config().get("PERFIL_PATH")
-        except Exception:  # an incomplete config (.env without keys) must not block reading the profile
+        except Exception:  # an incomplete config (.env without keys) must not block the read
             ruta = None
     if not ruta:
         ruta = _PERFIL_POR_DEFECTO
     if not os.path.isabs(ruta):
         ruta = os.path.join(os.path.dirname(os.path.abspath(__file__)), ruta)
 
-    with open(ruta, "r", encoding="utf-8") as fh:
+    with open(ruta, encoding="utf-8") as fh:
         return json.load(fh)
 
 
@@ -143,26 +148,25 @@ def _resumen_perfil(perfil: dict) -> str:
     perfil = perfil or {}
     ident = perfil.get("identity") or {}
     lineas = [
-        "NOMBRE: %s" % ident.get("nombre", ""),
-        "HEADLINE: %s" % perfil.get("headline", ""),
+        "NOMBRE: {}".format(ident.get("nombre", "")),
+        "HEADLINE: {}".format(perfil.get("headline", "")),
     ]
     if ident.get("ubicacion_cv"):
-        lineas.append("UBICACIÓN (según CV): %s" % ident["ubicacion_cv"])
+        lineas.append("UBICACIÓN (según CV): {}".format(ident["ubicacion_cv"]))
     if ident.get("linkedin"):
-        lineas.append("LINKEDIN: %s" % ident["linkedin"])
+        lineas.append("LINKEDIN: {}".format(ident["linkedin"]))
     if ident.get("portfolio"):
-        lineas.append("PORTFOLIO: %s" % ident["portfolio"])
+        lineas.append("PORTFOLIO: {}".format(ident["portfolio"]))
 
     pos = perfil.get("positioning_emphasis") or {}
     if pos.get("declaracion_principal"):
-        lineas.append("POSICIONAMIENTO: %s" % pos["declaracion_principal"])
+        lineas.append("POSICIONAMIENTO: {}".format(pos["declaracion_principal"]))
     if pos.get("matiz_liderazgo"):
-        lineas.append("MATIZ DE LIDERAZGO: %s" % pos["matiz_liderazgo"])
+        lineas.append("MATIZ DE LIDERAZGO: {}".format(pos["matiz_liderazgo"]))
 
     for exp in perfil.get("experience") or []:
         lineas.append(
-            "- %s en %s (%s, %s)"
-            % (
+            "- {} en {} ({}, {})".format(
                 exp.get("titulo_cv", ""),
                 exp.get("empresa", ""),
                 exp.get("periodo", ""),
@@ -170,27 +174,28 @@ def _resumen_perfil(perfil: dict) -> str:
             )
         )
         for bullet in (exp.get("bullets") or [])[:4]:
-            lineas.append("  · %s" % bullet)
+            lineas.append(f"  · {bullet}")
         if exp.get("nota"):
-            lineas.append("  (límite declarado: %s)" % exp["nota"])
+            lineas.append("  (límite declarado: {})".format(exp["nota"]))
 
     for proj in perfil.get("projects") or []:
         lineas.append(
-            "- Proyecto %s (%s): %s"
-            % (proj.get("nombre", ""), proj.get("rol", ""), proj.get("descripcion", ""))
+            "- Proyecto {} ({}): {}".format(
+                proj.get("nombre", ""), proj.get("rol", ""), proj.get("descripcion", "")
+            )
         )
         for bullet in (proj.get("bullets") or [])[:2]:
-            lineas.append("  · %s" % bullet)
+            lineas.append(f"  · {bullet}")
 
     for grupo, items in (perfil.get("skills") or {}).items():
-        lineas.append("SKILLS %s: %s" % (grupo, ", ".join(items)))
+        lineas.append("SKILLS {}: {}".format(grupo, ", ".join(items)))
 
     idiomas = perfil.get("languages") or {}
     if idiomas:
         lineas.append(
             "IDIOMAS: "
             + "; ".join(
-                "%s=%s" % (k, (v or {}).get("nivel") or "sin nivel acreditado")
+                "{}={}".format(k, (v or {}).get("nivel") or "sin nivel acreditado")
                 for k, v in idiomas.items()
             )
         )
@@ -198,15 +203,20 @@ def _resumen_perfil(perfil: dict) -> str:
     comp = perfil.get("compensation") or {}
     if comp.get("minimo") is not None:
         lineas.append(
-            "COMPENSACIÓN DECLARADA: mínimo %s %s (%s); objetivo %s"
-            % (comp.get("minimo"), comp.get("moneda", ""), comp.get("concepto", ""), comp.get("objetivo", ""))
+            "COMPENSACIÓN DECLARADA: mínimo {} {} ({}); objetivo {}".format(
+                comp.get("minimo"),
+                comp.get("moneda", ""),
+                comp.get("concepto", ""),
+                comp.get("objetivo", ""),
+            )
         )
 
     pendientes = {k: v for k, v in (perfil.get("pendientes") or {}).items() if v in (None, "PEND")}
     if pendientes:
         lineas.append(
-            "DATOS NO CONFIRMADOS (prohibido rellenarlos con invenciones): %s"
-            % ", ".join(sorted(pendientes))
+            "DATOS NO CONFIRMADOS (prohibido rellenarlos con invenciones): {}".format(
+                ", ".join(sorted(pendientes))
+            )
         )
     return "\n".join(lineas)
 
@@ -218,8 +228,8 @@ def _bloque_oferta(op: dict) -> str:
     if len(descripcion) > 6000:
         descripcion = descripcion[:6000] + "\n[...recortado...]"
     return (
-        "PUESTO: %s\nEMPRESA: %s\nUBICACIÓN: %s\nMODALIDAD: %s\nSALARIO: %s\nURL: %s\nDESCRIPCIÓN:\n%s"
-        % (
+        "PUESTO: {}\nEMPRESA: {}\nUBICACIÓN: {}\nMODALIDAD: {}\n"
+        "SALARIO: {}\nURL: {}\nDESCRIPCIÓN:\n{}".format(
             op.get("titulo") or op.get("title") or "(sin título)",
             op.get("empresa") or op.get("company") or "(sin empresa)",
             op.get("ubicacion") or op.get("location") or "(no indicada)",
@@ -454,7 +464,9 @@ def _abrir_navegador(pw, headless: bool):
     try:
         navegador = pw.chromium.launch(headless=headless, args=args)
     except Exception as err:  # patchright browsers not installed: fall back to the system Chrome
-        log.warning("No se pudo lanzar Chromium de patchright (%s); probando Chrome del sistema.", err)
+        log.warning(
+            "No se pudo lanzar Chromium de patchright (%s); probando Chrome del sistema.", err
+        )
         navegador = pw.chromium.launch(headless=headless, channel="chrome", args=args)
     contexto = navegador.new_context(
         locale="es-ES",
@@ -481,7 +493,7 @@ def _esperar_carga(pagina) -> None:
         pass
 
 
-def _candidatos_url(url: str) -> List[str]:
+def _candidatos_url(url: str) -> list[str]:
     """URLs to try when looking for the form.
 
     Lever publishes the offer and the form at ``/apply``; Ashby at
@@ -504,7 +516,7 @@ def _candidatos_url(url: str) -> List[str]:
     return urls
 
 
-def _extraer_de_pagina(pagina) -> List[dict]:
+def _extraer_de_pagina(pagina) -> list[dict]:
     """Walk the main page and its iframes and return the fields.
 
     Each field carries the extra key ``_frame`` (index within
@@ -517,7 +529,7 @@ def _extraer_de_pagina(pagina) -> List[dict]:
     Returns:
         List[dict]: extracted fields.
     """
-    campos: List[dict] = []
+    campos: list[dict] = []
     for idx, frame in enumerate(pagina.frames):
         try:
             crudos = frame.evaluate(_JS_EXTRAER)
@@ -544,7 +556,7 @@ def _extraer_de_pagina(pagina) -> List[dict]:
     return campos
 
 
-def _campos_publicos(campos: Iterable[dict]) -> List[dict]:
+def _campos_publicos(campos: Iterable[dict]) -> list[dict]:
     """Strip the internal keys (``_frame``) from the fields."""
     salida = []
     for c in campos:
@@ -554,7 +566,7 @@ def _campos_publicos(campos: Iterable[dict]) -> List[dict]:
     return salida
 
 
-def _analizar(url: str, headless: bool = True) -> Tuple[List[dict], dict]:
+def _analizar(url: str, headless: bool = True) -> tuple[list[dict], dict]:
     """Implementation of ``analizar_formulario`` that also returns metadata.
 
     ``meta`` includes ``url_final``, ``intentos`` and ``motivo`` (human-readable
@@ -570,7 +582,7 @@ def _analizar(url: str, headless: bool = True) -> Tuple[List[dict], dict]:
     from patchright.sync_api import sync_playwright
 
     meta = {"url_original": url, "url_final": None, "intentos": [], "motivo": None}
-    campos: List[dict] = []
+    campos: list[dict] = []
 
     with sync_playwright() as pw:
         navegador, contexto = _abrir_navegador(pw, headless)
@@ -612,10 +624,15 @@ def _diagnosticar_sin_campos(pagina) -> str:
         texto = (pagina.inner_text("body") or "").lower()[:4000]
     except Exception:
         texto = ""
-    if any(p in texto for p in ("sign in", "iniciar sesión", "log in", "create an account", "sign up")):
+    senales_acceso = ("sign in", "iniciar sesión", "log in", "create an account", "sign up")
+    if any(p in texto for p in senales_acceso):
         return "La página pide iniciar sesión o registrarse; no se analiza sin sesión."
-    if any(p in texto for p in ("verify you are human", "checking your browser", "captcha", "cloudflare")):
-        return "La página muestra un control anti-bot (Cloudflare/captcha); no se pudo leer el formulario."
+    senales_bot = ("verify you are human", "checking your browser", "captcha", "cloudflare")
+    if any(p in texto for p in senales_bot):
+        return (
+            "La página muestra un control anti-bot (Cloudflare/captcha); "
+            "no se pudo leer el formulario."
+        )
     if "no longer" in texto or "not found" in titulo or "404" in titulo:
         return "La oferta ya no está publicada (404 o retirada)."
     if any(f.url and ("greenhouse.io" in f.url or "ashbyhq.com" in f.url) for f in pagina.frames):
@@ -623,7 +640,7 @@ def _diagnosticar_sin_campos(pagina) -> str:
     return "No se encontraron campos de formulario visibles en la página."
 
 
-def analizar_formulario(url: str, headless: bool = True) -> List[dict]:
+def analizar_formulario(url: str, headless: bool = True) -> list[dict]:
     """Analyse the application form at ``url`` and return its fields.
 
     Navigates with patchright (no session, no credentials), waits for the load
@@ -644,8 +661,12 @@ def analizar_formulario(url: str, headless: bool = True) -> List[dict]:
     if not campos:
         log.warning("Sin campos en %s: %s", url, meta.get("motivo"))
     else:
-        log.info("Formulario de %s: %d campos (%d preguntas abiertas).",
-                 url, len(campos), sum(1 for c in campos if c.get("pregunta")))
+        log.info(
+            "Formulario de %s: %d campos (%d preguntas abiertas).",
+            url,
+            len(campos),
+            sum(1 for c in campos if c.get("pregunta")),
+        )
     return campos
 
 
@@ -683,7 +704,7 @@ No uses otras claves de primer nivel ni añadas notas. Una entrada por cada \
 pregunta recibida, sin omitir ninguna."""
 
 
-def _purgar_metricas(respuesta: str, fuentes: str) -> Tuple[str, List[str]]:
+def _purgar_metricas(respuesta: str, fuentes: str) -> tuple[str, list[str]]:
     """Remove sentences with metrics that do not appear in the sources.
 
     The LLM tends to "decorate" with percentages and years of experience. The
@@ -759,7 +780,7 @@ def _acortar_respuesta(texto: str, max_chars: int = 1200) -> str:
     return corte.rsplit(" ", 1)[0].rstrip(",;:") + "…"
 
 
-def _normalizar_pares(datos: Any) -> List[Tuple[str, str]]:
+def _normalizar_pares(datos: Any) -> list[tuple[str, str]]:
     """Extract ``[(campo, respuesta)]`` from the shapes the model returns.
 
     DeepSeek does not always honour the requested schema, so these are accepted:
@@ -802,8 +823,9 @@ def _normalizar_pares(datos: Any) -> List[Tuple[str, str]]:
     ]
 
 
-def redactar_respuestas(formulario: List[dict], perfil: dict, op: dict,
-                        max_preguntas: int = 8) -> Dict[str, str]:
+def redactar_respuestas(
+    formulario: list[dict], perfil: dict, op: dict, max_preguntas: int = 8
+) -> dict[str, str]:
     """Draft one answer per open question in the form.
 
     Args:
@@ -844,25 +866,21 @@ def redactar_respuestas(formulario: List[dict], perfil: dict, op: dict,
     lines = []
     for i, c in enumerate(lista, 1):
         lines.append(
-            "%d. campo=%s | tipo=%s | obligatorio=%s\n   PREGUNTA: %s"
-            % (
-                i,
-                c.get("nombre") or "(sin nombre)",
-                c.get("tipo"),
-                "sí" if c.get("requerido") else "no",
-                c.get("pregunta"),
-            )
+            f"{i}. campo={c.get('nombre') or '(sin nombre)'} | tipo={c.get('tipo')} | "
+            f"obligatorio={'sí' if c.get('requerido') else 'no'}\n"
+            f"   PREGUNTA: {c.get('pregunta')}"
         )
 
     prompt = (
         "PERFIL VERIFICADO DEL CANDIDATO\n"
-        "==============================\n%s\n\n"
-        "OFERTA\n======\n%s\n\n"
-        "PREGUNTAS DEL FORMULARIO\n========================\n%s\n\n"
+        "==============================\n{}\n\n"
+        "OFERTA\n======\n{}\n\n"
+        "PREGUNTAS DEL FORMULARIO\n========================\n{}\n\n"
         "Redacta una respuesta para cada pregunta. Usa como valor de 'campo' "
         "exactamente el nombre de campo indicado arriba (o el texto de la "
-        "pregunta si no hay nombre). Devuelve sólo el JSON."
-        % (_resumen_perfil(perfil), _bloque_oferta(op), "\n".join(lines))
+        "pregunta si no hay nombre). Devuelve sólo el JSON.".format(
+            _resumen_perfil(perfil), _bloque_oferta(op), "\n".join(lines)
+        )
     )
 
     try:
@@ -873,8 +891,10 @@ def redactar_respuestas(formulario: List[dict], perfil: dict, op: dict,
 
     pares = _normalizar_pares(datos)
     if not pares:
-        log.warning("El LLM no devolvió pares campo/respuesta utilizables: %s",
-                    list(datos)[:5] if isinstance(datos, dict) else type(datos))
+        log.warning(
+            "El LLM no devolvió pares campo/respuesta utilizables: %s",
+            list(datos)[:5] if isinstance(datos, dict) else type(datos),
+        )
         return {}
 
     # Index to match the model output against the real list even when spaces
@@ -885,7 +905,7 @@ def redactar_respuestas(formulario: List[dict], perfil: dict, op: dict,
         por_clave[_sin_acentos(c.get("pregunta") or "")] = c
 
     fuentes = json.dumps(perfil, ensure_ascii=False) + "\n" + _bloque_oferta(op)
-    respuestas: Dict[str, str] = {}
+    respuestas: dict[str, str] = {}
     for campo, texto in pares:
         texto = (texto or "").strip()
         if not texto or not campo:
@@ -902,8 +922,11 @@ def redactar_respuestas(formulario: List[dict], perfil: dict, op: dict,
             continue
         limpio, quitadas = _purgar_metricas(texto, fuentes)
         if quitadas:
-            log.info("Podadas %d frases con métricas no respaldadas en '%s'.",
-                     len(quitadas), (original.get("pregunta") or "")[:60])
+            log.info(
+                "Podadas %d frases con métricas no respaldadas en '%s'.",
+                len(quitadas),
+                (original.get("pregunta") or "")[:60],
+            )
         recortado = _acortar_respuesta(limpio)
         if recortado != limpio:
             log.info("Respuesta recortada de %d a %d caracteres.", len(limpio), len(recortado))
@@ -917,6 +940,7 @@ def redactar_respuestas(formulario: List[dict], perfil: dict, op: dict,
 # ---------------------------------------------------------------------------
 # Rellenado (sin enviar nunca)
 # ---------------------------------------------------------------------------
+
 
 def _frame_de(pagina, campo: dict):
     """Return the frame where the field was detected (or the main one)."""
@@ -939,13 +963,15 @@ def _localizar_campo(pagina, campo: dict):
     Returns:
         A locator, or None if the field cannot be located.
     """
-    tag = campo.get("tag") or {"textarea": "textarea", "select": "select"}.get(campo.get("tipo"), "input")
+    tag = campo.get("tag") or {"textarea": "textarea", "select": "select"}.get(
+        campo.get("tipo"), "input"
+    )
     frame = _frame_de(pagina, campo)
 
     nombre = (campo.get("nombre") or "").strip()
     if nombre and '"' not in nombre and "\\" not in nombre:
         try:
-            loc = frame.locator('%s[name="%s"]' % (tag, nombre))
+            loc = frame.locator(f'{tag}[name="{nombre}"]')
             if loc.count() >= 1:
                 return loc.first
         except Exception:
@@ -968,7 +994,7 @@ def _opciones_radio(pagina, campo: dict):
     nombre = (campo.get("nombre") or "").strip()
     if nombre and '"' not in nombre:
         try:
-            return frame.locator('input[type="radio"][name="%s"]' % nombre)
+            return frame.locator(f'input[type="radio"][name="{nombre}"]')
         except Exception:
             pass
     return frame.locator('input[type="radio"]')
@@ -1008,7 +1034,7 @@ def _valor_a_escribir(campo: dict, texto: str) -> str:
     return texto
 
 
-def _rellenar_en_pagina(pagina, campos: List[dict], respuestas: Dict[str, str]) -> dict:
+def _rellenar_en_pagina(pagina, campos: list[dict], respuestas: dict[str, str]) -> dict:
     """Write each answer into its field. Never clicks Submit."""
     informe = {
         "rellenados": [],
@@ -1046,7 +1072,9 @@ def _rellenar_en_pagina(pagina, campos: List[dict], respuestas: Dict[str, str]) 
         tipo = (campo.get("tipo") or "").lower()
 
         if tipo == "file":
-            informe["omitidos_por_tipo"].append({"campo": campo.get("nombre"), "motivo": "file: súbelo tú"})
+            informe["omitidos_por_tipo"].append(
+                {"campo": campo.get("nombre"), "motivo": "file: súbelo tú"}
+            )
             continue
 
         if tipo == "combobox":
@@ -1057,7 +1085,9 @@ def _rellenar_en_pagina(pagina, campos: List[dict], respuestas: Dict[str, str]) 
 
         loc = _localizar_campo(pagina, campo)
         if loc is None:
-            informe["no_rellenados"].append({"campo": campo.get("nombre"), "motivo": "no localizado en el DOM"})
+            informe["no_rellenados"].append(
+                {"campo": campo.get("nombre"), "motivo": "no localizado en el DOM"}
+            )
             continue
 
         try:
@@ -1078,11 +1108,15 @@ def _rellenar_en_pagina(pagina, campos: List[dict], respuestas: Dict[str, str]) 
                     c = opciones.nth(i)
                     etiqueta = _sin_acentos(_texto_opcion_radio(c))
                     valor_opcion = _sin_acentos(c.get_attribute("value") or "")
-                    if objetivo_norm and (objetivo_norm == etiqueta or objetivo_norm == valor_opcion):
+                    if objetivo_norm and (
+                        objetivo_norm == etiqueta or objetivo_norm == valor_opcion
+                    ):
                         elegido = c
                         break
-                    if parcial is None and objetivo_norm and (
-                        objetivo_norm in etiqueta or (etiqueta and etiqueta in objetivo_norm)
+                    if (
+                        parcial is None
+                        and objetivo_norm
+                        and (objetivo_norm in etiqueta or (etiqueta and etiqueta in objetivo_norm))
                     ):
                         parcial = c
                 elegido = elegido or parcial
@@ -1109,7 +1143,10 @@ def _rellenar_en_pagina(pagina, campos: List[dict], respuestas: Dict[str, str]) 
                 # fill() left no readable value: the field cannot be claimed
                 # as filled, so it is reported as pending.
                 informe["no_rellenados"].append(
-                    {"campo": campo.get("nombre"), "motivo": "sin valor legible tras escribir (revísalo tú)"}
+                    {
+                        "campo": campo.get("nombre"),
+                        "motivo": "sin valor legible tras escribir (revísalo tú)",
+                    }
                 )
                 continue
 
@@ -1119,7 +1156,7 @@ def _rellenar_en_pagina(pagina, campos: List[dict], respuestas: Dict[str, str]) 
                 {"campo": campo.get("nombre"), "motivo": str(err).split("\n")[0][:160]}
             )
 
-    for clave in (respuestas or {}):
+    for clave in respuestas or {}:
         if clave not in usadas:
             informe["respuestas_sin_campo"].append(clave)
     return informe
@@ -1145,9 +1182,14 @@ def _esperar_cierre_humano(pagina) -> None:
         pass
 
 
-def rellenar_formulario(url: str, respuestas: Dict[str, str], perfil: Optional[dict] = None,
-                        headless: bool = False, pausa_ms: int = 0,
-                        esperar_cierre: bool = False) -> dict:
+def rellenar_formulario(
+    url: str,
+    respuestas: dict[str, str],
+    perfil: dict | None = None,
+    headless: bool = False,
+    pausa_ms: int = 0,
+    esperar_cierre: bool = False,
+) -> dict:
     """Fill the form with ``respuestas`` and NEVER submit it.
 
     Args:
@@ -1191,7 +1233,7 @@ def rellenar_formulario(url: str, respuestas: Dict[str, str], perfil: Optional[d
     try:
         from patchright.sync_api import sync_playwright
     except Exception as err:
-        informe["nota"] = "patchright no disponible: pega las respuestas a mano (%s)." % err
+        informe["nota"] = f"patchright no disponible: pega las respuestas a mano ({err})."
         return informe
 
     try:
@@ -1199,12 +1241,14 @@ def rellenar_formulario(url: str, respuestas: Dict[str, str], perfil: Optional[d
             navegador, contexto = _abrir_navegador(pw, headless)
             try:
                 pagina = contexto.new_page()
-                campos: List[dict] = []
+                campos: list[dict] = []
                 for candidata in _candidatos_url(url):
                     try:
                         pagina.goto(candidata, wait_until="domcontentloaded", timeout=_TIMEOUT_MS)
                     except Exception as err:
-                        informe["no_rellenados"].append({"campo": None, "motivo": "navegación: %s" % str(err)[:160]})
+                        informe["no_rellenados"].append(
+                            {"campo": None, "motivo": f"navegación: {str(err)[:160]}"}
+                        )
                         continue
                     _esperar_carga(pagina)
                     campos = _extraer_de_pagina(pagina)
@@ -1213,8 +1257,8 @@ def rellenar_formulario(url: str, respuestas: Dict[str, str], perfil: Optional[d
 
                 if not campos:
                     informe["nota"] = (
-                        "No se pudo leer el formulario (%s). Respuestas listas para pegar."
-                        % _diagnosticar_sin_campos(pagina)
+                        f"No se pudo leer el formulario ({_diagnosticar_sin_campos(pagina)}). "
+                        "Respuestas listas para pegar."
                     )
                     return informe
 
@@ -1249,11 +1293,13 @@ def rellenar_formulario(url: str, respuestas: Dict[str, str], perfil: Optional[d
                 informe["modo"] = "rellenado" if informe["rellenados"] else "solo_respuestas"
                 informe["nota"] = (
                     "Campos rellenados en el navegador. NO se ha pulsado Submit: "
-                    "revisa cada respuesta y envía tú. Botones de envío visibles: %d."
-                    % formularios_envio
+                    f"revisa cada respuesta y envía tú. "
+                    f"Botones de envío visibles: {formularios_envio}."
                 )
                 if informe.get("url_cambio"):
-                    informe["nota"] += " AVISO: la URL cambió durante el rellenado; revisa la página."
+                    informe["nota"] += (
+                        " AVISO: la URL cambió durante el rellenado; revisa la página."
+                    )
                 if esperar_cierre:
                     _esperar_cierre_humano(pagina)
                 elif pausa_ms:
@@ -1270,13 +1316,13 @@ def rellenar_formulario(url: str, respuestas: Dict[str, str], perfil: Optional[d
     except Exception as err:
         # Any browser failure must not lose the answers.
         informe["modo"] = "solo_respuestas"
-        informe["nota"] = "Fallo del navegador (%s). Respuestas listas para pegar." % str(err)[:200]
+        informe["nota"] = f"Fallo del navegador ({str(err)[:200]}). Respuestas listas para pegar."
         log.warning("Fallo rellenando %s: %s", url, err)
 
     return informe
 
 
-def _respuestas_contacto(campos: List[dict], perfil: dict) -> Dict[str, str]:
+def _respuestas_contacto(campos: list[dict], perfil: dict) -> dict[str, str]:
     """Profile contact data for the typical form fields.
 
     Returns keys only for values that exist in the profile. Matching is done by
@@ -1301,19 +1347,39 @@ def _respuestas_contacto(campos: List[dict], perfil: dict) -> Dict[str, str]:
     reglas = [
         (("apellido", "last name", "surname", "family name"), apellidos, ("first",)),
         (("first name", "given name", "nombre de pila", "primer nombre"), nombre_pila, ("last",)),
-        (("full name", "nombre completo", "your name", "name"), nombre_completo,
-         ("company", "empresa", "last", "first", "user", "file", "project",
-          "referr", "their", "manager", "emergency")),
+        (
+            ("full name", "nombre completo", "your name", "name"),
+            nombre_completo,
+            (
+                "company",
+                "empresa",
+                "last",
+                "first",
+                "user",
+                "file",
+                "project",
+                "referr",
+                "their",
+                "manager",
+                "emergency",
+            ),
+        ),
         (("email", "correo", "e-mail"), ident.get("email"), ()),
         (("phone", "telefono", "mobile", "movil"), ident.get("telefono"), ()),
         (("linkedin",), ident.get("linkedin"), ()),
-        (("portfolio", "website", "sitio web", "github", "web personal"),
-         ident.get("portfolio") or ident.get("web"), ("company",)),
-        (("location", "ubicacion", "city", "ciudad", "residencia"),
-         ident.get("ubicacion_cv"), ("relocation", "country")),
+        (
+            ("portfolio", "website", "sitio web", "github", "web personal"),
+            ident.get("portfolio") or ident.get("web"),
+            ("company",),
+        ),
+        (
+            ("location", "ubicacion", "city", "ciudad", "residencia"),
+            ident.get("ubicacion_cv"),
+            ("relocation", "country"),
+        ),
     ]
 
-    salida: Dict[str, str] = {}
+    salida: dict[str, str] = {}
     for campo in campos or []:
         if campo.get("pregunta"):
             continue  # open questions go through their drafted answer
@@ -1347,12 +1413,13 @@ def _respuestas_contacto(campos: List[dict], perfil: dict) -> Dict[str, str]:
 # CLI
 # ---------------------------------------------------------------------------
 
+
 def _imprimir_json(datos: Any) -> None:
     """Print readable UTF-8 JSON."""
     print(json.dumps(datos, ensure_ascii=False, indent=2))
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     """CLI: ``analizar``, ``redactar`` or ``rellenar`` on a URL.
 
     Never submits the form: ``rellenar`` opens the browser and leaves the submit
@@ -1364,7 +1431,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     Returns:
         int: process exit code.
     """
-    parser = argparse.ArgumentParser(description="Analiza y rellena formularios de aplicación (sin enviar).")
+    parser = argparse.ArgumentParser(
+        description="Analiza y rellena formularios de aplicación (sin enviar)."
+    )
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     p_an = sub.add_parser("analizar", help="Extrae los campos del formulario")
@@ -1397,9 +1466,13 @@ def main(argv: Optional[List[str]] = None) -> int:
     # fill
     op = {"titulo": "", "empresa": "", "descripcion": "", "url": args.url}
     respuestas = redactar_respuestas(campos, perfil, op)
-    informe = rellenar_formulario(args.url, respuestas, perfil=perfil,
-                                  headless=args.headless,
-                                  esperar_cierre=not args.headless)
+    informe = rellenar_formulario(
+        args.url,
+        respuestas,
+        perfil=perfil,
+        headless=args.headless,
+        esperar_cierre=not args.headless,
+    )
     _imprimir_json(informe)
     return 0
 

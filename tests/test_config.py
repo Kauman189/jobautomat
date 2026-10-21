@@ -1,11 +1,10 @@
 """Tests de ``service/config.py``: configuración mínima y valores por defecto."""
 
+import config
 import pytest
 
-import config
-
-
 # --- validar_minimo -------------------------------------------------------
+
 
 def test_validar_minimo_sin_api_key_lanza_runtime_error():
     with pytest.raises(RuntimeError) as excinfo:
@@ -19,9 +18,7 @@ def test_validar_minimo_api_key_vacia_tambien_falla():
 
 
 def test_validar_minimo_avisa_si_telegram_activo_sin_token():
-    avisos = config.validar_minimo(
-        {"DEEPSEEK_API_KEY": "sk-test", "TELEGRAM_HABILITADO": True}
-    )
+    avisos = config.validar_minimo({"DEEPSEEK_API_KEY": "sk-test", "TELEGRAM_HABILITADO": True})
     assert len(avisos) == 1
     assert "TELEGRAM_BOT_TOKEN" in avisos[0]
 
@@ -73,6 +70,7 @@ def test_load_config_aplica_los_defaults_de_las_claves_nuevas(escribir_env):
 
 # --- load_config ----------------------------------------------------------
 
+
 def test_load_config_estricto_sin_api_key_falla(escribir_env):
     ruta = escribir_env("# sin claves\n")
     with pytest.raises(RuntimeError):
@@ -91,7 +89,7 @@ def test_load_config_convierte_tipos_del_env(escribir_env):
         "DEEPSEEK_API_KEY=sk-test\n"
         "SCORE_THRESHOLD=60\n"
         "TELEGRAM_HABILITADO=false\n"
-        "ROLES=[\"Product Designer\"]\n"
+        'ROLES=["Product Designer"]\n'
         "TEMPERATURA=0.7\n"
     )
     cfg = config.load_config(ruta, estricto=True)

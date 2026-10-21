@@ -1,0 +1,71 @@
+name: Feature request
+description: Suggest a new capability or an improvement
+title: "[Feature]: "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before opening a request, check that it is not already in the issue
+        list. For anything that touches scraping, keep in mind the legal and
+        rate-limit constraints described in the README.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What should the project do that it does not do today?
+      placeholder: Support a new job board (e.g. We Work Remotely) in service/search/.
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem it solves
+      description: The use case or pain point behind the request.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Suggested implementation
+      description: Optional. Files or modules you would touch, config keys, CLI/API shape.
+    validations:
+      required: false
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: How it would be used
+      description: Numbered steps of the expected flow, as a user would do it.
+      placeholder: |
+        1. Add the board to data/settings.json
+        2. Run the search
+        3. Offers from the new board appear scored in the panel
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version you are running
+      placeholder: v1.0.0 / latest
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: Linux (arm64), macOS (Apple Silicon), Windows (WSL2)…
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+    validations:
+      required: false

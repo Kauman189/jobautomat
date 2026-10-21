@@ -1,9 +1,6 @@
 """Tests de la caché de puntuaciones de ``service/scoring.py`` (sin LLM)."""
 
-import pytest
-
 import scoring
-
 
 OFERTA = {
     "titulo": "Product Designer",
@@ -49,7 +46,7 @@ def test_id_cache_tiene_prefijo_y_longitud_estable():
     clave = scoring.id_cache_oferta(OFERTA)
     assert clave.startswith("sc1:")
     assert len(clave) == len("sc1:") + 32
-    int(clave[len("sc1:"):], 16)  # es hexadecimal
+    int(clave[len("sc1:") :], 16)  # es hexadecimal
 
 
 def test_id_cache_sin_datos_devuelve_none():

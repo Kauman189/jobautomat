@@ -10,10 +10,10 @@ results to the console.
 
 import sys
 
-from config import load_config
-import scoring
-from search import search_jobs, get_job_details
 import main as M  # reuses cargar_perfil, _normalizar, _fusionar_detalles, _generar_id
+import scoring
+from config import load_config
+from search import get_job_details, search_jobs
 
 # Results per query and rows shown at the end.
 LIMITE = 20
@@ -27,7 +27,7 @@ def main():
     ofertas = search_jobs(M.QUERIES, limit=LIMITE)
 
     vistas = {}
-    for bruto in (ofertas or []):
+    for bruto in ofertas or []:
         if not isinstance(bruto, dict):
             continue
         try:
@@ -38,17 +38,17 @@ def main():
             continue
         vistas[cid] = bruto
 
-    print("Ofertas únicas tras dedup: %d" % len(vistas))
+    print(f"Ofertas únicas tras dedup: {len(vistas)}")
 
     resultados = []
-    for cid, bruto in vistas.items():
+    for _cid, bruto in vistas.items():
         op = M._normalizar(bruto)
         job_id = bruto.get("id") or bruto.get("job_id") or op["id"]
         try:
             det = get_job_details(job_id)
             M._fusionar_detalles(op, det)
         except Exception as err:  # noqa: BLE001
-            print("sin detalle %s: %s" % (op["id"], err), file=sys.stderr)
+            print("sin detalle {}: {}".format(op["id"], err), file=sys.stderr)
 
         r = scoring.score(op, perfil)
         op["score"] = r["score"]
@@ -64,8 +64,8 @@ def main():
         print("")
         print("=" * 72)
         print(
-            "%s%% [%s] %s @ %s"
-            % (o.get("score"), o.get("recomendacion") or "?", o.get("titulo"), o.get("empresa"))
+            f"{o.get('score')}% [{o.get('recomendacion') or '?'}] {o.get('titulo')} @ "
+            f"{o.get('empresa')}"
         )
         meta = []
         if o.get("remoto"):
@@ -75,18 +75,18 @@ def main():
         if o.get("ubicacion"):
             meta.append(o["ubicacion"])
         if meta:
-            print("  %s" % " · ".join(meta))
+            print("  {}".format(" · ".join(meta)))
         for m in (o.get("motivos") or [])[:2]:
-            print("  + %s" % m)
+            print(f"  + {m}")
         for g in (o.get("gaps") or [])[:2]:
-            print("  - %s" % g)
+            print(f"  - {g}")
         for f in (o.get("red_flags") or [])[:3]:
-            print("  ! %s" % f)
+            print(f"  ! {f}")
         if o.get("url"):
-            print("  %s" % o["url"])
+            print("  {}".format(o["url"]))
 
     print("")
-    print("TOTAL evaluadas: %d · mostradas: %d" % (len(resultados), min(TOP, len(resultados))))
+    print(f"TOTAL evaluadas: {len(resultados)} · mostradas: {min(TOP, len(resultados))}")
     return 0
 
 

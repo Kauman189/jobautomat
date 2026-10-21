@@ -4,12 +4,11 @@ Cubre ``_normalizar_texto_clave``, ``_claves_deduplicacion`` y
 ``_filtrar_keywords_negativas``. Ninguna de estas funciones toca la red.
 """
 
+import main
 import pytest
 
-import main
-
-
 # --- _normalizar_texto_clave ---------------------------------------------
+
 
 @pytest.mark.parametrize(
     "texto",
@@ -57,6 +56,7 @@ def test_normalizar_texto_vacio():
 
 # --- _claves_deduplicacion ------------------------------------------------
 
+
 def test_claves_estables_para_la_misma_oferta():
     oferta = {
         "titulo": "Product Designer",
@@ -94,9 +94,7 @@ def test_claves_distintas_si_cambia_el_puesto():
 
 
 def test_claves_sin_empresa_no_acaban_en_separador():
-    assert main._claves_deduplicacion({"titulo": "Product Designer"}) == [
-        "te:product designer"
-    ]
+    assert main._claves_deduplicacion({"titulo": "Product Designer"}) == ["te:product designer"]
 
 
 def test_claves_sin_datos_devuelve_lista_vacia():
@@ -141,7 +139,10 @@ def test_no_descarta_coincidencias_parciales():
 
 
 def test_normaliza_acentos_en_las_keywords():
-    ofertas = [{"titulo": "Diseño Gráfico", "descripcion": ""}, {"titulo": "Product", "descripcion": ""}]
+    ofertas = [
+        {"titulo": "Diseño Gráfico", "descripcion": ""},
+        {"titulo": "Product", "descripcion": ""},
+    ]
     salida = main._filtrar_keywords_negativas(ofertas, keywords=["diseño grafico"])
     assert [o["titulo"] for o in salida] == ["Product"]
 

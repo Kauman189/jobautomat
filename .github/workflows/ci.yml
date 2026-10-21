@@ -84,9 +84,9 @@ jobs:
               print("import ok:", nombre)
           PY
 
-  # 3) Lint ligero: todo service/ compila.
+  # 3) Lint: ruff (reglas y formato de pyproject.toml) + todo service/ compila.
   lint:
-    name: py_compile
+    name: Ruff + py_compile
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -95,6 +95,19 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: Instalar ruff
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-dev.txt
+
+      - name: ruff check
+        run: ruff check .
+
+      - name: ruff format --check
+        run: ruff format --check .
 
       - name: py_compile de service/
         run: |
@@ -102,9 +115,11 @@ jobs:
             | xargs -0 python -m py_compile
           echo "Todos los módulos de service/ compilan."
 
-  # 4) Tests con pytest. Dependencias en requirements-dev.txt (pytest + flask).
+  # 4) Tests con pytest + cobertura. Dependencias en requirements-dev.txt
+  #    (pytest, flask, ruff, coverage). El umbral (11 %) está aquí y en
+  #    pyproject.toml se define el alcance ([tool.coverage.*]).
   test:
-    name: Tests (pytest)
+    name: Tests (pytest + coverage)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -121,10 +136,15 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements-dev.txt
 
-      - name: pytest
+      - name: pytest con cobertura
         env:
           PYTHONPATH: service
-        run: python -m pytest tests/ -q
+        run: coverage run -m pytest tests/ -q
+
+      - name: Informe de cobertura (umbral 11 %)
+        env:
+          PYTHONPATH: service
+        run: coverage report --fail-under=11
 
   # 5) Publicación de la imagen multi-arch en GHCR.
   #    Solo en push de tags v* y en ejecución manual (workflow_dispatch):

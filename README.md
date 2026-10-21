@@ -5,6 +5,8 @@
 [![Docker][docker-shield]][docker-url]
 [![License: MIT][license-shield]][license-url]
 [![GHCR][ghcr-shield]][ghcr-url]
+[![Ruff][ruff-shield]][ruff-url]
+[![Coverage][coverage-shield]][coverage-url]
 
 <!-- PROJECT LOGO / TITLE -->
 <br />
@@ -582,3 +584,7 @@ Issues and feature requests: [https://github.com/Kauman189/jobautomat/issues](ht
 [license-url]: LICENSE
 [ghcr-shield]: https://img.shields.io/badge/ghcr.io-kauman189%2Fjobautomat-blue?logo=github
 [ghcr-url]: https://github.com/Kauman189/jobautomat/pkgs/container/jobautomat
+[ruff-shield]: https://img.shields.io/badge/code%20style-ruff-000000.svg?logo=ruff
+[ruff-url]: https://docs.astral.sh/ruff/
+[coverage-shield]: https://img.shields.io/badge/coverage-12%25-brightgreen
+[coverage-url]: https://coverage.readthedocs.io/

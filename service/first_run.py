@@ -3,6 +3,7 @@
 Patches QUERIES and LIMITE so the full 8-query sweep is not launched. Exercise
 the whole loop: real search -> detail -> score -> generation -> Telegram.
 """
+
 import os
 import sys
 

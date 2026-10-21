@@ -82,9 +82,7 @@ def chat(messages, temperature=0.7, max_tokens=2000, json_mode=False):
             datos = json.loads(resp.read().decode("utf-8"))
     except urllib.error.HTTPError as err:
         detalle = err.read().decode("utf-8", errors="replace")
-        raise LLMError(
-            f"HTTP {err.code} en {url}: {detalle[:500]}"
-        ) from err
+        raise LLMError(f"HTTP {err.code} en {url}: {detalle[:500]}") from err
     except urllib.error.URLError as err:
         raise LLMError(f"Error de red al llamar a {url}: {err.reason}") from err
     except json.JSONDecodeError as err:
@@ -96,9 +94,7 @@ def chat(messages, temperature=0.7, max_tokens=2000, json_mode=False):
         contenido = mensaje.get("content")
         motivo_fin = eleccion.get("finish_reason")
     except (KeyError, IndexError, TypeError) as err:
-        raise LLMError(
-            f"Respuesta de API sin 'choices[0].message.content': {datos}"
-        ) from err
+        raise LLMError(f"Respuesta de API sin 'choices[0].message.content': {datos}") from err
 
     # Reasoning models (deepseek-flash) emit 'reasoning_content' first and
     # only then 'content'. If max_tokens runs out during reasoning the API
@@ -109,7 +105,10 @@ def chat(messages, temperature=0.7, max_tokens=2000, json_mode=False):
         if mensaje.get("reasoning_content"):
             detalle += " y tokens consumidos en reasoning_content"
         if motivo_fin == "length":
-            detalle += ". Aumenta max_tokens (los modelos de razonamiento gastan parte del presupuesto antes de responder)"
+            detalle += (
+                ". Aumenta max_tokens (los modelos de razonamiento gastan parte "
+                "del presupuesto antes de responder)"
+            )
         raise LLMError(f"DeepSeek devolvió contenido vacío ({detalle}).")
 
     return contenido

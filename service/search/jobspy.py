@@ -54,7 +54,8 @@ import os
 import re
 import sys
 import time
-from typing import Any, Dict, Iterable, List, Optional
+from collections.abc import Iterable
+from typing import Any
 
 log = logging.getLogger("jobautomat.search.jobspy")
 
@@ -79,25 +80,49 @@ UBICACION_POR_DEFECTO = "Spain"
 
 # JobSpy contract type -> scoring.py vocabulary.
 _CONTRATOS = (
-    (("fulltime", "full time", "full-time", "permanent", "indefinido",
-      "jornada completa", "tiempo completo", "permanente"), "Jornada completa"),
-    (("parttime", "part time", "part-time", "media jornada", "tiempo parcial"),
-     "Media jornada"),
-    (("internship", "intern", "becario", "beca", "practicas", "practica"),
-     "Prácticas"),
-    (("freelance", "contractor", "contrato mercantil", "autonomo", "contract",
-      "contrato de obra"), "Freelance"),
-    (("temporary", "temporal", "fixed term", "fixed-term", "temporalidad"),
-     "Temporal"),
+    (
+        (
+            "fulltime",
+            "full time",
+            "full-time",
+            "permanent",
+            "indefinido",
+            "jornada completa",
+            "tiempo completo",
+            "permanente",
+        ),
+        "Jornada completa",
+    ),
+    (("parttime", "part time", "part-time", "media jornada", "tiempo parcial"), "Media jornada"),
+    (("internship", "intern", "becario", "beca", "practicas", "practica"), "Prácticas"),
+    (
+        (
+            "freelance",
+            "contractor",
+            "contrato mercantil",
+            "autonomo",
+            "contract",
+            "contrato de obra",
+        ),
+        "Freelance",
+    ),
+    (("temporary", "temporal", "fixed term", "fixed-term", "temporalidad"), "Temporal"),
 )
 
 # JobSpy pay interval -> readable suffix.
 _INTERVALOS = {
-    "yearly": "año", "annual": "año", "year": "año", "annually": "año",
-    "monthly": "mes", "month": "mes",
-    "weekly": "semana", "week": "semana",
-    "daily": "día", "day": "día",
-    "hourly": "hora", "hour": "hora",
+    "yearly": "año",
+    "annual": "año",
+    "year": "año",
+    "annually": "año",
+    "monthly": "mes",
+    "month": "mes",
+    "weekly": "semana",
+    "week": "semana",
+    "daily": "día",
+    "day": "día",
+    "hourly": "hora",
+    "hour": "hora",
 }
 
 # Maximum stored description length (cost control in scoring).
@@ -111,11 +136,22 @@ _PAUSA_GLASSDOOR = 0.7
 # Normalization utilities
 # --------------------------------------------------------------------------- #
 
+
 def _sin_acentos(texto: str) -> str:
     """Lowercase and strip accents, to compare text loosely."""
     reemplazos = {
-        "á": "a", "é": "e", "í": "i", "ó": "o", "ú": "u", "ü": "u", "ñ": "n",
-        "à": "a", "è": "e", "ì": "i", "ò": "o", "ù": "u",
+        "á": "a",
+        "é": "e",
+        "í": "i",
+        "ó": "o",
+        "ú": "u",
+        "ü": "u",
+        "ñ": "n",
+        "à": "a",
+        "è": "e",
+        "ì": "i",
+        "ò": "o",
+        "ù": "u",
     }
     return "".join(reemplazos.get(c, c) for c in (texto or "").lower())
 
@@ -132,7 +168,7 @@ def _nulo(valor: Any) -> bool:
         return False
 
 
-def _limpio(valor: Any) -> Optional[str]:
+def _limpio(valor: Any) -> str | None:
     """Return the trimmed text, or ``None`` if nothing useful remains."""
     if _nulo(valor):
         return None
@@ -140,7 +176,7 @@ def _limpio(valor: Any) -> Optional[str]:
     return texto or None
 
 
-def _texto_descripcion(valor: Any) -> Optional[str]:
+def _texto_descripcion(valor: Any) -> str | None:
     """Plain-text description, trimmed to ``_MAX_DESCRIPCION``."""
     if _nulo(valor):
         return None
@@ -168,10 +204,10 @@ def _prefijo_site(site: Any) -> str:
 def _id_estable(url: str, site: Any) -> str:
     """``<prefix>-<sha1(url)[:8]>``: stable across runs."""
     digest = hashlib.sha1(url.strip().lower().encode("utf-8")).hexdigest()[:8]
-    return "%s-%s" % (_prefijo_site(site), digest)
+    return f"{_prefijo_site(site)}-{digest}"
 
 
-def _mapear_contrato(job_type: Any) -> Optional[str]:
+def _mapear_contrato(job_type: Any) -> str | None:
     """Translate ``job_type`` to ``scoring.py`` vocabulary (or ``None``)."""
     texto = _sin_acentos(_limpio(job_type) or "")
     if not texto:
@@ -185,7 +221,7 @@ def _mapear_contrato(job_type: Any) -> Optional[str]:
     return None
 
 
-def _formatear_numero(valor: Any) -> Optional[str]:
+def _formatear_numero(valor: Any) -> str | None:
     """Readable amount in Spanish format (``50.000``, ``25,5``)."""
     if _nulo(valor):
         return None
@@ -196,13 +232,13 @@ def _formatear_numero(valor: Any) -> Optional[str]:
     if not math.isfinite(numero) or numero <= 0:
         return None
     if numero >= 1000 and abs(numero - round(numero)) < 0.01:
-        return "{:,.0f}".format(numero).replace(",", ".")
+        return f"{numero:,.0f}".replace(",", ".")
     if abs(numero - round(numero)) < 0.01:
         return str(int(round(numero)))
-    return ("%.2f" % numero).replace(".", ",")
+    return (f"{numero:.2f}").replace(".", ",")
 
 
-def _formatear_salario(minimo: Any, maximo: Any, moneda: Any, intervalo: Any) -> Optional[str]:
+def _formatear_salario(minimo: Any, maximo: Any, moneda: Any, intervalo: Any) -> str | None:
     """Compose the salary text respecting range, currency and interval.
 
     ``50.000 – 70.000 EUR/año`` · ``50.000 EUR/año`` (minimum only) ·
@@ -216,14 +252,14 @@ def _formatear_salario(minimo: Any, maximo: Any, moneda: Any, intervalo: Any) ->
         if txt_min == txt_max:
             rango = txt_min
         else:
-            rango = "%s – %s" % (txt_min, txt_max)
+            rango = f"{txt_min} – {txt_max}"
     else:
         rango = txt_min or txt_max
 
     codigo = _limpio(moneda)
     sufijo = _INTERVALOS.get(_sin_acentos(_limpio(intervalo) or ""))
 
-    partes: List[str] = [str(rango)]
+    partes: list[str] = [str(rango)]
     if codigo:
         partes.append(codigo.upper() if len(codigo) == 3 else codigo)
     texto = " ".join(partes)
@@ -235,6 +271,7 @@ def _formatear_salario(minimo: Any, maximo: Any, moneda: Any, intervalo: Any) ->
 # --------------------------------------------------------------------------- #
 # Tolerant import of the dependency
 # --------------------------------------------------------------------------- #
+
 
 def _cargar_scrape_jobs():
     """Return ``scrape_jobs`` or ``None`` when jobspy is not installed.
@@ -252,10 +289,7 @@ def _cargar_scrape_jobs():
         primero = err
 
     original = list(sys.path)
-    sombra = [
-        ruta for ruta in sys.path
-        if os.path.abspath(ruta or os.getcwd()) == _DIR_MODULO
-    ]
+    sombra = [ruta for ruta in sys.path if os.path.abspath(ruta or os.getcwd()) == _DIR_MODULO]
     if sombra:
         sys.path[:] = [ruta for ruta in sys.path if ruta not in sombra]
         try:
@@ -279,7 +313,8 @@ def _cargar_scrape_jobs():
 # Row normalization
 # --------------------------------------------------------------------------- #
 
-def _fecha_publicacion(valor: Any) -> Optional[str]:
+
+def _fecha_publicacion(valor: Any) -> str | None:
     """Normalize JobSpy's ``date_posted`` to ``YYYY-MM-DD``.
 
     JobSpy returns a pandas ``datetime``/``Timestamp`` usually, but it may also
@@ -325,7 +360,7 @@ def _fecha_publicacion(valor: Any) -> Optional[str]:
         return None
 
 
-def _fecha_desde_epoch(numero: Any) -> Optional[str]:
+def _fecha_desde_epoch(numero: Any) -> str | None:
     """Convert an epoch (seconds or milliseconds) to ``YYYY-MM-DD``."""
     try:
         valor = float(numero)
@@ -336,13 +371,13 @@ def _fecha_desde_epoch(numero: Any) -> Optional[str]:
     if abs(valor) >= 1e11:  # milliseconds
         valor /= 1000.0
     try:
-        momento = datetime.datetime.fromtimestamp(valor, tz=datetime.timezone.utc)
+        momento = datetime.datetime.fromtimestamp(valor, tz=datetime.UTC)
     except (OverflowError, OSError, ValueError):
         return None
     return momento.date().isoformat()
 
 
-def _normalizar_fila(fila: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+def _normalizar_fila(fila: dict[str, Any]) -> dict[str, Any] | None:
     """Convert a JobSpy row to the normalized contract.
 
     Returns ``None`` when something essential is missing (title or URL).
@@ -374,25 +409,22 @@ def _normalizar_fila(fila: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     }
 
 
-def _clave_deduplicacion(oferta: Dict[str, Any]) -> tuple:
+def _clave_deduplicacion(oferta: dict[str, Any]) -> tuple:
     """Loose key to recognize the same posting inside JobSpy.
 
     Compared without accents or punctuation: the same role may arrive from
     Indeed and Glassdoor with the company spelled differently.
     """
     url = (oferta.get("url") or "").split("?")[0].rstrip("/").lower()
-    titulo = " ".join(
-        _sin_acentos(str(oferta.get("titulo") or "")).split()
-    )
-    empresa = " ".join(
-        _sin_acentos(str(oferta.get("empresa") or "")).split()
-    )
+    titulo = " ".join(_sin_acentos(str(oferta.get("titulo") or "")).split())
+    empresa = " ".join(_sin_acentos(str(oferta.get("empresa") or "")).split())
     return url, titulo, empresa
 
 
 # --------------------------------------------------------------------------- #
 # Public API
 # --------------------------------------------------------------------------- #
+
 
 def buscar_ofertas_jobspy(
     queries: Iterable[str],
@@ -401,7 +433,7 @@ def buscar_ofertas_jobspy(
     ubicacion: str = UBICACION_POR_DEFECTO,
     sites: Iterable[str] = SITES,
     traer_descripcion: bool = True,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Search postings on Indeed, ZipRecruiter and Glassdoor through JobSpy.
 
     :param queries: search terms (one call each). ``main.py`` passes ``ROLES``
@@ -429,11 +461,11 @@ def buscar_ofertas_jobspy(
     lista_sites = [s for s in sites if s]
     limite = max(1, int(limite or 1))
 
-    ofertas: List[Dict[str, Any]] = []
+    ofertas: list[dict[str, Any]] = []
     vistas = set()
     # Per-site counters for the final log (a failure is visible at a glance).
-    por_site: Dict[str, int] = {s: 0 for s in lista_sites}
-    fallos: Dict[str, int] = {s: 0 for s in lista_sites}
+    por_site: dict[str, int] = {s: 0 for s in lista_sites}
+    fallos: dict[str, int] = {s: 0 for s in lista_sites}
 
     for query in lista_queries:
         for site in lista_sites:
@@ -453,8 +485,11 @@ def buscar_ofertas_jobspy(
             except Exception as err:  # noqa: BLE001 — isolate site/query.
                 fallos[nombre] = fallos.get(nombre, 0) + 1
                 log.warning(
-                    "JobSpy: '%s' falló en %s (%s): %s", query, nombre,
-                    type(err).__name__, err,
+                    "JobSpy: '%s' falló en %s (%s): %s",
+                    query,
+                    nombre,
+                    type(err).__name__,
+                    err,
                 )
                 continue
             finally:
@@ -471,7 +506,9 @@ def buscar_ofertas_jobspy(
                 fallos[nombre] = fallos.get(nombre, 0) + 1
                 log.warning(
                     "JobSpy: DataFrame ilegible de %s (%s): %s",
-                    nombre, type(err).__name__, err,
+                    nombre,
+                    type(err).__name__,
+                    err,
                 )
                 continue
 
@@ -496,14 +533,17 @@ def buscar_ofertas_jobspy(
             por_site[nombre] = por_site.get(nombre, 0) + nuevas
             log.info(
                 "JobSpy: '%s' en %s -> %s filas, %s nuevas.",
-                query, nombre, len(filas), nuevas,
+                query,
+                nombre,
+                len(filas),
+                nuevas,
             )
 
     resumen = ", ".join(
-        "%s: %s%s" % (
+        "{}: {}{}".format(
             site,
             por_site.get(site, 0),
-            " (%s fallos)" % fallos[site] if fallos.get(site) else "",
+            f" ({fallos[site]} fallos)" if fallos.get(site) else "",
         )
         for site in por_site
     )

@@ -144,6 +144,7 @@ log = logging.getLogger("jobautomat")
 # Data loading
 # ---------------------------------------------------------------------------
 
+
 def _ruta_perfil(config):
     """Resolve the perfil.json path relative to the service directory."""
     ruta = config.get("PERFIL_PATH") or "../data/perfil.json"
@@ -155,13 +156,14 @@ def _ruta_perfil(config):
 def cargar_perfil(config):
     """Read and return the candidate profile as a dict."""
     ruta = _ruta_perfil(config)
-    with open(ruta, "r", encoding="utf-8") as fh:
+    with open(ruta, encoding="utf-8") as fh:
         return json.load(fh)
 
 
 # ---------------------------------------------------------------------------
 # Offer normalization
 # ---------------------------------------------------------------------------
+
 
 def _primer_valor(diccionario, claves, defecto=None):
     """Return the first non-empty value of ``claves`` in ``diccionario``."""
@@ -182,7 +184,7 @@ def _generar_id(job):
     if url:
         return str(url)
 
-    base = "%s|%s" % (
+    base = "{}|{}".format(
         _primer_valor(job, ("titulo", "title"), ""),
         _primer_valor(job, ("empresa", "company"), ""),
     )
@@ -204,9 +206,7 @@ def _normalizar(job):
         "ubicacion": _primer_valor(job, ("ubicacion", "location", "place")),
         "remoto": _primer_valor(job, ("remoto", "remote", "workplace")),
         "contrato": _primer_valor(job, ("contrato", "contract", "employment_type")),
-        "descripcion": _primer_valor(
-            job, ("descripcion", "description", "description_text")
-        ),
+        "descripcion": _primer_valor(job, ("descripcion", "description", "description_text")),
         "fecha_publicacion": _primer_valor(
             job,
             ("fecha_publicacion", "fecha", "date_posted", "publication_date", "published_at"),
@@ -242,7 +242,7 @@ def _fusionar_detalles(op, detalles):
 
 def _ahora_iso():
     """UTC timestamp in ISO-8601 (as in db.py)."""
-    return datetime.datetime.now(datetime.timezone.utc).isoformat()
+    return datetime.datetime.now(datetime.UTC).isoformat()
 
 
 # ---------------------------------------------------------------------------
@@ -264,10 +264,31 @@ _RE_SUFIJO_EMPRESA = re.compile(
 # is not merged with "(UI)".
 _RE_PARENTESIS = re.compile(r"\(([^)]*)\)")
 _MARCAS_PARENTESIS = (
-    "remote", "remoto", "remota", "hybrid", "hibrido", "hibrida", "onsite",
-    "on-site", "on site", "presencial", "teletrabajo", "full-time", "part-time",
-    "full time", "part time", "m/f/d", "m/w/d", "f/m/d", "w/m/d", "m/f/x",
-    "m f d", "m w d", "f m d", "w m d", "m f x",
+    "remote",
+    "remoto",
+    "remota",
+    "hybrid",
+    "hibrido",
+    "hibrida",
+    "onsite",
+    "on-site",
+    "on site",
+    "presencial",
+    "teletrabajo",
+    "full-time",
+    "part-time",
+    "full time",
+    "part time",
+    "m/f/d",
+    "m/w/d",
+    "f/m/d",
+    "w/m/d",
+    "m/f/x",
+    "m f d",
+    "m w d",
+    "f m d",
+    "w m d",
+    "m f x",
 )
 
 
@@ -285,11 +306,13 @@ def _normalizar_texto_comparable(valor):
 
 def _quitar_parentesis_modalidad(texto):
     """Remove modality/EEO parentheses; keep the distinguishing ones."""
+
     def _sustituir(coincidencia):
         contenido = _normalizar_texto_comparable(coincidencia.group(1))
         if any(marca in contenido for marca in _MARCAS_PARENTESIS):
             return " "
         return coincidencia.group(0)
+
     return _RE_PARENTESIS.sub(_sustituir, str(texto or ""))
 
 
@@ -335,12 +358,10 @@ def _claves_deduplicacion(job):
 
     titulo = _normalizar_texto_clave(_primer_valor(job, ("titulo", "title", "position")))
     if titulo:
-        empresa = _normalizar_texto_clave(
-            _primer_valor(job, ("empresa", "company", "companyName"))
-        )
+        empresa = _normalizar_texto_clave(_primer_valor(job, ("empresa", "company", "companyName")))
         # Without a company the separator is omitted, so the key of a bare
         # title does not end in "|" and matches the one from another source.
-        claves.append("te:%s|%s" % (titulo, empresa) if empresa else "te:" + titulo)
+        claves.append(f"te:{titulo}|{empresa}" if empresa else "te:" + titulo)
     return claves
 
 
@@ -386,14 +407,16 @@ def _filtrar_keywords_negativas(ofertas, keywords=None, config=None):
     requires a whole word, so ``gaming`` does not reject ``gaming`` inside
     another word. Without configured keywords the list is returned intact.
     """
-    palabras = _keywords_negativas(config) if keywords is None else [
-        _normalizar_texto_comparable(k) for k in keywords if _normalizar_texto_comparable(k)
-    ]
+    palabras = (
+        _keywords_negativas(config)
+        if keywords is None
+        else [_normalizar_texto_comparable(k) for k in keywords if _normalizar_texto_comparable(k)]
+    )
     if not palabras:
         return list(ofertas or [])
 
     patrones = [
-        (palabra, re.compile(r"(?<![a-z0-9])%s(?![a-z0-9])" % re.escape(palabra)))
+        (palabra, re.compile(rf"(?<![a-z0-9]){re.escape(palabra)}(?![a-z0-9])"))
         for palabra in palabras
     ]
     conservadas = []
@@ -402,18 +425,12 @@ def _filtrar_keywords_negativas(ofertas, keywords=None, config=None):
         if not isinstance(oferta, dict):
             continue
         texto = _normalizar_texto_comparable(
-            "%s %s"
-            % (
+            "{} {}".format(
                 _primer_valor(oferta, ("titulo", "title", "position"), "") or "",
-                _primer_valor(
-                    oferta, ("descripcion", "description", "description_text"), ""
-                )
-                or "",
+                _primer_valor(oferta, ("descripcion", "description", "description_text"), "") or "",
             )
         )
-        encontrada = next(
-            (palabra for palabra, patron in patrones if patron.search(texto)), None
-        )
+        encontrada = next((palabra for palabra, patron in patrones if patron.search(texto)), None)
         if encontrada:
             descartadas += 1
             log.debug(
@@ -426,7 +443,9 @@ def _filtrar_keywords_negativas(ofertas, keywords=None, config=None):
 
     log.info(
         "Filtro de keywords negativas (%s): %s descartadas, %s conservadas.",
-        ", ".join(palabras), descartadas, len(conservadas),
+        ", ".join(palabras),
+        descartadas,
+        len(conservadas),
     )
     return conservadas
 
@@ -481,14 +500,10 @@ def _entero_config(config, claves, variable, defecto):
     try:
         numero = int(str(crudo).strip())
     except (TypeError, ValueError):
-        log.warning(
-            "%s=%r no es un entero; se usa %s.", variable, crudo, defecto
-        )
+        log.warning("%s=%r no es un entero; se usa %s.", variable, crudo, defecto)
         return defecto
     if numero <= 0:
-        log.warning(
-            "%s=%r no es positivo; se usa %s.", variable, crudo, defecto
-        )
+        log.warning("%s=%r no es positivo; se usa %s.", variable, crudo, defecto)
         return defecto
     return numero
 
@@ -601,7 +616,8 @@ def _filtrar_por_antiguedad(ofertas, dias=None, config=None):
             descartadas += 1
             log.debug(
                 "Descartada por antigüedad (%s < %s): %s",
-                fecha.isoformat(), limite.isoformat(),
+                fecha.isoformat(),
+                limite.isoformat(),
                 oferta.get("titulo") or oferta.get("url") or "(sin título)",
             )
             continue
@@ -610,7 +626,11 @@ def _filtrar_por_antiguedad(ofertas, dias=None, config=None):
     log.info(
         "Filtro de antigüedad (máx. %s días, desde %s): %s descartadas, "
         "%s conservadas (%s sin fecha, se conservan).",
-        dias, limite.isoformat(), descartadas, len(conservadas), sin_fecha,
+        dias,
+        limite.isoformat(),
+        descartadas,
+        len(conservadas),
+        sin_fecha,
     )
     return conservadas
 
@@ -618,6 +638,7 @@ def _filtrar_por_antiguedad(ofertas, dias=None, config=None):
 # ---------------------------------------------------------------------------
 # Per-offer pipeline
 # ---------------------------------------------------------------------------
+
 
 def _procesar_oferta(bruto, perfil, umbral, idioma="en"):
     """Process one offer and return the op ready to notify, or None.
@@ -715,9 +736,7 @@ def _configurar_log_fichero(config):
         manejador = logging.handlers.RotatingFileHandler(
             ruta, maxBytes=2_000_000, backupCount=3, encoding="utf-8"
         )
-        manejador.setFormatter(
-            logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s")
-        )
+        manejador.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
         logging.getLogger().addHandler(manejador)
     except Exception as err:  # noqa: BLE001 — the file is an extra, not critical.
         log.warning("No se pudo abrir el log de fichero %s: %s", ruta, err)
@@ -758,8 +777,7 @@ def _alertar_sesion_linkedin(config):
     )
     try:
         notify.enviar_aviso(
-            "La sesión de LinkedIn está caducada o ausente; "
-            "exporta una nueva desde el Mac"
+            "La sesión de LinkedIn está caducada o ausente; exporta una nueva desde el Mac"
         )
     except Exception as err:  # noqa: BLE001 — the alert must not kill the run.
         log.error("No se pudo enviar el aviso de sesión de LinkedIn: %s", err)
@@ -872,7 +890,10 @@ def _ejecutar_run(config, args):
 
     log.info(
         "Umbral de score: %s · consultas: %s (%s) · antigüedad máx.: %s días",
-        umbral, len(consultas), ", ".join(consultas[:6]) or "-", dias_maximos,
+        umbral,
+        len(consultas),
+        ", ".join(consultas[:6]) or "-",
+        dias_maximos,
     )
     log.info(
         "Fuentes activas — LinkedIn: %s · boards: %s · JobSpy: %s",
@@ -890,9 +911,7 @@ def _ejecutar_run(config, args):
     LinkedInError = None  # type: ignore[assignment]
     search_jobs = None
     if not usar_linkedin:
-        log.info(
-            "LinkedIn desactivado en la configuración (FUENTES_LINKEDIN=false); se omite."
-        )
+        log.info("LinkedIn desactivado en la configuración (FUENTES_LINKEDIN=false); se omite.")
     else:
         try:
             from search.linkedin import LinkedInError, search_jobs  # noqa: F811
@@ -919,10 +938,13 @@ def _ejecutar_run(config, args):
 
     if search_jobs is not None:
         try:
-            ofertas_linkedin = search_jobs(
-                consultas,
-                limit=LIMITE_POR_QUERY,
-            ) or []
+            ofertas_linkedin = (
+                search_jobs(
+                    consultas,
+                    limit=LIMITE_POR_QUERY,
+                )
+                or []
+            )
         except Exception as err:  # noqa: BLE001 — a failure does not abort the run.
             es_linkedin = LinkedInError is not None and isinstance(err, LinkedInError)
             log.error(
@@ -943,9 +965,7 @@ def _ejecutar_run(config, args):
     # LinkedIn's rate limit. Their failure does not kill the run either.
     ofertas_boards = []
     if not usar_boards:
-        log.info(
-            "Boards desactivados en la configuración (FUENTES_BOARDS=false); se omite."
-        )
+        log.info("Boards desactivados en la configuración (FUENTES_BOARDS=false); se omite.")
     else:
         try:
             from search.boards import buscar_ofertas_boards
@@ -953,11 +973,14 @@ def _ejecutar_run(config, args):
             # ROLES + TOPICS also filter the board titles and feed their
             # searches (Remotive/EURES); the editable age avoids fetching
             # offers main would drop afterwards.
-            ofertas_boards = buscar_ofertas_boards(
-                limite_por_fuente=LIMITE_POR_FUENTE_BOARDS,
-                terminos=terminos,
-                max_antiguedad_dias=dias_maximos,
-            ) or []
+            ofertas_boards = (
+                buscar_ofertas_boards(
+                    limite_por_fuente=LIMITE_POR_FUENTE_BOARDS,
+                    terminos=terminos,
+                    max_antiguedad_dias=dias_maximos,
+                )
+                or []
+            )
         except Exception as err:  # noqa: BLE001
             log.error("Las fuentes alternativas fallaron: %s", err)
 
@@ -967,9 +990,7 @@ def _ejecutar_run(config, args):
     # either: the function isolates each site and each query.
     ofertas_jobspy = []
     if not usar_jobspy:
-        log.info(
-            "JobSpy desactivado en la configuración (FUENTES_JOBSPY=false); se omite."
-        )
+        log.info("JobSpy desactivado en la configuración (FUENTES_JOBSPY=false); se omite.")
     else:
         try:
             from search.jobspy import UBICACION_POR_DEFECTO, buscar_ofertas_jobspy
@@ -984,12 +1005,15 @@ def _ejecutar_run(config, args):
                 (str(u).strip() for u in ubicaciones if str(u or "").strip()),
                 UBICACION_POR_DEFECTO,
             )
-            ofertas_jobspy = buscar_ofertas_jobspy(
-                consultas,
-                limite=LIMITE_POR_QUERY_JOBSPY,
-                horas_recientes=horas_jobspy,
-                ubicacion=ubicacion,
-            ) or []
+            ofertas_jobspy = (
+                buscar_ofertas_jobspy(
+                    consultas,
+                    limite=LIMITE_POR_QUERY_JOBSPY,
+                    horas_recientes=horas_jobspy,
+                    ubicacion=ubicacion,
+                )
+                or []
+            )
         except Exception as err:  # noqa: BLE001
             log.error("La fuente JobSpy (Indeed/ZipRecruiter/Glassdoor) falló: %s", err)
 
@@ -1014,9 +1038,11 @@ def _ejecutar_run(config, args):
         len(ofertas_jobspy),
     )
     if not ofertas:
-        log.error("Ninguna oferta quedó tras la fusión y los filtros (antigüedad/keywords); se termina sin procesar nada.")
+        log.error(
+            "Ninguna oferta quedó tras la fusión y los filtros (antigüedad/keywords); "
+            "se termina sin procesar nada."
+        )
         return 0
-
 
     para_confirmar = []
     enviadas = 0
@@ -1055,7 +1081,7 @@ def _ejecutar_run(config, args):
                 except Exception as err:  # noqa: BLE001 — isolate each offer.
                     log.exception("Error procesando %s: %s", clave, err)
 
-    for clave, op in resueltas:
+    for _clave, op in resueltas:
         if not op:
             continue
         if args.modo == "manual":
@@ -1116,7 +1142,7 @@ def main():
     try:
         config = load_config(estricto=True)
     except RuntimeError as err:
-        print("[main] Error de configuración: %s" % err, file=sys.stderr)
+        print(f"[main] Error de configuración: {err}", file=sys.stderr)
         sys.exit(1)
 
     try:

@@ -60,26 +60,50 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_FILE = BASE_DIR / "data" / "oportunidades.json"
 
 ESTADOS_FALLBACK = [
-    "descubierta", "filtrada", "compatible", "priorizada", "cv_adaptado",
-    "cover_lista", "aprobacion_pendiente", "enviada", "respuesta",
-    "entrevista", "oferta", "descartada",
+    "descubierta",
+    "filtrada",
+    "compatible",
+    "priorizada",
+    "cv_adaptado",
+    "cover_lista",
+    "aprobacion_pendiente",
+    "enviada",
+    "respuesta",
+    "entrevista",
+    "oferta",
+    "descartada",
 ]
 FUENTES_FALLBACK = ["linkedin", "indeed", "web"]
 CONTRATOS_FALLBACK = ["laboral", "b2b", "desconocido"]
 
 CAMPOS_CSV = [
-    "id", "fuente", "url", "titulo", "empresa", "salario_publicado",
-    "ubicacion", "remoto", "restriccion_geografica",
-    "restriccion_requiere_aclaracion", "contrato", "estado", "score",
-    "motivo_descarte", "skills_match", "notas",
+    "id",
+    "fuente",
+    "url",
+    "titulo",
+    "empresa",
+    "salario_publicado",
+    "ubicacion",
+    "remoto",
+    "restriccion_geografica",
+    "restriccion_requiere_aclaracion",
+    "contrato",
+    "estado",
+    "score",
+    "motivo_descarte",
+    "skills_match",
+    "notas",
 ]
 
 
 # ---------- acceso a datos ----------
 
+
 def cargar() -> dict:
     if not DATA_FILE.exists():
-        raise SystemExit(f"No existe {DATA_FILE}; créalo primero con las claves 'schema' y 'oportunidades'.")
+        raise SystemExit(
+            f"No existe {DATA_FILE}; créalo primero con las claves 'schema' y 'oportunidades'."
+        )
     with DATA_FILE.open(encoding="utf-8") as fh:
         return json.load(fh)
 
@@ -123,6 +147,7 @@ def _remoto_str(v) -> str:
 
 
 # ---------- comandos ----------
+
 
 def cmd_add(data: dict, args) -> None:
     oid = args.id
@@ -169,15 +194,17 @@ def cmd_list(data: dict, args) -> None:
     encabezados = ["ID", "EMPRESA", "TITULO", "ESTADO", "SCORE", "UBICACION", "REMOTO"]
     filas: list[list[str]] = []
     for i in items:
-        filas.append([
-            str(i.get("id", "")),
-            str(i.get("empresa", "")),
-            str(i.get("titulo", "")),
-            str(i.get("estado", "")),
-            str(i.get("score", "")),
-            str(i.get("ubicacion") or ""),
-            _remoto_str(i.get("remoto")),
-        ])
+        filas.append(
+            [
+                str(i.get("id", "")),
+                str(i.get("empresa", "")),
+                str(i.get("titulo", "")),
+                str(i.get("estado", "")),
+                str(i.get("score", "")),
+                str(i.get("ubicacion") or ""),
+                _remoto_str(i.get("remoto")),
+            ]
+        )
     todas = [encabezados] + filas
     anchos = [max(len(fila[c]) for fila in todas) for c in range(len(encabezados))]
     for fila in todas:
@@ -234,6 +261,7 @@ def cmd_export(data: dict, args) -> None:
 
 # ---------- parser ----------
 
+
 def construir_parser(estados, fuentes, contratos) -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="tracker.py",
@@ -251,8 +279,9 @@ def construir_parser(estados, fuentes, contratos) -> argparse.ArgumentParser:
     pa.add_argument("--ubicacion")
     pa.add_argument("--remoto", type=parse_bool, default=None, metavar="true|false")
     pa.add_argument("--restriccion", dest="restriccion_geografica", help="restricción geográfica")
-    pa.add_argument("--aclaracion", action="store_true",
-                    help="marca restriccion_requiere_aclaracion=True")
+    pa.add_argument(
+        "--aclaracion", action="store_true", help="marca restriccion_requiere_aclaracion=True"
+    )
     pa.add_argument("--contrato", choices=contratos, default="desconocido")
     pa.add_argument("--estado", choices=estados, default="descubierta")
     pa.add_argument("--score", type=int, default=0, help="0-100")

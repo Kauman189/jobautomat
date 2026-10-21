@@ -1,6 +1,9 @@
-# Dependencias de desarrollo/test para CI (job `test`).
-# Solo lo mínimo para pytest y para los tests de la capa web (Flask).
+# Dependencias de desarrollo/test para CI (jobs `test` y `lint`).
+# Solo lo mínimo para pytest, para los tests de la capa web (Flask), para el
+# linting/formato con ruff y para medir cobertura.
 # Las dependencias de runtime del servicio están en service/requirements.txt
 # y las instala el propio Dockerfile: no se duplican aquí.
 pytest>=8,<9
 flask>=3,<4
+ruff>=0.6,<1
+coverage>=7,<8

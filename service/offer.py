@@ -65,6 +65,7 @@ _ESQUEMA_ESPERADO = """{
 # Numeric helpers
 # ---------------------------------------------------------------------------
 
+
 def _a_numero(valor):
     """Convert a model value ("40.000", "40k", 40000) to float.
 
@@ -162,6 +163,7 @@ def _cifra_en_texto(cifra, texto):
 # Profile
 # ---------------------------------------------------------------------------
 
+
 def _datos_objetivo(perfil):
     """Return the normalized target salary from the profile.
 
@@ -209,6 +211,7 @@ def _resumen_perfil(perfil):
 # ---------------------------------------------------------------------------
 # Sanitizing the model response
 # ---------------------------------------------------------------------------
+
 
 def _texto_limpio(valor, limite=600):
     """Return a trimmed string; empty when the value is not textual."""
@@ -259,9 +262,7 @@ def _saneado_salario(datos, texto_oferta, supuestos):
             "ninguna cifra y el gap no se calcula."
         )
     if (minimo is not None or maximo is not None) and periodo is None:
-        supuestos.append(
-            "No consta el periodo del salario; se asume anual para comparar."
-        )
+        supuestos.append("No consta el periodo del salario; se asume anual para comparar.")
     if bruto_neto is None and (minimo is not None or maximo is not None):
         supuestos.append("No consta si el salario es bruto o neto.")
 
@@ -335,16 +336,12 @@ def _parsear_json_tolerante(contenido):
         texto = bloque.group(1).strip()
     inicio = texto.find("{")
     if inicio == -1:
-        raise llm.LLMError(
-            "La respuesta del modelo no contiene ningún objeto JSON: "
-            + texto[:200]
-        )
+        raise llm.LLMError("La respuesta del modelo no contiene ningún objeto JSON: " + texto[:200])
     try:
         datos, _ = json.JSONDecoder().raw_decode(texto[inicio:])
     except ValueError as err:
         raise llm.LLMError(
-            f"No se pudo parsear el JSON de la oferta: {err}. "
-            f"Contenido: {texto[:300]}"
+            f"No se pudo parsear el JSON de la oferta: {err}. Contenido: {texto[:300]}"
         ) from err
     if not isinstance(datos, dict):
         raise llm.LLMError("El JSON de la oferta no es un objeto.")
@@ -354,6 +351,7 @@ def _parsear_json_tolerante(contenido):
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 def analizar_oferta(texto_oferta, perfil, max_tokens=4000):
     """Analyze a job offer and return a structured dict.
@@ -374,9 +372,7 @@ def analizar_oferta(texto_oferta, perfil, max_tokens=4000):
         llm.LLMError if the model call fails or returns no JSON object.
     """
     if not isinstance(texto_oferta, str) or len(texto_oferta.strip()) < 40:
-        raise ValueError(
-            "texto_oferta debe ser una cadena de al menos 40 caracteres."
-        )
+        raise ValueError("texto_oferta debe ser una cadena de al menos 40 caracteres.")
 
     texto = texto_oferta.strip()
     if len(texto) > _MAX_TEXTO:
@@ -385,9 +381,7 @@ def analizar_oferta(texto_oferta, perfil, max_tokens=4000):
     objetivo = _datos_objetivo(perfil)
     supuestos = []
     if objetivo["referencia_anual"] is None:
-        supuestos.append(
-            "El perfil no tiene salario objetivo interpretable: no se calcula gap."
-        )
+        supuestos.append("El perfil no tiene salario objetivo interpretable: no se calcula gap.")
 
     prompt = f"""Analiza la OFERTA DE TRABAJO y devuelve SÓLO un objeto JSON con
 exactamente esta forma:
@@ -445,9 +439,7 @@ OFERTA:
         if supuesto not in supuestos:
             supuestos.append(supuesto)
 
-    salario = _saneado_salario(
-        respuesta.get("salario_ofrecido"), texto, supuestos
-    )
+    salario = _saneado_salario(respuesta.get("salario_ofrecido"), texto, supuestos)
 
     # Deterministic gap calculation: the model never does it.
     referencia = objetivo["referencia_anual"]
@@ -514,7 +506,11 @@ def formatear_analisis(analisis):
     lineas.append(
         "Salario ofrecido: "
         + _importe(salario.get("min"))
-        + (" - " + _importe(salario.get("max")) if salario.get("max") is not None and salario.get("max") != salario.get("min") else "")
+        + (
+            " - " + _importe(salario.get("max"))
+            if salario.get("max") is not None and salario.get("max") != salario.get("min")
+            else ""
+        )
         + " "
         + (salario.get("moneda") or "")
         + (" / " + str(salario.get("periodo")) if salario.get("periodo") else "")
@@ -538,8 +534,7 @@ def formatear_analisis(analisis):
     lineas.append("Cláusulas:")
     for clausula in analisis.get("clausulas") or []:
         lineas.append(
-            f"- [{clausula.get('riesgo')}] {clausula.get('clausula')}: "
-            f"{clausula.get('detalle')}"
+            f"- [{clausula.get('riesgo')}] {clausula.get('clausula')}: {clausula.get('detalle')}"
         )
     if not analisis.get("clausulas"):
         lineas.append("- (ninguna detectada)")
@@ -568,7 +563,7 @@ if __name__ == "__main__":
         "data",
         "perfil.json",
     )
-    with open(ruta, "r", encoding="utf-8") as fh:
+    with open(ruta, encoding="utf-8") as fh:
         perfil_local = json.load(fh)
     print("Objetivo salarial:", _datos_objetivo(perfil_local))
     print("Rango '40k-45k':", _parsear_rango_objetivo("40k-45k"))

@@ -153,10 +153,16 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description="Copia la sesión de LinkedIn (storage_state) a la ruta del servicio."
     )
-    parser.add_argument("--origen", default=str(ORIGEN_DEFECTO),
-                        help=f"storage_state de origen (def: {ORIGEN_DEFECTO})")
-    parser.add_argument("--destino", default=None,
-                        help="ruta destino (def: $SESSION_PATH o data/linkedin_session.json)")
+    parser.add_argument(
+        "--origen",
+        default=str(ORIGEN_DEFECTO),
+        help=f"storage_state de origen (def: {ORIGEN_DEFECTO})",
+    )
+    parser.add_argument(
+        "--destino",
+        default=None,
+        help="ruta destino (def: $SESSION_PATH o data/linkedin_session.json)",
+    )
     args = parser.parse_args()
 
     origen = Path(os.path.expanduser(args.origen))

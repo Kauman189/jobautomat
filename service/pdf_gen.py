@@ -30,13 +30,13 @@ import shutil
 import subprocess
 import unicodedata
 import zlib
+from xml.sax.saxutils import escape
 
+from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
-from reportlab.lib.enums import TA_LEFT, TA_CENTER
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
-from xml.sax.saxutils import escape
 
 _registro = logging.getLogger(__name__)
 
@@ -58,13 +58,34 @@ _MARGEN_INFERIOR = 18 * mm
 # Mappings for typographic signs outside WinAnsi or unreliable in text
 # extraction (arrows, angle quotes, bullets...).
 _EQUIVALENCIAS = {
-    "\u2018": "'", "\u2019": "'", "\u201a": "'", "\u201b": "'",
-    "\u201c": '"', "\u201d": '"', "\u201e": '"', "\u201f": '"',
-    "\u2013": "-", "\u2014": "-", "\u2015": "-", "\u2212": "-",
-    "\u2022": "-", "\u00b7": "-", "\u25aa": "-", "\u25cf": "-",
-    "\u2026": "...", "\u2192": "->", "\u2190": "<-", "\u2194": "<->",
-    "\u2264": "<=", "\u2265": ">=", "\u00a0": " ", "\u202f": " ",
-    "\u2009": " ", "\u200b": "", "\ufeff": "", "\u00ad": "",
+    "\u2018": "'",
+    "\u2019": "'",
+    "\u201a": "'",
+    "\u201b": "'",
+    "\u201c": '"',
+    "\u201d": '"',
+    "\u201e": '"',
+    "\u201f": '"',
+    "\u2013": "-",
+    "\u2014": "-",
+    "\u2015": "-",
+    "\u2212": "-",
+    "\u2022": "-",
+    "\u00b7": "-",
+    "\u25aa": "-",
+    "\u25cf": "-",
+    "\u2026": "...",
+    "\u2192": "->",
+    "\u2190": "<-",
+    "\u2194": "<->",
+    "\u2264": "<=",
+    "\u2265": ">=",
+    "\u00a0": " ",
+    "\u202f": " ",
+    "\u2009": " ",
+    "\u200b": "",
+    "\ufeff": "",
+    "\u00ad": "",
 }
 
 # Styles (created once; reportlab reuses them for every document).
@@ -108,6 +129,7 @@ _ESTILO_FIRMA = ParagraphStyle("firma", parent=_ESTILO_TEXTO, spaceBefore=8)
 # Text cleanup
 # ---------------------------------------------------------------------------
 
+
 def _apto_helvetica(texto):
     """Degrade to WinAnsi/ASCII the characters Helvetica cannot represent.
 
@@ -149,9 +171,7 @@ def _quitar_markdown_inline(linea):
     # Links [texto](url) -> "texto (url)": the URL is kept, useful in a CV.
     linea = re.sub(
         r"\[([^\]]+)\]\(([^)\s]+)\)",
-        lambda m: "%s (%s)" % (m.group(1), m.group(2))
-        if m.group(2) not in m.group(1)
-        else m.group(1),
+        lambda m: f"{m.group(1)} ({m.group(2)})" if m.group(2) not in m.group(1) else m.group(1),
         linea,
     )
     # Images ![alt](url) -> alt (no image is inserted in the PDF).
@@ -322,24 +342,24 @@ def bloques_a_html(bloques, titulo=None, autor=None):
 
         if tipo == "titulo":
             if not hay_nombre:
-                cuerpo.append('<h1 class="nombre">%s</h1>' % seguro)
+                cuerpo.append(f'<h1 class="nombre">{seguro}</h1>')
                 hay_nombre = True
                 estado_cabecera = "subtitulo"
             else:
                 # Second H1: demoted to a section to keep the hierarchy.
-                cuerpo.append('<h2 class="seccion">%s</h2>' % seguro)
+                cuerpo.append(f'<h2 class="seccion">{seguro}</h2>')
             continue
 
         if tipo == "seccion":
-            cuerpo.append('<h2 class="seccion">%s</h2>' % seguro)
+            cuerpo.append(f'<h2 class="seccion">{seguro}</h2>')
             continue
 
         if tipo == "bullet":
             # Group consecutive bullets into a single list.
             if en_lista:
-                cuerpo.append("<li>%s</li>" % seguro)
+                cuerpo.append(f"<li>{seguro}</li>")
             else:
-                cuerpo.append("<ul><li>%s</li>" % seguro)
+                cuerpo.append(f"<ul><li>{seguro}</li>")
                 en_lista = True
             if siguiente != "bullet":
                 cuerpo.append("</ul>")
@@ -353,18 +373,18 @@ def bloques_a_html(bloques, titulo=None, autor=None):
         # tipo == "texto"
         if hay_nombre and estado_cabecera in ("subtitulo", "contacto"):
             if _parece_contacto(contenido):
-                cuerpo.append('<p class="contacto">%s</p>' % seguro)
+                cuerpo.append(f'<p class="contacto">{seguro}</p>')
                 estado_cabecera = "listo"
             elif estado_cabecera == "subtitulo":
-                cuerpo.append('<p class="subtitulo">%s</p>' % seguro)
+                cuerpo.append(f'<p class="subtitulo">{seguro}</p>')
                 estado_cabecera = "contacto"
             else:
-                cuerpo.append("<p>%s</p>" % seguro)
+                cuerpo.append(f"<p>{seguro}</p>")
                 estado_cabecera = "listo"
             continue
 
         if siguiente == "bullet" and len(contenido) <= 220:
-            cuerpo.append('<p class="puesto">%s</p>' % seguro)
+            cuerpo.append(f'<p class="puesto">{seguro}</p>')
             continue
 
         # Short closing line (letter signature): a little air above.
@@ -373,23 +393,25 @@ def bloques_a_html(bloques, titulo=None, autor=None):
             and indice >= total - 2
             and not contenido.endswith((".", ":", ";", ","))
         )
-        cuerpo.append('<p class="%s">%s</p>' % ("firma" if es_firma else "", seguro))
+        cuerpo.append('<p class="{}">{}</p>'.format("firma" if es_firma else "", seguro))
 
     titulo_html = html.escape(titulo or "Currículum", quote=False)
     autor_html = html.escape(autor or "", quote=False)
     return (
         "<!DOCTYPE html>\n"
         '<html lang="es">\n<head>\n<meta charset="utf-8">\n'
-        "<title>%s</title>\n"
-        '<meta name="author" content="%s">\n'
-        "<style>%s</style>\n</head>\n<body>\n%s\n</body>\n</html>\n"
-        % (titulo_html, autor_html, _CSS, "\n".join(cuerpo))
+        "<title>{}</title>\n"
+        '<meta name="author" content="{}">\n'
+        "<style>{}</style>\n</head>\n<body>\n{}\n</body>\n</html>\n".format(
+            titulo_html, autor_html, _CSS, "\n".join(cuerpo)
+        )
     )
 
 
 # ---------------------------------------------------------------------------
 # Render
 # ---------------------------------------------------------------------------
+
 
 def contar_paginas(ruta):
     """Page count of a PDF. Uses pypdf when available, else raw bytes."""
@@ -424,10 +446,10 @@ def _render_chromium(documento_html, ruta):
             display_header_footer=False,
             prefer_css_page_size=False,
             margin={
-                "top": "%dmm" % _MARGENES_MM["top"],
-                "bottom": "%dmm" % _MARGENES_MM["bottom"],
-                "left": "%dmm" % _MARGENES_MM["left"],
-                "right": "%dmm" % _MARGENES_MM["right"],
+                "top": f"{_MARGENES_MM['top']}mm",
+                "bottom": f"{_MARGENES_MM['bottom']}mm",
+                "left": f"{_MARGENES_MM['left']}mm",
+                "right": f"{_MARGENES_MM['right']}mm",
             },
         )
     finally:
@@ -476,9 +498,7 @@ def _render_reportlab(bloques, ruta, titulo=None, autor=None):
                 and indice >= len(bloques) - 2
                 and not contenido.endswith((".", ":", ";", ","))
             )
-            historia.append(
-                Paragraph(seguro, _ESTILO_FIRMA if es_firma else _ESTILO_TEXTO)
-            )
+            historia.append(Paragraph(seguro, _ESTILO_FIRMA if es_firma else _ESTILO_TEXTO))
 
     # An empty block between sections keeps the text from looking cramped.
     if len(historia) > 1:
@@ -554,7 +574,7 @@ def _autor_candidato():
         try:
             with open(ruta, encoding="utf-8") as archivo:
                 perfil = json.load(archivo) or {}
-            nombre = ((perfil.get("identity") or {}).get("nombre") or "")
+            nombre = (perfil.get("identity") or {}).get("nombre") or ""
         except (OSError, ValueError):
             nombre = ""
         _AUTOR_CANDIDATO = str(nombre).strip()
@@ -636,8 +656,7 @@ def _texto_con_pdftotext(ruta):
     try:
         proceso = subprocess.run(
             ["pdftotext", "-layout", str(ruta), "-"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            capture_output=True,
             timeout=60,
         )
     except (OSError, subprocess.SubprocessError) as error:
@@ -694,10 +713,20 @@ def _cadenas_de_contenido(stream):
         trozo = coincidencia.group(0)
         if trozo.startswith(b"("):
             crudo = trozo[1:-1]
-            crudo = re.sub(rb"\\([nrtbf()\\])", lambda m: {
-                b"n": b"\n", b"r": b"\r", b"t": b"\t", b"b": b"",
-                b"f": b"", b"(": b"(", b")": b")", b"\\": b"\\",
-            }[m.group(1)], crudo)
+            crudo = re.sub(
+                rb"\\([nrtbf()\\])",
+                lambda m: {
+                    b"n": b"\n",
+                    b"r": b"\r",
+                    b"t": b"\t",
+                    b"b": b"",
+                    b"f": b"",
+                    b"(": b"(",
+                    b")": b")",
+                    b"\\": b"\\",
+                }[m.group(1)],
+                crudo,
+            )
         else:
             hexa = re.sub(rb"\s+", b"", trozo[1:-1])
             if len(hexa) % 2:
@@ -807,10 +836,10 @@ def verificar_pdf_cv(texto_markdown, ruta_pdf, perfil):
             return resultado
         tamano = os.path.getsize(ruta)
         if tamano <= _TAMANO_MINIMO_PDF:
-            resultado["motivo"] = "PDF de %d bytes (posible render vacío)" % tamano
+            resultado["motivo"] = f"PDF de {tamano} bytes (posible render vacío)"
             return resultado
     except OSError as error:
-        resultado["motivo"] = "no se pudo leer el PDF: %s" % error
+        resultado["motivo"] = f"no se pudo leer el PDF: {error}"
         return resultado
 
     try:
@@ -826,13 +855,13 @@ def verificar_pdf_cv(texto_markdown, ruta_pdf, perfil):
 
     normalizado = _normalizar_comparable(texto)
     if not normalizado:
-        resultado["motivo"] = "el PDF no contiene texto extraíble (%s)" % fuente
+        resultado["motivo"] = f"el PDF no contiene texto extraíble ({fuente})"
         return resultado
 
     faltantes = []
     for etiqueta, valor in _datos_duros_perfil(perfil):
         if not _contiene(normalizado, valor):
-            faltantes.append("%s: %s" % (etiqueta, valor))
+            faltantes.append(f"{etiqueta}: {valor}")
     resultado["faltantes"] = faltantes
     resultado["ok"] = not faltantes
 
@@ -841,11 +870,10 @@ def verificar_pdf_cv(texto_markdown, ruta_pdf, perfil):
     markdown = _normalizar_comparable(texto_markdown)
     if markdown and len(normalizado) < len(markdown) * 0.5:
         resultado["motivo"] = (
-            "texto extraído corto: %d chars frente a %d del markdown"
-            % (len(normalizado), len(markdown))
+            f"texto extraído corto: {len(normalizado)} chars frente a {len(markdown)} del markdown"
         )
     elif faltantes:
-        resultado["motivo"] = "datos del perfil ausentes en el PDF (%s)" % fuente
+        resultado["motivo"] = f"datos del perfil ausentes en el PDF ({fuente})"
     return resultado
 
 
@@ -853,9 +881,7 @@ if __name__ == "__main__":
     # Manual self-check: render the base CV to a temporary PDF.
     _raiz = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     _origen = os.path.join(_raiz, "assets", "cv", "base-cv-es.md")
-    _destino = os.path.join(
-        os.environ.get("TMPDIR", "/tmp"), "smoke_cv_base.pdf"
-    )
-    with open(_origen, "r", encoding="utf-8") as _fh:
+    _destino = os.path.join(os.environ.get("TMPDIR", "/tmp"), "smoke_cv_base.pdf")
+    with open(_origen, encoding="utf-8") as _fh:
         _texto = _fh.read()
     print(generar_pdf_cv(_texto, _destino))

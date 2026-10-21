@@ -116,7 +116,7 @@ def _comprobar_deepseek(cfg):
 
     base = str(_valor(cfg, "DEEPSEEK_BASE_URL", "https://api.deepseek.com/v1")).rstrip("/")
     modelo = str(_valor(cfg, "DEEPSEEK_MODEL", "deepseek-flash"))
-    cabeceras = {"Authorization": "Bearer %s" % clave}
+    cabeceras = {"Authorization": f"Bearer {clave}"}
     inicio = time.time()
 
     # 1) Model listing.
@@ -135,20 +135,23 @@ def _comprobar_deepseek(cfg):
         if err.code not in (404, 405):
             # 401/403 = bad key; 5xx = service down. Do not retry.
             return _bloque_error(
-                "DeepSeek respondió HTTP %s en /models (¿clave inválida o servicio caído?)"
-                % err.code, endpoint=base + "/models",
+                f"DeepSeek respondió HTTP {err.code} en /models "
+                "(¿clave inválida o servicio caído?)",
+                endpoint=base + "/models",
             )
     except Exception as err:  # noqa: BLE001 — network down, DNS, TLS...
-        return _bloque_error("sin respuesta de DeepSeek: %s" % err, endpoint=base + "/models")
+        return _bloque_error(f"sin respuesta de DeepSeek: {err}", endpoint=base + "/models")
     else:
         estado_models = None
 
     # 2) Fallback: a one-token completion.
-    cuerpo = json.dumps({
-        "model": modelo,
-        "messages": [{"role": "user", "content": "ping"}],
-        "max_tokens": 1,
-    }).encode("utf-8")
+    cuerpo = json.dumps(
+        {
+            "model": modelo,
+            "messages": [{"role": "user", "content": "ping"}],
+            "max_tokens": 1,
+        }
+    ).encode("utf-8")
     cabeceras_post = dict(cabeceras)
     cabeceras_post["Content-Type"] = "application/json"
     try:
@@ -163,18 +166,18 @@ def _comprobar_deepseek(cfg):
                     latencia_ms=int((time.time() - inicio) * 1000),
                 )
             return _bloque_error(
-                "DeepSeek respondió HTTP %s en chat/completions" % respuesta.status,
+                f"DeepSeek respondió HTTP {respuesta.status} en chat/completions",
                 endpoint=base + "/chat/completions",
             )
     except urllib.error.HTTPError as err:
         return _bloque_error(
-            "DeepSeek respondió HTTP %s en chat/completions (¿clave inválida?)" % err.code,
+            f"DeepSeek respondió HTTP {err.code} en chat/completions (¿clave inválida?)",
             endpoint=base + "/chat/completions",
             http_models=estado_models,
         )
     except Exception as err:  # noqa: BLE001
         return _bloque_error(
-            "sin respuesta de DeepSeek: %s" % err, endpoint=base + "/chat/completions"
+            f"sin respuesta de DeepSeek: {err}", endpoint=base + "/chat/completions"
         )
 
 
@@ -188,21 +191,23 @@ def _comprobar_telegram(cfg):
     if not token:
         return _bloque_error("sin TELEGRAM_BOT_TOKEN en .env")
 
-    url = "https://api.telegram.org/bot%s/getMe" % token
+    url = f"https://api.telegram.org/bot{token}/getMe"
     try:
         with urllib.request.urlopen(url, timeout=TIMEOUT_RED) as respuesta:
             datos = json.loads(respuesta.read().decode("utf-8", "replace") or "{}")
     except urllib.error.HTTPError as err:
         # 401/404 = revoked or mistyped token.
-        return _bloque_error("getMe respondió HTTP %s (¿token inválido?)" % err.code)
+        return _bloque_error(f"getMe respondió HTTP {err.code} (¿token inválido?)")
     except Exception as err:  # noqa: BLE001
-        return _bloque_error("sin respuesta de Telegram: %s" % err)
+        return _bloque_error(f"sin respuesta de Telegram: {err}")
 
     if not datos.get("ok"):
-        return _bloque_error("getMe devolvió ok=false: %s" % (datos.get("description") or "sin descripción"))
+        return _bloque_error(
+            "getMe devolvió ok=false: %s" % (datos.get("description") or "sin descripción")
+        )
     bot = datos.get("result") or {}
     return _bloque_ok(
-        "bot @%s operativo" % bot.get("username", "?"),
+        "bot @{} operativo".format(bot.get("username", "?")),
         bot_username=bot.get("username"),
         bot_id=bot.get("id"),
     )
@@ -210,7 +215,9 @@ def _comprobar_telegram(cfg):
 
 def _comprobar_linkedin(cfg):
     """LinkedIn session: existence and age of the cookies file."""
-    crudo = _valor(cfg, "SESSION_PATH") or _valor(cfg, "LINKEDIN_SESSION_PATH") or RUTA_SESION_DEFECTO
+    crudo = (
+        _valor(cfg, "SESSION_PATH") or _valor(cfg, "LINKEDIN_SESSION_PATH") or RUTA_SESION_DEFECTO
+    )
     ruta = _ruta_absoluta(crudo)
     max_dias = _valor(cfg, "SESION_LINKEDIN_MAX_DIAS", MAX_DIAS_SESION_DEFECTO)
     try:
@@ -232,9 +239,9 @@ def _comprobar_linkedin(cfg):
     antiguedad_dias = (time.time() - os.path.getmtime(ruta)) / 86400.0
     caducada = antiguedad_dias > max_dias
     if caducada:
-        detalle = "sesión de hace %.1f días (máx. %d): conviene renovarla" % (antiguedad_dias, max_dias)
+        detalle = f"sesión de hace {antiguedad_dias:.1f} días (máx. {max_dias}): conviene renovarla"
     else:
-        detalle = "sesión de hace %.1f días (máx. %d)" % (antiguedad_dias, max_dias)
+        detalle = f"sesión de hace {antiguedad_dias:.1f} días (máx. {max_dias})"
     return {
         "ok": not caducada,
         "presente": True,
@@ -263,15 +270,15 @@ def _comprobar_data(cfg):
     for directorio in directorios:
         comprobados.append(directorio)
         if not os.path.isdir(directorio):
-            fallos.append("%s no existe" % directorio)
+            fallos.append(f"{directorio} no existe")
             continue
-        temporal = os.path.join(directorio, ".health-%d.tmp" % os.getpid())
+        temporal = os.path.join(directorio, f".health-{os.getpid()}.tmp")
         try:
             with open(temporal, "w", encoding="utf-8") as fh:
                 fh.write("ok")
             os.remove(temporal)
         except Exception as err:  # noqa: BLE001
-            fallos.append("%s no escribible: %s" % (directorio, err))
+            fallos.append(f"{directorio} no escribible: {err}")
             try:
                 if os.path.exists(temporal):
                     os.remove(temporal)
@@ -280,17 +287,21 @@ def _comprobar_data(cfg):
 
     if fallos:
         return _bloque_error("; ".join(fallos), directorios=comprobados)
-    return _bloque_ok("escritura correcta en %s" % ", ".join(comprobados), directorios=comprobados)
+    return _bloque_ok(
+        "escritura correcta en {}".format(", ".join(comprobados)), directorios=comprobados
+    )
 
 
 def _comprobar_chromium(cfg):
     """patchright (preferred) or playwright resolve a Chromium binary."""
     try:
         from patchright.sync_api import sync_playwright  # noqa: F401
+
         libreria = "patchright"
     except Exception:  # noqa: BLE001 — not installed: try playwright
         try:
             from playwright.sync_api import sync_playwright  # noqa: F401
+
             libreria = "playwright"
         except Exception:  # noqa: BLE001
             return _bloque_error("sin librería (ni patchright ni playwright instalados)")
@@ -304,15 +315,15 @@ def _comprobar_chromium(cfg):
         with _sp() as pw:
             ejecutable = pw.chromium.executable_path
     except Exception as err:  # noqa: BLE001 — browser not downloaded, etc.
-        return _bloque_error("%s no resuelve Chromium: %s" % (libreria, err), libreria=libreria)
+        return _bloque_error(f"{libreria} no resuelve Chromium: {err}", libreria=libreria)
 
     if not ejecutable or not os.path.isfile(ejecutable):
         return _bloque_error(
-            "%s no encuentra el binario de Chromium (¿faltan los navegadores?)" % libreria,
+            f"{libreria} no encuentra el binario de Chromium (¿faltan los navegadores?)",
             libreria=libreria,
             ejecutable=ejecutable,
         )
-    return _bloque_ok("Chromium resuelto por %s" % libreria, libreria=libreria, ejecutable=ejecutable)
+    return _bloque_ok(f"Chromium resuelto por {libreria}", libreria=libreria, ejecutable=ejecutable)
 
 
 # ---------------------------------------------------------------------------
@@ -348,7 +359,7 @@ def diagnostico(cfg):
         try:
             resultado[nombre] = funcion(cfg)
         except Exception as err:  # noqa: BLE001 — diagnostics must never bring anything down
-            resultado[nombre] = _bloque_error("error inesperado en la comprobación: %s" % err)
+            resultado[nombre] = _bloque_error(f"error inesperado en la comprobación: {err}")
 
     resultado["ok"] = all(
         bloque.get("ok") for bloque in resultado.values() if not bloque.get("omitido")
@@ -366,8 +377,10 @@ def resumen(resultado):
             estado = "omitido"
         else:
             estado = "ok" if bloque.get("ok") else "FALLO"
-        partes.append("%s=%s" % (nombre, estado))
-    return ("global=%s " % ("ok" if (resultado or {}).get("ok") else "degradado")) + " ".join(partes)
+        partes.append(f"{nombre}={estado}")
+    return ("global=%s " % ("ok" if (resultado or {}).get("ok") else "degradado")) + " ".join(
+        partes
+    )
 
 
 if __name__ == "__main__":
@@ -380,7 +393,7 @@ if __name__ == "__main__":
         # estricto=False: a diagnostic must work with a half-filled config.
         config_actual = load_config(estricto=False)
     except Exception as err:  # noqa: BLE001
-        print("[health] no se pudo cargar la configuración: %s" % err, file=sys.stderr)
+        print(f"[health] no se pudo cargar la configuración: {err}", file=sys.stderr)
         config_actual = {}
 
     diagnostico_actual = diagnostico(config_actual)

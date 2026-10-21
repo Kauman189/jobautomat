@@ -45,8 +45,16 @@ LIMITE = 3
 
 CLAVES_BUSQUEDA = ("job_id", "titulo", "empresa", "url")
 CLAVES_DETALLE = (
-    "job_id", "titulo", "empresa", "url", "ubicacion",
-    "descripcion", "requisitos", "salario", "remoto", "contrato",
+    "job_id",
+    "titulo",
+    "empresa",
+    "url",
+    "ubicacion",
+    "descripcion",
+    "requisitos",
+    "salario",
+    "remoto",
+    "contrato",
 )
 
 
@@ -122,8 +130,10 @@ def main() -> int:
     print(f"  remoto:     {detalle.get('remoto')}")
     print(f"  contrato:   {detalle.get('contrato')}")
     print(f"  salario:    {detalle.get('salario')}")
-    print(f"  descripcion ({len(detalle.get('descripcion') or '')} chars): "
-          f"{_recorte(detalle.get('descripcion'), 300)}")
+    print(
+        f"  descripcion ({len(detalle.get('descripcion') or '')} chars): "
+        f"{_recorte(detalle.get('descripcion'), 300)}"
+    )
     requisitos = detalle.get("requisitos")
     print(f"  requisitos ({len(requisitos or '')} chars): {_recorte(requisitos, 200)}")
 

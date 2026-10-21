@@ -95,7 +95,7 @@ _FALSE = ("false", "0", "no", "n", "off", "falso", "")
 
 def _warn(mensaje):
     """Warning to stderr. Never receives config values (keys only)."""
-    print("[config] AVISO: %s" % mensaje, file=sys.stderr)
+    print(f"[config] AVISO: {mensaje}", file=sys.stderr)
 
 
 def _a_bool(valor):
@@ -109,7 +109,7 @@ def _a_bool(valor):
         return True
     if texto in _FALSE:
         return False
-    raise ValueError("valor booleano no reconocido: %r" % (valor,))
+    raise ValueError(f"valor booleano no reconocido: {valor!r}")
 
 
 def _convertir(valor, tipo):
@@ -129,7 +129,7 @@ def _convertir(valor, tipo):
         texto = str(valor).strip()
         numero = float(texto)
         if numero != int(numero):
-            raise ValueError("se esperaba un entero: %r" % (valor,))
+            raise ValueError(f"se esperaba un entero: {valor!r}")
         return int(numero)
     if tipo == "float":
         return float(str(valor).strip())
@@ -148,7 +148,7 @@ def _parsear_env(ruta):
         return {}
 
     datos = {}
-    with open(ruta, "r", encoding="utf-8") as fh:
+    with open(ruta, encoding="utf-8") as fh:
         for linea in fh:
             linea = linea.strip()
             if not linea or linea.startswith("#"):
@@ -190,13 +190,13 @@ def leer_settings(ruta=None):
     if not os.path.isfile(ruta):
         return {}
     try:
-        with open(ruta, "r", encoding="utf-8") as fh:
+        with open(ruta, encoding="utf-8") as fh:
             datos = json.load(fh)
     except Exception as err:  # noqa: BLE001 — corrupt file must not crash the service
-        _warn("no se pudo leer %s (%s); se usa el entorno" % (ruta, err))
+        _warn(f"no se pudo leer {ruta} ({err}); se usa el entorno")
         return {}
     if not isinstance(datos, dict):
-        _warn("%s no contiene un objeto JSON; se ignora" % ruta)
+        _warn(f"{ruta} no contiene un objeto JSON; se ignora")
         return {}
     return datos
 
@@ -215,9 +215,7 @@ def guardar_settings(cambios, ruta=None):
     directorio = os.path.dirname(ruta) or "."
     os.makedirs(directorio, exist_ok=True)
 
-    fd, temporal = tempfile.mkstemp(
-        dir=directorio, prefix=".settings-", suffix=".tmp"
-    )
+    fd, temporal = tempfile.mkstemp(dir=directorio, prefix=".settings-", suffix=".tmp")
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
             json.dump(actuales, fh, ensure_ascii=False, indent=2, sort_keys=True)
@@ -304,14 +302,15 @@ def load_config(ruta_env=None, estricto=True):
         if clave.startswith("_"):
             continue  # comment convention in settings.json
         if clave not in _CONFIG_DEFS:
-            _warn("clave desconocida en settings.json ignorada: %s" % clave)
+            _warn(f"clave desconocida en settings.json ignorada: {clave}")
             continue
         tipo = _CONFIG_DEFS[clave][0]
         try:
             config[clave] = _convertir(valor, tipo)
         except Exception as err:  # noqa: BLE001 — one bad key does not invalidate the rest
-            _warn("valor inválido para %s en settings.json (%s); se conserva el del entorno"
-                  % (clave, err))
+            _warn(
+                f"valor inválido para {clave} en settings.json ({err}); se conserva el del entorno"
+            )
 
     if estricto:
         # Startup fail-fast: validate the minimum (RuntimeError if
@@ -361,10 +360,7 @@ def enmascarar_config(config):
 
 def secretos_configurados(config):
     """``{secret_key: bool}`` telling whether each one has a non-empty value."""
-    return {
-        clave: bool((config or {}).get(clave))
-        for clave in _SECRET_KEYS
-    }
+    return {clave: bool((config or {}).get(clave)) for clave in _SECRET_KEYS}
 
 
 def normalizar_valor(clave, valor):
@@ -379,23 +375,23 @@ def normalizar_valor(clave, valor):
 
     if tipo == "bool":
         if not isinstance(valor, bool):
-            raise ValueError("%s debe ser booleano (true/false)" % clave)
+            raise ValueError(f"{clave} debe ser booleano (true/false)")
         return valor
     if tipo == "int":
         if isinstance(valor, bool) or not isinstance(valor, int):
-            raise ValueError("%s debe ser un número entero" % clave)
+            raise ValueError(f"{clave} debe ser un número entero")
         return valor
     if tipo == "float":
         if isinstance(valor, bool) or not isinstance(valor, (int, float)):
-            raise ValueError("%s debe ser un número" % clave)
+            raise ValueError(f"{clave} debe ser un número")
         return float(valor)
     if tipo == "json":
         if not isinstance(valor, (list, dict)):
-            raise ValueError("%s debe ser una lista u objeto JSON" % clave)
+            raise ValueError(f"{clave} debe ser una lista u objeto JSON")
         return copy.deepcopy(valor)
     # str
     if not isinstance(valor, str):
-        raise ValueError("%s debe ser texto" % clave)
+        raise ValueError(f"{clave} debe ser texto")
     return valor.strip()
 
 
@@ -411,17 +407,13 @@ def validar_rangos(valores):
             continue
         valor = valores[clave]
         if valor < minimo or valor > maximo:
-            raise ValueError(
-                "%s debe estar entre %s y %s (recibido %s)"
-                % (clave, minimo, maximo, valor)
-            )
+            raise ValueError(f"{clave} debe estar entre {minimo} y {maximo} (recibido {valor})")
 
     minimo = valores.get("RANGO_DUDOSO_MIN")
     maximo = valores.get("RANGO_DUDOSO_MAX")
     if minimo is not None and maximo is not None and minimo > maximo:
         raise ValueError(
-            "RANGO_DUDOSO_MIN (%s) no puede ser mayor que RANGO_DUDOSO_MAX (%s)"
-            % (minimo, maximo)
+            f"RANGO_DUDOSO_MIN ({minimo}) no puede ser mayor que RANGO_DUDOSO_MAX ({maximo})"
         )
 
 

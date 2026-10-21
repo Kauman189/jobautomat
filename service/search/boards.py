@@ -95,8 +95,8 @@ from __future__ import annotations
 import base64
 import datetime
 import email.utils
-import html
 import hashlib
+import html
 import json
 import logging
 import os
@@ -105,8 +105,9 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
+from collections.abc import Iterable, Sequence
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Any
 
 log = logging.getLogger(__name__)
 
@@ -138,9 +139,7 @@ URL_RECRUITEE = "https://{slug}.recruitee.com/api/offers/"
 URL_WORKABLE = "https://apply.workable.com/api/v1/widget/accounts/{slug}?details=true"
 URL_BAMBOOHR_LISTA = "https://{slug}.bamboohr.com/careers/list"
 URL_BAMBOOHR_DETALLE = "https://{slug}.bamboohr.com/careers/{job_id}/detail"
-URL_EURES_BUSQUEDA = (
-    "https://europa.eu/eures/api/jv-searchengine/public/jv-search/search"
-)
+URL_EURES_BUSQUEDA = "https://europa.eu/eures/api/jv-searchengine/public/jv-search/search"
 # The public EURES detail page is a SPA: the URL is enough to open the posting.
 URL_EURES_DETALLE = "https://europa.eu/eures/portal/jv-se/jv-details/{job_id}?lang=en"
 # InfoJobs requires a registered app (client_id + client_secret). Without those
@@ -151,38 +150,38 @@ VARIABLE_INFOJOBS_SECRET = "INFOJOBS_CLIENT_SECRET"
 
 # Companies with a Recruitee board. The slug is the subdomain: just add the
 # ones of interest; missing ones are dropped silently (404).
-RECRUITEE_EMPRESAS: Tuple[str, ...] = (
-    "mayflower",    # verified: 51 postings, 3 design
+RECRUITEE_EMPRESAS: tuple[str, ...] = (
+    "mayflower",  # verified: 51 postings, 3 design
     "nacardesign",  # verified: 16 postings, 13 design
-    "snapp",        # verified: 23 postings, 2 design
-    "eleken",       # verified: 4 postings, 1 design
-    "mailerlite",   # verified: 3 postings, 1 design
-    "up42gmbh",     # verified: 1 design posting
-    "bunq",         # verified: board with postings (no design ones today)
+    "snapp",  # verified: 23 postings, 2 design
+    "eleken",  # verified: 4 postings, 1 design
+    "mailerlite",  # verified: 3 postings, 1 design
+    "up42gmbh",  # verified: 1 design posting
+    "bunq",  # verified: board with postings (no design ones today)
 )
 
 # Companies with a Workable board (public widget endpoint). Huge boards
 # (1,000+ openings) are skipped: the payload is not worth it.
-WORKABLE_EMPRESAS: Tuple[str, ...] = (
-    "qodea",        # verified: 20 postings, 3 design
-    "devsu",        # verified: 29 postings, 1 design (UX, Spanish)
-    "ndax",         # verified: 11 postings, 1 design
-    "zealthy",      # verified: 10 postings, 1 design
+WORKABLE_EMPRESAS: tuple[str, ...] = (
+    "qodea",  # verified: 20 postings, 3 design
+    "devsu",  # verified: 29 postings, 1 design (UX, Spanish)
+    "ndax",  # verified: 11 postings, 1 design
+    "zealthy",  # verified: 10 postings, 1 design
     "bakery-agency",  # verified: 6 postings, 1 design
     "huggingface",  # verified: responds, no design ones today
 )
 
 # Companies with a BambooHR board. The slug is the *.bamboohr.com subdomain.
-BAMBOOHR_EMPRESAS: Tuple[str, ...] = (
-    "konfio",           # verified: board with postings
+BAMBOOHR_EMPRESAS: tuple[str, ...] = (
+    "konfio",  # verified: board with postings
     "greenparkcontent",  # verified: board with design postings
-    "studios",          # verified: board with design postings
-    "nprc",             # verified: board with postings
+    "studios",  # verified: board with design postings
+    "nprc",  # verified: board with postings
 )
 
 # Queries issued against the EURES public search. Results are filtered by title
 # afterwards, using the same criterion as the other sources.
-BUSQUEDAS_EURES: Tuple[str, ...] = ("designer", "product designer")
+BUSQUEDAS_EURES: tuple[str, ...] = ("designer", "product designer")
 
 # Maximum age in days, mirroring ``main.MAX_ANTIGUEDAD_DIAS``: the new sources
 # already drop at the origin what ``main`` would drop again. ``main.py`` may set
@@ -190,10 +189,10 @@ BUSQUEDAS_EURES: Tuple[str, ...] = ("designer", "product designer")
 # ``max_antiguedad_dias`` argument).
 MAX_ANTIGUEDAD_DIAS = 30
 VARIABLE_MAX_ANTIGUEDAD = "MAX_ANTIGUEDAD_DIAS"
-_DIAS_ANTIGUEDAD_CONFIGURADOS: Optional[int] = None
+_DIAS_ANTIGUEDAD_CONFIGURADOS: int | None = None
 
 
-def configurar_antiguedad(dias: Optional[int]) -> Optional[int]:
+def configurar_antiguedad(dias: int | None) -> int | None:
     """Set the maximum age in days applied by the board sources.
 
     Args:
@@ -220,6 +219,7 @@ def configurar_antiguedad(dias: Optional[int]) -> Optional[int]:
     _DIAS_ANTIGUEDAD_CONFIGURADOS = valor
     return valor
 
+
 # Remotive queries besides the design category. Remotive accepts ``category``
 # and ``search``; an extra search is used so as not to depend on a single one.
 # Budget: 2 requests per run (their docs ask for ~4 a day at most, so one daily
@@ -228,15 +228,57 @@ BUSQUEDAS_REMOTIVE = ("product designer",)
 
 # Candidate companies. Not all of them need to exist: auto-detection drops the
 # ones returning no postings.
-EMPRESAS_SLUGS: Tuple[str, ...] = (
-    "stripe", "airbnb", "shopify", "spotify", "duolingo", "reddit",
-    "cloudflare", "datadog", "dropbox", "block", "twilio", "zapier",
-    "doordash", "instacart", "robinhood", "chime", "affirm", "plaid",
-    "wise", "revolut", "klarna", "monzo", "n26", "glovo", "cabify",
-    "wallapop", "jobandtalent", "travelperk", "factorial", "typeform",
-    "deepl", "linear", "vercel", "ramp", "notion", "figma", "framer",
-    "deel", "openai", "anthropic", "scale", "mercury", "brex", "rippling",
-    "retool", "vanta", "posthog", "supabase", "gitlab", "netflix",
+EMPRESAS_SLUGS: tuple[str, ...] = (
+    "stripe",
+    "airbnb",
+    "shopify",
+    "spotify",
+    "duolingo",
+    "reddit",
+    "cloudflare",
+    "datadog",
+    "dropbox",
+    "block",
+    "twilio",
+    "zapier",
+    "doordash",
+    "instacart",
+    "robinhood",
+    "chime",
+    "affirm",
+    "plaid",
+    "wise",
+    "revolut",
+    "klarna",
+    "monzo",
+    "n26",
+    "glovo",
+    "cabify",
+    "wallapop",
+    "jobandtalent",
+    "travelperk",
+    "factorial",
+    "typeform",
+    "deepl",
+    "linear",
+    "vercel",
+    "ramp",
+    "notion",
+    "figma",
+    "framer",
+    "deel",
+    "openai",
+    "anthropic",
+    "scale",
+    "mercury",
+    "brex",
+    "rippling",
+    "retool",
+    "vanta",
+    "posthog",
+    "supabase",
+    "gitlab",
+    "netflix",
 )
 
 # Title filter: only design roles are of interest. 'ui'/'ux' are matched as
@@ -255,10 +297,10 @@ PALABRAS_TITULO = (
 # Extra terms from the editable config (ROLES + TOPICS). Added as title
 # substrings, like PALABRAS_TITULO, so a new role ("Service Designer",
 # "Content Designer"…) works without touching code.
-_TERMINOS_TITULO_EXTRA: Tuple[str, ...] = ()
+_TERMINOS_TITULO_EXTRA: tuple[str, ...] = ()
 
 
-def configurar_terminos(terminos: Optional[Iterable[str]]) -> Tuple[str, ...]:
+def configurar_terminos(terminos: Iterable[str] | None) -> tuple[str, ...]:
     """Extend the title filter with ``ROLES`` + ``TOPICS`` from the config.
 
     Args:
@@ -269,7 +311,7 @@ def configurar_terminos(terminos: Optional[Iterable[str]]) -> Tuple[str, ...]:
         historical filter).
     """
     global _TERMINOS_TITULO_EXTRA
-    limpios: List[str] = []
+    limpios: list[str] = []
     for termino in terminos or []:
         texto = _sin_acentos(str(termino or "")).strip()
         if len(texto) < 3 or texto in limpios:
@@ -277,6 +319,7 @@ def configurar_terminos(terminos: Optional[Iterable[str]]) -> Tuple[str, ...]:
         limpios.append(texto)
     _TERMINOS_TITULO_EXTRA = tuple(limpios)
     return _TERMINOS_TITULO_EXTRA
+
 
 # Proper casing of known brands (the slug does not carry it). Cosmetic only:
 # the company name is always derived from its board slug.
@@ -297,16 +340,27 @@ _MARCAS = {
 _MODALIDADES = (
     (("remote", "remoto", "teletrabajo", "100% remote", "fully remote"), "Remoto"),
     (("hybrid", "híbrido", "hibrido"), "Híbrido"),
-    (("onsite", "on-site", "on site", "in-office", "in office",
-      "presencial", "office"), "Presencial"),
+    (
+        ("onsite", "on-site", "on site", "in-office", "in office", "presencial", "office"),
+        "Presencial",
+    ),
 )
 
 # Contract type -> scoring.py vocabulary.
 _CONTRATOS = (
-    (("full-time", "full time", "fulltime", "permanent", "indefinido",
-      "jornada completa", "tiempo completo"), "Jornada completa"),
-    (("part-time", "part time", "parttime", "media jornada",
-      "tiempo parcial"), "Media jornada"),
+    (
+        (
+            "full-time",
+            "full time",
+            "fulltime",
+            "permanent",
+            "indefinido",
+            "jornada completa",
+            "tiempo completo",
+        ),
+        "Jornada completa",
+    ),
+    (("part-time", "part time", "parttime", "media jornada", "tiempo parcial"), "Media jornada"),
     (("internship", "intern", "becario", "beca", "prácticas", "practicas"), "Prácticas"),
     (("freelance", "contractor", "autónomo", "autonomo", "contract"), "Freelance"),
     (("temporary", "temporal", "fixed term", "fixed-term"), "Temporal"),
@@ -349,7 +403,7 @@ def _json(url: str) -> Any:
     return json.loads(_descargar(url).decode("utf-8", errors="replace"))
 
 
-def _json_post(url: str, cuerpo: Dict[str, Any], timeout: int = TIMEOUT_HTTP) -> Any:
+def _json_post(url: str, cuerpo: dict[str, Any], timeout: int = TIMEOUT_HTTP) -> Any:
     """POST ``cuerpo`` as JSON and return the parsed response.
 
     Used by EURES, whose search is a POST with filters in the body. No
@@ -379,13 +433,23 @@ def _json_post(url: str, cuerpo: Dict[str, Any], timeout: int = TIMEOUT_HTTP) ->
 def _sin_acentos(texto: str) -> str:
     """Lowercase and strip accents, for loose text comparison."""
     reemplazos = {
-        "á": "a", "é": "e", "í": "i", "ó": "o", "ú": "u", "ü": "u", "ñ": "n",
-        "à": "a", "è": "e", "ì": "i", "ò": "o", "ù": "u",
+        "á": "a",
+        "é": "e",
+        "í": "i",
+        "ó": "o",
+        "ú": "u",
+        "ü": "u",
+        "ñ": "n",
+        "à": "a",
+        "è": "e",
+        "ì": "i",
+        "ò": "o",
+        "ù": "u",
     }
     return "".join(reemplazos.get(c, c) for c in (texto or "").lower())
 
 
-def _limpio(valor: Any) -> Optional[str]:
+def _limpio(valor: Any) -> str | None:
     """Return the trimmed text, or ``None`` when nothing useful is left."""
     if valor is None:
         return None
@@ -393,7 +457,7 @@ def _limpio(valor: Any) -> Optional[str]:
     return texto or None
 
 
-def _fecha_desde_epoch(numero: Any) -> Optional[str]:
+def _fecha_desde_epoch(numero: Any) -> str | None:
     """Convert an epoch (seconds or milliseconds) to ``YYYY-MM-DD``.
 
     Lever publishes ``createdAt`` in milliseconds; the unit is told apart by
@@ -414,13 +478,13 @@ def _fecha_desde_epoch(numero: Any) -> Optional[str]:
     if abs(valor) >= 1e11:  # milliseconds
         valor /= 1000.0
     try:
-        momento = datetime.datetime.fromtimestamp(valor, tz=datetime.timezone.utc)
+        momento = datetime.datetime.fromtimestamp(valor, tz=datetime.UTC)
     except (OverflowError, OSError, ValueError):
         return None
     return momento.date().isoformat()
 
 
-def _fecha_publicacion(valor: Any) -> Optional[str]:
+def _fecha_publicacion(valor: Any) -> str | None:
     """Normalize a posting's publication date to ``YYYY-MM-DD``.
 
     Each source provides it differently: ISO 8601 (Greenhouse ``updated_at``,
@@ -465,7 +529,7 @@ def _fecha_publicacion(valor: Any) -> Optional[str]:
     return momento.date().isoformat() if momento else None
 
 
-def _texto_plano(valor: Any, maximo: int = _MAX_DESCRIPCION) -> Optional[str]:
+def _texto_plano(valor: Any, maximo: int = _MAX_DESCRIPCION) -> str | None:
     """Turn HTML (or text with tags) into readable plain text.
 
     Only text is extracted: nothing in the content is interpreted or executed.
@@ -488,10 +552,9 @@ def _texto_plano(valor: Any, maximo: int = _MAX_DESCRIPCION) -> Optional[str]:
     texto = html.unescape(texto)
 
     lineas = [
-        _RE_ESPACIOS.sub(" ", linea).strip()
-        for linea in texto.replace("\r", "\n").split("\n")
+        _RE_ESPACIOS.sub(" ", linea).strip() for linea in texto.replace("\r", "\n").split("\n")
     ]
-    salida: List[str] = []
+    salida: list[str] = []
     for linea in lineas:
         if not linea and (not salida or not salida[-1]):
             continue  # collapse consecutive empty lines
@@ -502,7 +565,7 @@ def _texto_plano(valor: Any, maximo: int = _MAX_DESCRIPCION) -> Optional[str]:
     return limpio[:maximo]
 
 
-def _clasificar(texto: Optional[str], tabla: Sequence[Sequence[Any]]) -> Optional[str]:
+def _clasificar(texto: str | None, tabla: Sequence[Sequence[Any]]) -> str | None:
     """Return the normalized value of the first match, or ``None``."""
     if not texto:
         return None
@@ -513,7 +576,7 @@ def _clasificar(texto: Optional[str], tabla: Sequence[Sequence[Any]]) -> Optiona
     return None
 
 
-def _normalizar_remoto(*pistas: Optional[str]) -> Optional[str]:
+def _normalizar_remoto(*pistas: str | None) -> str | None:
     """Infer the workplace type from several hints (workplaceType, location…).
 
     Hints are tried in order; the first one yielding a known type wins. If none
@@ -540,7 +603,7 @@ def _empresa_desde_slug(slug: str) -> str:
     return " ".join(_MARCAS.get(p.lower(), p.capitalize()) for p in partes) or slug
 
 
-def _titulo_relevante(titulo: Optional[str]) -> bool:
+def _titulo_relevante(titulo: str | None) -> bool:
     """True if the title looks like a design role or a configured role/topic."""
     if not titulo:
         return False
@@ -548,7 +611,7 @@ def _titulo_relevante(titulo: Optional[str]) -> bool:
     for palabra in tuple(PALABRAS_TITULO) + _TERMINOS_TITULO_EXTRA:
         if len(palabra) <= 2:
             # 'ui'/'ux': whole word, so "building" or "guide" do not match.
-            if re.search(r"\b%s\b" % re.escape(palabra), titulo, re.IGNORECASE):
+            if re.search(rf"\b{re.escape(palabra)}\b", titulo, re.IGNORECASE):
                 return True
         elif palabra in buscado:
             return True
@@ -570,7 +633,7 @@ def _job_id(prefijo: str, identificador: Any, respaldo: str = "") -> str:
     if not valor:
         valor = hashlib.sha1(respaldo.encode("utf-8")).hexdigest()[:16]
     # Lever/Ashby ids are hyphenated UUIDs: kept verbatim.
-    return "%s-%s" % (prefijo, valor)
+    return f"{prefijo}-{valor}"
 
 
 def _oferta(
@@ -580,13 +643,13 @@ def _oferta(
     empresa: Any,
     url: Any,
     ubicacion: Any = None,
-    remoto: Optional[str] = None,
+    remoto: str | None = None,
     salario: Any = None,
     contrato: Any = None,
     descripcion: Any = None,
     fecha: Any = None,
     source: str,
-) -> Optional[Dict[str, Any]]:
+) -> dict[str, Any] | None:
     """Build the normalized contract dict.
 
     Returns:
@@ -617,7 +680,7 @@ def _oferta(
 # --------------------------------------------------------------------------- #
 
 
-def _remotive_una_llamada(parametros: Dict[str, Any], limite: int) -> List[Dict[str, Any]]:
+def _remotive_una_llamada(parametros: dict[str, Any], limite: int) -> list[dict[str, Any]]:
     """Run one Remotive query and return normalized postings.
 
     Remotive's legal note: the source is credited in ``source`` and its URL is
@@ -638,7 +701,7 @@ def _remotive_una_llamada(parametros: Dict[str, Any], limite: int) -> List[Dict[
     if not isinstance(trabajos, list):
         return []
 
-    ofertas: List[Dict[str, Any]] = []
+    ofertas: list[dict[str, Any]] = []
     for trabajo in trabajos:
         if not isinstance(trabajo, dict):
             continue
@@ -666,8 +729,8 @@ def _remotive_una_llamada(parametros: Dict[str, Any], limite: int) -> List[Dict[
 
 def buscar_remotive(
     limite: int = 100,
-    terminos: Optional[Iterable[str]] = None,
-) -> List[Dict[str, Any]]:
+    terminos: Iterable[str] | None = None,
+) -> list[dict[str, Any]]:
     """Design postings on Remotive (design category + specific searches).
 
     ``terminos`` (ROLES + TOPICS from the config) replaces the fixed
@@ -682,10 +745,10 @@ def buscar_remotive(
         Deduplicated postings by ``job_id``.
     """
     buscados = [str(t).strip() for t in (terminos or BUSQUEDAS_REMOTIVE) if str(t).strip()][:3]
-    consultas: List[Dict[str, Any]] = [{"category": "design"}]
+    consultas: list[dict[str, Any]] = [{"category": "design"}]
     consultas.extend({"search": termino} for termino in buscados)
 
-    encontradas: Dict[str, Dict[str, Any]] = {}
+    encontradas: dict[str, dict[str, Any]] = {}
     for parametros in consultas:
         try:
             for oferta in _remotive_una_llamada(parametros, limite):
@@ -703,7 +766,7 @@ def buscar_remotive(
 # --------------------------------------------------------------------------- #
 
 
-def _wwr_empresa_y_titulo(titulo: str) -> Tuple[Optional[str], str]:
+def _wwr_empresa_y_titulo(titulo: str) -> tuple[str | None, str]:
     """Split 'Company: Role' from the RSS title (WWR uses that format).
 
     Returns:
@@ -718,7 +781,7 @@ def _wwr_empresa_y_titulo(titulo: str) -> Tuple[Optional[str], str]:
     return None, titulo
 
 
-def buscar_wwr(limite: int = 100) -> List[Dict[str, Any]]:
+def buscar_wwr(limite: int = 100) -> list[dict[str, Any]]:
     """Design postings from the We Work Remotely RSS feed.
 
     Args:
@@ -734,7 +797,7 @@ def buscar_wwr(limite: int = 100) -> List[Dict[str, Any]]:
         log.warning("WWR RSS falló: %s", err)
         return []
 
-    ofertas: List[Dict[str, Any]] = []
+    ofertas: list[dict[str, Any]] = []
     # The RSS feed uses no namespaces: searching 'item' at any level is enough.
     for item in raiz.iter("item"):
         titulo_bruto = (item.findtext("title") or "").strip()
@@ -774,7 +837,7 @@ def buscar_wwr(limite: int = 100) -> List[Dict[str, Any]]:
 # --------------------------------------------------------------------------- #
 
 
-def buscar_ashby(slug: str, limite: int = 100) -> List[Dict[str, Any]]:
+def buscar_ashby(slug: str, limite: int = 100) -> list[dict[str, Any]]:
     """Design postings from Ashby's public board for ``slug``.
 
     Ashby returns everything in the list call: description, workplace type and
@@ -796,7 +859,7 @@ def buscar_ashby(slug: str, limite: int = 100) -> List[Dict[str, Any]]:
         raise ValueError("respuesta sin 'jobs'")
 
     empresa = _empresa_desde_slug(slug)
-    ofertas: List[Dict[str, Any]] = []
+    ofertas: list[dict[str, Any]] = []
     for trabajo in trabajos:
         if not isinstance(trabajo, dict):
             continue
@@ -843,7 +906,7 @@ def buscar_ashby(slug: str, limite: int = 100) -> List[Dict[str, Any]]:
 # --------------------------------------------------------------------------- #
 
 
-def _importe(valor: Any) -> Optional[float]:
+def _importe(valor: Any) -> float | None:
     """Convert a Greenhouse amount (str/num) to float when possible."""
     if valor in (None, ""):
         return None
@@ -853,7 +916,7 @@ def _importe(valor: Any) -> Optional[float]:
         return None
 
 
-def _formatear_rango(valor: Dict[str, Any]) -> Optional[str]:
+def _formatear_rango(valor: dict[str, Any]) -> str | None:
     """Format a Greenhouse ``currency_range`` as text.
 
     Only yearly ranges are published: an hourly range (40-60 USD) would be read
@@ -877,17 +940,17 @@ def _formatear_rango(valor: Dict[str, Any]) -> Optional[str]:
         log.debug("Rango salarial no anual ignorado: %s", valor)
         return None
 
-    def _fmt(cifra: Optional[float]) -> str:
-        return "{:,.0f}".format(cifra).replace(",", ".")
+    def _fmt(cifra: float | None) -> str:
+        return f"{cifra:,.0f}".replace(",", ".")
 
     if minimo is not None and maximo is not None:
-        texto = "%s – %s" % (_fmt(minimo), _fmt(maximo))
+        texto = f"{_fmt(minimo)} – {_fmt(maximo)}"
     else:
         texto = _fmt(minimo if minimo is not None else maximo)
-    return ("%s %s" % (unidad, texto)).strip()
+    return (f"{unidad} {texto}").strip()
 
 
-def _greenhouse_salario(metadata: Any) -> Optional[str]:
+def _greenhouse_salario(metadata: Any) -> str | None:
     """Look for a published salary in Greenhouse's ``metadata`` block."""
     if not isinstance(metadata, list):
         return None
@@ -895,10 +958,7 @@ def _greenhouse_salario(metadata: Any) -> Optional[str]:
         if not isinstance(entrada, dict):
             continue
         nombre = _sin_acentos(str(entrada.get("name") or ""))
-        if not any(
-            clave in nombre
-            for clave in ("salary", "compensation", "salario", "pay range")
-        ):
+        if not any(clave in nombre for clave in ("salary", "compensation", "salario", "pay range")):
             continue
         valor = entrada.get("value")
         if isinstance(valor, dict):
@@ -910,7 +970,7 @@ def _greenhouse_salario(metadata: Any) -> Optional[str]:
     return None
 
 
-def _greenhouse_remoto(metadata: Any, ubicacion: Optional[str]) -> Optional[str]:
+def _greenhouse_remoto(metadata: Any, ubicacion: str | None) -> str | None:
     """Infer the workplace type of a Greenhouse posting.
 
     Many boards declare remote openness in ``metadata``
@@ -935,7 +995,7 @@ def _greenhouse_remoto(metadata: Any, ubicacion: Optional[str]) -> Optional[str]
     return _normalizar_remoto(ubicacion)
 
 
-def buscar_greenhouse(slug: str, limite: int = 100) -> List[Dict[str, Any]]:
+def buscar_greenhouse(slug: str, limite: int = 100) -> list[dict[str, Any]]:
     """Design postings from Greenhouse's public board for ``slug``.
 
     The list carries no description: the detail is requested only for postings
@@ -958,22 +1018,21 @@ def buscar_greenhouse(slug: str, limite: int = 100) -> List[Dict[str, Any]]:
     if not isinstance(trabajos, list):
         raise ValueError("respuesta sin 'jobs'")
 
-    candidatas = [
-        t for t in trabajos
-        if isinstance(t, dict) and _titulo_relevante(t.get("title"))
-    ][:limite]
+    candidatas = [t for t in trabajos if isinstance(t, dict) and _titulo_relevante(t.get("title"))][
+        :limite
+    ]
     if not candidatas:
         return []
 
     empresa = None
-    ofertas: List[Dict[str, Any]] = []
+    ofertas: list[dict[str, Any]] = []
     for trabajo in candidatas:
         ubicacion = trabajo.get("location")
         if isinstance(ubicacion, dict):
             ubicacion = ubicacion.get("name")
 
         descripcion = None
-        detalle: Dict[str, Any] = {}
+        detalle: dict[str, Any] = {}
         try:
             detalle = _json(
                 URL_GREENHOUSE_DETALLE.format(
@@ -1012,7 +1071,7 @@ def buscar_greenhouse(slug: str, limite: int = 100) -> List[Dict[str, Any]]:
 # --------------------------------------------------------------------------- #
 
 
-def buscar_lever(slug: str, limite: int = 100) -> List[Dict[str, Any]]:
+def buscar_lever(slug: str, limite: int = 100) -> list[dict[str, Any]]:
     """Design postings from Lever's public board for ``slug``.
 
     Lever returns a flat array with the description already included.
@@ -1032,7 +1091,7 @@ def buscar_lever(slug: str, limite: int = 100) -> List[Dict[str, Any]]:
         raise ValueError("respuesta inesperada (se esperaba una lista)")
 
     empresa = _empresa_desde_slug(slug)
-    ofertas: List[Dict[str, Any]] = []
+    ofertas: list[dict[str, Any]] = []
     for trabajo in datos:
         if not isinstance(trabajo, dict):
             continue
@@ -1096,7 +1155,9 @@ def _dias_maximos_antiguedad() -> int:
     except ValueError:
         log.warning(
             "%s=%r no es un entero; se usan %s días.",
-            VARIABLE_MAX_ANTIGUEDAD, crudo, MAX_ANTIGUEDAD_DIAS,
+            VARIABLE_MAX_ANTIGUEDAD,
+            crudo,
+            MAX_ANTIGUEDAD_DIAS,
         )
         return MAX_ANTIGUEDAD_DIAS
     if dias <= 0:
@@ -1104,7 +1165,7 @@ def _dias_maximos_antiguedad() -> int:
     return dias
 
 
-def _reciente(oferta: Dict[str, Any], dias: Optional[int] = None) -> bool:
+def _reciente(oferta: dict[str, Any], dias: int | None = None) -> bool:
     """True if the posting is not older than the maximum age.
 
     Postings without ``fecha_publicacion`` (or with an unreadable date) are
@@ -1137,7 +1198,7 @@ def _reciente(oferta: Dict[str, Any], dias: Optional[int] = None) -> bool:
 # --------------------------------------------------------------------------- #
 
 
-def _salario_recruitee(salario: Any) -> Optional[str]:
+def _salario_recruitee(salario: Any) -> str | None:
     """Format Recruitee's ``salary`` block (almost always empty)."""
     if not isinstance(salario, dict):
         return None
@@ -1150,11 +1211,11 @@ def _salario_recruitee(salario: Any) -> Optional[str]:
 
     def _fmt(cifra: float) -> str:
         if float(cifra).is_integer():
-            return "{:,.0f}".format(cifra).replace(",", ".")
-        return "{:,.2f}".format(cifra).replace(",", ".")
+            return f"{cifra:,.0f}".replace(",", ".")
+        return f"{cifra:,.2f}".replace(",", ".")
 
     if minimo is not None and maximo is not None:
-        texto = "%s – %s" % (_fmt(minimo), _fmt(maximo))
+        texto = f"{_fmt(minimo)} – {_fmt(maximo)}"
     elif minimo is not None:
         texto = _fmt(minimo)
     elif maximo is not None:
@@ -1164,7 +1225,7 @@ def _salario_recruitee(salario: Any) -> Optional[str]:
     return " ".join(parte for parte in (moneda, texto, periodo) if parte)
 
 
-def _remoto_recruitee(trabajo: Dict[str, Any], ubicacion: Optional[str]) -> Optional[str]:
+def _remoto_recruitee(trabajo: dict[str, Any], ubicacion: str | None) -> str | None:
     """Translate Recruitee's ``remote``/``hybrid``/``on_site`` booleans."""
     if trabajo.get("remote") is True:
         return "Remoto"
@@ -1175,7 +1236,7 @@ def _remoto_recruitee(trabajo: Dict[str, Any], ubicacion: Optional[str]) -> Opti
     return _normalizar_remoto(ubicacion)
 
 
-def buscar_recruitee(slug: str, limite: int = 100) -> List[Dict[str, Any]]:
+def buscar_recruitee(slug: str, limite: int = 100) -> list[dict[str, Any]]:
     """Design postings from Recruitee's public board for ``slug``.
 
     ``GET https://{slug}.recruitee.com/api/offers/`` returns ``{"offers": […]}``
@@ -1197,7 +1258,7 @@ def buscar_recruitee(slug: str, limite: int = 100) -> List[Dict[str, Any]]:
         raise ValueError("respuesta sin 'offers'")
 
     empresa = _empresa_desde_slug(slug)
-    ofertas: List[Dict[str, Any]] = []
+    ofertas: list[dict[str, Any]] = []
     for trabajo in ofertas_crudas:
         if not isinstance(trabajo, dict):
             continue
@@ -1208,16 +1269,20 @@ def buscar_recruitee(slug: str, limite: int = 100) -> List[Dict[str, Any]]:
         ubicacion = (
             _limpio(trabajo.get("location"))
             or ", ".join(
-                parte for parte in (
+                parte
+                for parte in (
                     _limpio(trabajo.get("city")),
                     _limpio(trabajo.get("country")),
-                ) if parte
+                )
+                if parte
             )
             or None
         )
 
         oferta = _oferta(
-            job_id=_job_id("recruitee", trabajo.get("id"), str(trabajo.get("careers_url") or titulo)),
+            job_id=_job_id(
+                "recruitee", trabajo.get("id"), str(trabajo.get("careers_url") or titulo)
+            ),
             titulo=titulo,
             empresa=_limpio(trabajo.get("company_name")) or empresa,
             url=trabajo.get("careers_url") or trabajo.get("careers_apply_url"),
@@ -1241,8 +1306,8 @@ def buscar_recruitee(slug: str, limite: int = 100) -> List[Dict[str, Any]]:
 
 def buscar_recruitee_empresas(
     limite: int = 100,
-    empresas: Optional[Iterable[str]] = None,
-) -> List[Dict[str, Any]]:
+    empresas: Iterable[str] | None = None,
+) -> list[dict[str, Any]]:
     """Walk the Recruitee boards in parallel and aggregate their postings.
 
     Args:
@@ -1256,7 +1321,7 @@ def buscar_recruitee_empresas(
     if not lista:
         return []
 
-    ofertas: List[Dict[str, Any]] = []
+    ofertas: list[dict[str, Any]] = []
     with ThreadPoolExecutor(max_workers=MAX_HILOS) as pool:
         futuros = {slug: pool.submit(buscar_recruitee, slug, limite) for slug in lista}
         for slug, futuro in futuros.items():
@@ -1274,7 +1339,7 @@ def buscar_recruitee_empresas(
 # --------------------------------------------------------------------------- #
 
 
-def buscar_workable(slug: str, limite: int = 100) -> List[Dict[str, Any]]:
+def buscar_workable(slug: str, limite: int = 100) -> list[dict[str, Any]]:
     """Design postings from Workable's public board for ``slug``.
 
     Uses the **public widget** endpoint (``apply.workable.com/api/v1/
@@ -1300,7 +1365,7 @@ def buscar_workable(slug: str, limite: int = 100) -> List[Dict[str, Any]]:
         raise ValueError("respuesta sin 'jobs'")
 
     empresa = _limpio(datos.get("name")) or _empresa_desde_slug(slug)
-    ofertas: List[Dict[str, Any]] = []
+    ofertas: list[dict[str, Any]] = []
     for trabajo in trabajos:
         if not isinstance(trabajo, dict):
             continue
@@ -1308,13 +1373,18 @@ def buscar_workable(slug: str, limite: int = 100) -> List[Dict[str, Any]]:
         if not _titulo_relevante(titulo):
             continue
 
-        ubicacion = ", ".join(
-            parte for parte in (
-                _limpio(trabajo.get("city")),
-                _limpio(trabajo.get("state")),
-                _limpio(trabajo.get("country")),
-            ) if parte
-        ) or None
+        ubicacion = (
+            ", ".join(
+                parte
+                for parte in (
+                    _limpio(trabajo.get("city")),
+                    _limpio(trabajo.get("state")),
+                    _limpio(trabajo.get("country")),
+                )
+                if parte
+            )
+            or None
+        )
 
         oferta = _oferta(
             job_id=_job_id("workable", trabajo.get("shortcode"), str(trabajo.get("url") or titulo)),
@@ -1323,8 +1393,7 @@ def buscar_workable(slug: str, limite: int = 100) -> List[Dict[str, Any]]:
             url=trabajo.get("url") or trabajo.get("shortlink") or trabajo.get("application_url"),
             ubicacion=ubicacion,
             remoto=(
-                "Remoto" if trabajo.get("telecommuting") is True
-                else _normalizar_remoto(ubicacion)
+                "Remoto" if trabajo.get("telecommuting") is True else _normalizar_remoto(ubicacion)
             ),
             salario=None,  # the public widget publishes no salary
             contrato=_clasificar(trabajo.get("employment_type"), _CONTRATOS),
@@ -1341,8 +1410,8 @@ def buscar_workable(slug: str, limite: int = 100) -> List[Dict[str, Any]]:
 
 def buscar_workable_empresas(
     limite: int = 100,
-    empresas: Optional[Iterable[str]] = None,
-) -> List[Dict[str, Any]]:
+    empresas: Iterable[str] | None = None,
+) -> list[dict[str, Any]]:
     """Walk the Workable boards in parallel and aggregate their postings.
 
     Args:
@@ -1356,7 +1425,7 @@ def buscar_workable_empresas(
     if not lista:
         return []
 
-    ofertas: List[Dict[str, Any]] = []
+    ofertas: list[dict[str, Any]] = []
     with ThreadPoolExecutor(max_workers=MAX_HILOS) as pool:
         futuros = {slug: pool.submit(buscar_workable, slug, limite) for slug in lista}
         for slug, futuro in futuros.items():
@@ -1374,7 +1443,7 @@ def buscar_workable_empresas(
 # --------------------------------------------------------------------------- #
 
 
-def _ubicacion_bamboohr(*bloques: Any) -> Optional[str]:
+def _ubicacion_bamboohr(*bloques: Any) -> str | None:
     """Compose a readable location from BambooHR's blocks.
 
     Args:
@@ -1396,7 +1465,7 @@ def _ubicacion_bamboohr(*bloques: Any) -> Optional[str]:
     return None
 
 
-def buscar_bamboohr(slug: str, limite: int = 100) -> List[Dict[str, Any]]:
+def buscar_bamboohr(slug: str, limite: int = 100) -> list[dict[str, Any]]:
     """Design postings from BambooHR's public board for ``slug``.
 
     The index (``/careers/list``) carries no description, date or salary: the
@@ -1420,7 +1489,7 @@ def buscar_bamboohr(slug: str, limite: int = 100) -> List[Dict[str, Any]]:
         raise ValueError("respuesta sin 'result'")
 
     empresa = _empresa_desde_slug(slug)
-    ofertas: List[Dict[str, Any]] = []
+    ofertas: list[dict[str, Any]] = []
     for trabajo in trabajos:
         if not isinstance(trabajo, dict):
             continue
@@ -1428,12 +1497,10 @@ def buscar_bamboohr(slug: str, limite: int = 100) -> List[Dict[str, Any]]:
         if not _titulo_relevante(titulo):
             continue
 
-        detalle: Dict[str, Any] = {}
+        detalle: dict[str, Any] = {}
         try:
             crudo = _json(
-                URL_BAMBOOHR_DETALLE.format(
-                    slug=urllib.parse.quote(slug), job_id=trabajo.get("id")
-                )
+                URL_BAMBOOHR_DETALLE.format(slug=urllib.parse.quote(slug), job_id=trabajo.get("id"))
             )
             if isinstance(crudo, dict):
                 resultado = crudo.get("result")
@@ -1443,8 +1510,10 @@ def buscar_bamboohr(slug: str, limite: int = 100) -> List[Dict[str, Any]]:
             log.debug("BambooHR %s/%s sin detalle: %s", slug, trabajo.get("id"), err)
 
         ubicacion = _ubicacion_bamboohr(
-            detalle.get("location"), detalle.get("atsLocation"),
-            trabajo.get("location"), trabajo.get("atsLocation"),
+            detalle.get("location"),
+            detalle.get("atsLocation"),
+            trabajo.get("location"),
+            trabajo.get("atsLocation"),
         )
         es_remoto = detalle.get("isRemote")
         if es_remoto is None:
@@ -1453,13 +1522,13 @@ def buscar_bamboohr(slug: str, limite: int = 100) -> List[Dict[str, Any]]:
         oferta = _oferta(
             job_id=_job_id(
                 "bamboohr",
-                "%s-%s" % (slug, trabajo.get("id")),
+                "{}-{}".format(slug, trabajo.get("id")),
                 str(trabajo.get("jobOpeningShareUrl") or titulo),
             ),
             titulo=titulo,
             empresa=empresa,
             url=detalle.get("jobOpeningShareUrl")
-            or "https://%s.bamboohr.com/careers/%s" % (slug, trabajo.get("id")),
+            or "https://{}.bamboohr.com/careers/{}".format(slug, trabajo.get("id")),
             ubicacion=ubicacion,
             remoto="Remoto" if es_remoto is True else _normalizar_remoto(ubicacion),
             salario=detalle.get("compensation"),
@@ -1480,8 +1549,8 @@ def buscar_bamboohr(slug: str, limite: int = 100) -> List[Dict[str, Any]]:
 
 def buscar_bamboohr_empresas(
     limite: int = 100,
-    empresas: Optional[Iterable[str]] = None,
-) -> List[Dict[str, Any]]:
+    empresas: Iterable[str] | None = None,
+) -> list[dict[str, Any]]:
     """Walk the BambooHR boards in parallel and aggregate their postings.
 
     Args:
@@ -1495,7 +1564,7 @@ def buscar_bamboohr_empresas(
     if not lista:
         return []
 
-    ofertas: List[Dict[str, Any]] = []
+    ofertas: list[dict[str, Any]] = []
     with ThreadPoolExecutor(max_workers=MAX_HILOS) as pool:
         futuros = {slug: pool.submit(buscar_bamboohr, slug, limite) for slug in lista}
         for slug, futuro in futuros.items():
@@ -1513,7 +1582,7 @@ def buscar_bamboohr_empresas(
 # --------------------------------------------------------------------------- #
 
 
-def _cuerpo_eures(termino: str, resultados: int) -> Dict[str, Any]:
+def _cuerpo_eures(termino: str, resultados: int) -> dict[str, Any]:
     """Build the EURES search POST body.
 
     All filters are empty except the term and the language; the design filter is
@@ -1549,7 +1618,7 @@ def _cuerpo_eures(termino: str, resultados: int) -> Dict[str, Any]:
     }
 
 
-def _ubicacion_eures(trabajo: Dict[str, Any]) -> Optional[str]:
+def _ubicacion_eures(trabajo: dict[str, Any]) -> str | None:
     """Countries of the posting, taken from ``locationMap`` (ISO country codes)."""
     mapa = trabajo.get("locationMap")
     if isinstance(mapa, dict) and mapa:
@@ -1562,7 +1631,7 @@ def _ubicacion_eures(trabajo: Dict[str, Any]) -> Optional[str]:
 _RE_EURES_FRONTMATTER = re.compile(r"\A\s*---.*?---\s*", re.DOTALL)
 
 
-def _descripcion_eures(valor: Any) -> Optional[str]:
+def _descripcion_eures(valor: Any) -> str | None:
     """Strip the front-matter EURES puts before the description."""
     if not valor:
         return None
@@ -1571,8 +1640,8 @@ def _descripcion_eures(valor: Any) -> Optional[str]:
 
 def buscar_eures(
     limite: int = 100,
-    terminos: Optional[Iterable[str]] = None,
-) -> List[Dict[str, Any]]:
+    terminos: Iterable[str] | None = None,
+) -> list[dict[str, Any]]:
     """Design postings from the EURES public search API.
 
     EURES requires **no** key or registration to search: it is a JSON POST to
@@ -1590,7 +1659,7 @@ def buscar_eures(
     Returns:
         Recent normalized postings, deduplicated by EURES id.
     """
-    encontradas: Dict[str, Dict[str, Any]] = {}
+    encontradas: dict[str, dict[str, Any]] = {}
     # EURES rejects (400) more than 50 results per page.
     por_pagina = max(1, min(limite, 50))
     buscados = [str(t).strip() for t in (terminos or BUSQUEDAS_EURES) if str(t).strip()][:3]
@@ -1651,7 +1720,7 @@ def buscar_eures(
 def buscar_infojobs(
     limite: int = 100,
     consulta: str = "designer",
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Design postings on InfoJobs. **Credentialed source.**
 
     The InfoJobs API is not open: it requires registering an app at
@@ -1679,15 +1748,14 @@ def buscar_infojobs(
     if not cliente or not secreto:
         log.info(
             "InfoJobs omitido: faltan %s/%s (su API exige key).",
-            VARIABLE_INFOJOBS_ID, VARIABLE_INFOJOBS_SECRET,
+            VARIABLE_INFOJOBS_ID,
+            VARIABLE_INFOJOBS_SECRET,
         )
         return []
 
-    credenciales = base64.b64encode(
-        ("%s:%s" % (cliente, secreto)).encode("utf-8")
-    ).decode("ascii")
-    url = URL_INFOJOBS + "?" + urllib.parse.urlencode(
-        {"q": consulta, "maxResults": min(limite, 50)}
+    credenciales = base64.b64encode((f"{cliente}:{secreto}").encode()).decode("ascii")
+    url = (
+        URL_INFOJOBS + "?" + urllib.parse.urlencode({"q": consulta, "maxResults": min(limite, 50)})
     )
     peticion = urllib.request.Request(
         url, headers=dict(CABECERAS, Authorization="Basic " + credenciales)
@@ -1703,7 +1771,7 @@ def buscar_infojobs(
     if not isinstance(elementos, list):
         return []
 
-    ofertas: List[Dict[str, Any]] = []
+    ofertas: list[dict[str, Any]] = []
     for elemento in elementos:
         if not isinstance(elemento, dict):
             continue
@@ -1715,7 +1783,7 @@ def buscar_infojobs(
         identificador = _limpio(elemento.get("id"))
         salario = None
         if elemento.get("salaryMin") or elemento.get("salaryMax"):
-            salario = "%s – %s %s" % (
+            salario = "{} – {} {}".format(
                 elemento.get("salaryMin") or "",
                 elemento.get("salaryMax") or "",
                 _limpio(elemento.get("salaryPeriod")) or "",
@@ -1727,7 +1795,7 @@ def buscar_infojobs(
             titulo=titulo,
             empresa=empresa,
             url=elemento.get("link")
-            or ("https://www.infojobs.net/oferta/%s" % identificador if identificador else None),
+            or (f"https://www.infojobs.net/oferta/{identificador}" if identificador else None),
             ubicacion=_limpio(elemento.get("city")),
             remoto=_normalizar_remoto(
                 _limpio(elemento.get("teleworking")), _limpio(elemento.get("city"))
@@ -1757,7 +1825,7 @@ _DETECTORES = (
 )
 
 
-def buscar_empresa(slug: str, limite: int = 100) -> Tuple[Optional[str], List[Dict[str, Any]]]:
+def buscar_empresa(slug: str, limite: int = 100) -> tuple[str | None, list[dict[str, Any]]]:
     """Auto-detect the ATS of ``slug`` and return ``(ats, postings)``.
 
     Greenhouse -> Lever -> Ashby are tried in order and the first one returning
@@ -1782,7 +1850,7 @@ def buscar_empresa(slug: str, limite: int = 100) -> Tuple[Optional[str], List[Di
     return None, []
 
 
-def buscar_ats(limite: int = 100, slugs: Optional[Iterable[str]] = None) -> List[Dict[str, Any]]:
+def buscar_ats(limite: int = 100, slugs: Iterable[str] | None = None) -> list[dict[str, Any]]:
     """Walk the companies in parallel and aggregate their design postings.
 
     Args:
@@ -1796,8 +1864,8 @@ def buscar_ats(limite: int = 100, slugs: Optional[Iterable[str]] = None) -> List
     if not lista_slugs:
         return []
 
-    ofertas: List[Dict[str, Any]] = []
-    detectadas: List[str] = []
+    ofertas: list[dict[str, Any]] = []
+    detectadas: list[str] = []
     with ThreadPoolExecutor(max_workers=MAX_HILOS) as pool:
         futuros = {slug: pool.submit(buscar_empresa, slug, limite) for slug in lista_slugs}
         for slug, futuro in futuros.items():
@@ -1807,12 +1875,14 @@ def buscar_ats(limite: int = 100, slugs: Optional[Iterable[str]] = None) -> List
                 log.warning("Empresa %s falló: %s", slug, err)
                 continue
             if ats:
-                detectadas.append("%s:%s" % (slug, ats))
+                detectadas.append(f"{slug}:{ats}")
                 ofertas.extend(encontradas)
 
     log.info(
         "ATS: %s/%s empresas con ofertas de diseño (%s).",
-        len(detectadas), len(lista_slugs), ", ".join(sorted(detectadas)) or "ninguna",
+        len(detectadas),
+        len(lista_slugs),
+        ", ".join(sorted(detectadas)) or "ninguna",
     )
     return ofertas
 
@@ -1822,7 +1892,7 @@ def buscar_ats(limite: int = 100, slugs: Optional[Iterable[str]] = None) -> List
 # --------------------------------------------------------------------------- #
 
 
-def _clave_url(url: Optional[str]) -> Optional[str]:
+def _clave_url(url: str | None) -> str | None:
     """Deduplication key from the URL (no query string, no trailing slash)."""
     if not url:
         return None
@@ -1830,15 +1900,16 @@ def _clave_url(url: Optional[str]) -> Optional[str]:
     return limpia or None
 
 
-def _clave_titulo_empresa(titulo: Optional[str], empresa: Optional[str]) -> Optional[str]:
+def _clave_titulo_empresa(titulo: str | None, empresa: str | None) -> str | None:
     """Deduplication key from normalized title + company."""
     if not titulo:
         return None
-    return "%s|%s" % (_sin_acentos(str(titulo)).strip(),
-                      _sin_acentos(str(empresa or "")).strip())
+    return "{}|{}".format(
+        _sin_acentos(str(titulo)).strip(), _sin_acentos(str(empresa or "")).strip()
+    )
 
 
-def _deduplicar(ofertas: Iterable[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def _deduplicar(ofertas: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
     """Drop duplicates by ``job_id``, URL or title+company (in that order).
 
     Args:
@@ -1848,7 +1919,7 @@ def _deduplicar(ofertas: Iterable[Dict[str, Any]]) -> List[Dict[str, Any]]:
         Postings with the first occurrence of each key kept.
     """
     vistas: set = set()
-    salida: List[Dict[str, Any]] = []
+    salida: list[dict[str, Any]] = []
     for oferta in ofertas:
         claves = (
             "id:" + str(oferta.get("job_id") or ""),
@@ -1869,10 +1940,10 @@ def _deduplicar(ofertas: Iterable[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
 def buscar_ofertas_boards(
     limite_por_fuente: int = 100,
-    slugs: Optional[Iterable[str]] = None,
-    terminos: Optional[Iterable[str]] = None,
-    max_antiguedad_dias: Optional[int] = None,
-) -> List[Dict[str, Any]]:
+    slugs: Iterable[str] | None = None,
+    terminos: Iterable[str] | None = None,
+    max_antiguedad_dias: int | None = None,
+) -> list[dict[str, Any]]:
     """Aggregate design postings from every public source (no LinkedIn).
 
     Args:
@@ -1904,13 +1975,11 @@ def buscar_ofertas_boards(
         configurar_antiguedad(max_antiguedad_dias)
     terminos_fuente = configurar_terminos(terminos) or None
 
-    ofertas: List[Dict[str, Any]] = []
+    ofertas: list[dict[str, Any]] = []
 
     # Remotive (legal note: the source is credited on every posting).
     try:
-        ofertas.extend(
-            buscar_remotive(limite=limite_por_fuente, terminos=terminos_fuente)
-        )
+        ofertas.extend(buscar_remotive(limite=limite_por_fuente, terminos=terminos_fuente))
     except Exception as err:  # noqa: BLE001
         log.warning("Remotive falló: %s", err)
 
@@ -1946,9 +2015,7 @@ def buscar_ofertas_boards(
 
     # EURES: public search API (JSON POST, no key).
     try:
-        ofertas.extend(
-            buscar_eures(limite=limite_por_fuente, terminos=terminos_fuente)
-        )
+        ofertas.extend(buscar_eures(limite=limite_por_fuente, terminos=terminos_fuente))
     except Exception as err:  # noqa: BLE001
         log.warning("EURES falló: %s", err)
 
@@ -1967,7 +2034,8 @@ def buscar_ofertas_boards(
     resultado = _deduplicar(ofertas)
     log.info(
         "Boards: %s ofertas de diseño tras deduplicar (%s antes).",
-        len(resultado), len(ofertas),
+        len(resultado),
+        len(ofertas),
     )
     return resultado
 
@@ -2001,15 +2069,15 @@ def _detalle_error(err: Exception) -> str:
             "Gateway Timeout": "timeout de la pasarela",
         }
         razon = razones.get(err.reason or "", err.reason or "")
-        return "HTTP %s %s" % (err.code, razon)
+        return f"HTTP {err.code} {razon}"
     if isinstance(err, urllib.error.URLError):
-        return "error de red: %s" % (err.reason,)
+        return f"error de red: {err.reason}"
     if isinstance(err, TimeoutError):
-        return "timeout tras %ss" % TIMEOUT_PROBAR_FUENTE
-    return "%s: %s" % (type(err).__name__, err)
+        return f"timeout tras {TIMEOUT_PROBAR_FUENTE}s"
+    return f"{type(err).__name__}: {err}"
 
 
-def probar_fuente(nombre: str, parametros: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def probar_fuente(nombre: str, parametros: dict[str, Any] | None = None) -> dict[str, Any]:
     """Probe a source with **one** real request and return ``{ok, detalle}``.
 
     Used by the self-host diagnostics: checks that a slug is spelled correctly
@@ -2031,21 +2099,30 @@ def probar_fuente(nombre: str, parametros: Optional[Dict[str, Any]] = None) -> D
     clave = str(nombre or "").strip().lower()
     params = parametros if isinstance(parametros, dict) else {}
     slug = str(
-        params.get("slug")
-        or params.get("empresa")
-        or params.get("subdominio")
-        or ""
+        params.get("slug") or params.get("empresa") or params.get("subdominio") or ""
     ).strip()
 
     conocidas = (
-        "workable", "bamboohr", "recruitee", "greenhouse", "ashby",
-        "lever", "remotive", "weworkremotely", "wwr",
+        "workable",
+        "bamboohr",
+        "recruitee",
+        "greenhouse",
+        "ashby",
+        "lever",
+        "remotive",
+        "weworkremotely",
+        "wwr",
     )
     if clave not in conocidas:
         return {"ok": False, "detalle": "fuente desconocida"}
 
     necesita_slug = clave in (
-        "workable", "bamboohr", "recruitee", "greenhouse", "ashby", "lever",
+        "workable",
+        "bamboohr",
+        "recruitee",
+        "greenhouse",
+        "ashby",
+        "lever",
     )
     if necesita_slug and not slug:
         return {"ok": False, "detalle": "falta 'slug' en parametros"}
@@ -2058,8 +2135,10 @@ def probar_fuente(nombre: str, parametros: Optional[Dict[str, Any]] = None) -> D
             if not isinstance(trabajos, list):
                 return {"ok": False, "detalle": "respuesta sin 'jobs'"}
             nombre_board = _limpio(datos.get("name")) or slug
-            return {"ok": True, "detalle": "workable:%s (%s) -> %s ofertas" % (
-                slug, nombre_board, len(trabajos))}
+            return {
+                "ok": True,
+                "detalle": f"workable:{slug} ({nombre_board}) -> {len(trabajos)} ofertas",
+            }
 
         if clave == "bamboohr":
             url = URL_BAMBOOHR_LISTA.format(slug=urllib.parse.quote(slug))
@@ -2067,8 +2146,10 @@ def probar_fuente(nombre: str, parametros: Optional[Dict[str, Any]] = None) -> D
             trabajos = datos.get("result") if isinstance(datos, dict) else None
             if not isinstance(trabajos, list):
                 return {"ok": False, "detalle": "respuesta sin 'result'"}
-            return {"ok": True, "detalle": "bamboohr:%s.bamboohr.com -> %s ofertas" % (
-                slug, len(trabajos))}
+            return {
+                "ok": True,
+                "detalle": f"bamboohr:{slug}.bamboohr.com -> {len(trabajos)} ofertas",
+            }
 
         if clave == "recruitee":
             url = URL_RECRUITEE.format(slug=urllib.parse.quote(slug))
@@ -2076,7 +2157,7 @@ def probar_fuente(nombre: str, parametros: Optional[Dict[str, Any]] = None) -> D
             ofertas = datos.get("offers") if isinstance(datos, dict) else None
             if not isinstance(ofertas, list):
                 return {"ok": False, "detalle": "respuesta sin 'offers'"}
-            return {"ok": True, "detalle": "recruitee:%s -> %s ofertas" % (slug, len(ofertas))}
+            return {"ok": True, "detalle": f"recruitee:{slug} -> {len(ofertas)} ofertas"}
 
         if clave == "greenhouse":
             url = URL_GREENHOUSE_LISTA.format(slug=urllib.parse.quote(slug))
@@ -2084,7 +2165,7 @@ def probar_fuente(nombre: str, parametros: Optional[Dict[str, Any]] = None) -> D
             trabajos = datos.get("jobs") if isinstance(datos, dict) else None
             if not isinstance(trabajos, list):
                 return {"ok": False, "detalle": "respuesta sin 'jobs'"}
-            return {"ok": True, "detalle": "greenhouse:%s -> %s ofertas" % (slug, len(trabajos))}
+            return {"ok": True, "detalle": f"greenhouse:{slug} -> {len(trabajos)} ofertas"}
 
         if clave == "ashby":
             url = URL_ASHBY_LIGERO.format(slug=urllib.parse.quote(slug))
@@ -2092,31 +2173,37 @@ def probar_fuente(nombre: str, parametros: Optional[Dict[str, Any]] = None) -> D
             trabajos = datos.get("jobs") if isinstance(datos, dict) else None
             if not isinstance(trabajos, list):
                 return {"ok": False, "detalle": "respuesta sin 'jobs'"}
-            return {"ok": True, "detalle": "ashby:%s -> %s ofertas" % (slug, len(trabajos))}
+            return {"ok": True, "detalle": f"ashby:{slug} -> {len(trabajos)} ofertas"}
 
         if clave == "lever":
             url = URL_LEVER.format(slug=urllib.parse.quote(slug))
             datos = json.loads(_descargar(url, TIMEOUT_PROBAR_FUENTE).decode("utf-8", "replace"))
             if not isinstance(datos, list):
                 return {"ok": False, "detalle": "respuesta inesperada (se esperaba una lista)"}
-            return {"ok": True, "detalle": "lever:%s -> %s ofertas" % (slug, len(datos))}
+            return {"ok": True, "detalle": f"lever:{slug} -> {len(datos)} ofertas"}
 
         if clave == "remotive":
             datos = json.loads(
-                _descargar(URL_REMOTIVE + "?limit=1", TIMEOUT_PROBAR_FUENTE).decode("utf-8", "replace")
+                _descargar(URL_REMOTIVE + "?limit=1", TIMEOUT_PROBAR_FUENTE).decode(
+                    "utf-8", "replace"
+                )
             )
             trabajos = datos.get("jobs") if isinstance(datos, dict) else None
             if not isinstance(trabajos, list):
                 return {"ok": False, "detalle": "respuesta sin 'jobs'"}
             total = datos.get("job-count") or datos.get("total-job-count")
-            return {"ok": True, "detalle": "remotive -> %s ofertas%s" % (
-                len(trabajos), " (total %s)" % total if total else "")}
+            return {
+                "ok": True,
+                "detalle": "remotive -> {} ofertas{}".format(
+                    len(trabajos), f" (total {total})" if total else ""
+                ),
+            }
 
         # weworkremotely (alias wwr): RSS, counted with ElementTree.
         crudo = _descargar(URL_WWR_DESIGN, TIMEOUT_PROBAR_FUENTE)
         raiz = ET.fromstring(crudo)
         items = sum(1 for _ in raiz.iter("item"))
-        return {"ok": True, "detalle": "weworkremotely -> %s items en el RSS" % items}
+        return {"ok": True, "detalle": f"weworkremotely -> {items} items en el RSS"}
 
     except Exception as err:  # noqa: BLE001 — the diagnostic never propagates
         return {"ok": False, "detalle": _detalle_error(err)}
@@ -2126,12 +2213,7 @@ if __name__ == "__main__":  # pragma: no cover — manual utility
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     for oferta in buscar_ofertas_boards(limite_por_fuente=5)[:10]:
         print(
-            "%-22s %-45s %-22s %-12s %s"
-            % (
-                oferta["source"],
-                (oferta["titulo"] or "")[:45],
-                (oferta["empresa"] or "")[:22],
-                oferta["remoto"] or "-",
-                oferta["salario"] or "-",
-            )
+            f"{oferta['source']:<22} {(oferta['titulo'] or '')[:45]:<45} "
+            f"{(oferta['empresa'] or '')[:22]:<22} {str(oferta['remoto'] or '-'):<12} "
+            f"{oferta['salario'] or '-'}"
         )

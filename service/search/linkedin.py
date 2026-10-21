@@ -48,8 +48,9 @@ import random
 import re
 import threading
 import time
+from collections.abc import Iterable, Sequence
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Sequence, cast
+from typing import Any, cast
 from urllib.parse import quote_plus
 
 log = logging.getLogger(__name__)
@@ -107,15 +108,11 @@ PAUSA_TRAS_NAVEGAR = (1.2, 2.6)
 # Result card: `data-occludable-job-id` is the stable attribute LinkedIn puts
 # on every <li> of the list and holds the numeric posting id.
 SELECTOR_TARJETA = (
-    "li[data-occludable-job-id], "
-    "li.scaffold-layout__list-item, "
-    "ul.jobs-search__results-list > li"
+    "li[data-occludable-job-id], li.scaffold-layout__list-item, ul.jobs-search__results-list > li"
 )
 # Results column's own scroll container (lazy loading).
 SELECTOR_LISTA_SCROLL = (
-    ".scaffold-layout__list > div, "
-    ".jobs-search-results-list, "
-    ".jobs-search__results-list"
+    ".scaffold-layout__list > div, .jobs-search-results-list, .jobs-search__results-list"
 )
 
 # Inside the card.
@@ -278,13 +275,17 @@ def _cooldown_desde_entorno() -> int:
     except ValueError:
         log.warning(
             "%s=%r no es un entero; se usan %s s.",
-            VARIABLE_COOLDOWN, crudo, COOLDOWN_SEGUNDOS_DEFECTO,
+            VARIABLE_COOLDOWN,
+            crudo,
+            COOLDOWN_SEGUNDOS_DEFECTO,
         )
         return COOLDOWN_SEGUNDOS_DEFECTO
     if valor <= 0:
         log.warning(
             "%s=%r no es positivo; se usan %s s.",
-            VARIABLE_COOLDOWN, crudo, COOLDOWN_SEGUNDOS_DEFECTO,
+            VARIABLE_COOLDOWN,
+            crudo,
+            COOLDOWN_SEGUNDOS_DEFECTO,
         )
         return COOLDOWN_SEGUNDOS_DEFECTO
     return valor
@@ -293,7 +294,7 @@ def _cooldown_desde_entorno() -> int:
 COOLDOWN_SEGUNDOS = _cooldown_desde_entorno()
 
 
-def configurar_cooldown(segundos: Optional[int]) -> int:
+def configurar_cooldown(segundos: int | None) -> int:
     """Set the effective cooldown (seconds) and return the applied value.
 
     ``main.py`` calls it with the ``settings.json`` value so the panel overrides
@@ -306,13 +307,18 @@ def configurar_cooldown(segundos: Optional[int]) -> int:
     try:
         valor = int(str(segundos).strip())
     except (TypeError, ValueError):
-        log.warning("Cooldown de LinkedIn inválido (%r); se conserva %s s.", segundos, COOLDOWN_SEGUNDOS)
+        log.warning(
+            "Cooldown de LinkedIn inválido (%r); se conserva %s s.", segundos, COOLDOWN_SEGUNDOS
+        )
         return COOLDOWN_SEGUNDOS
     if valor <= 0:
-        log.warning("Cooldown de LinkedIn no positivo (%r); se conserva %s s.", segundos, COOLDOWN_SEGUNDOS)
+        log.warning(
+            "Cooldown de LinkedIn no positivo (%r); se conserva %s s.", segundos, COOLDOWN_SEGUNDOS
+        )
         return COOLDOWN_SEGUNDOS
     COOLDOWN_SEGUNDOS = valor
     return COOLDOWN_SEGUNDOS
+
 
 # Consecutive empty queries that reveal a block. The first queries (generic
 # titles) should always return postings; empty results mean the anti-bot wall,
@@ -340,7 +346,7 @@ def _cooldown_restante() -> int:
     return max(0, int(hasta - time.time()))
 
 
-def _marcar_cooldown(segundos: Optional[int] = None) -> None:
+def _marcar_cooldown(segundos: int | None = None) -> None:
     """Persist a cooldown of ``segundos`` (``COOLDOWN_SEGUNDOS`` by default)."""
     ruta = _ruta_cooldown()
     try:
@@ -360,10 +366,10 @@ def _marcar_cooldown(segundos: Optional[int] = None) -> None:
 def _formato_duracion(segundos: int) -> str:
     """Format a duration in seconds as ``45s``, ``12m`` or ``6.0h``."""
     if segundos < 60:
-        return "%ds" % segundos
+        return f"{segundos}s"
     if segundos < 3600:
-        return "%dm" % (segundos // 60)
-    return "%.1fh" % (segundos / 3600)
+        return f"{segundos // 60}m"
+    return f"{segundos / 3600:.1f}h"
 
 
 # --------------------------------------------------------------------------- #
@@ -394,7 +400,7 @@ def _ruta_sesion() -> Path:
     return ruta
 
 
-def sesion_estado() -> Dict[str, Any]:
+def sesion_estado() -> dict[str, Any]:
     """Diagnostics for the session saved on disk (does not open the browser).
 
     Returns::
@@ -412,7 +418,7 @@ def sesion_estado() -> Dict[str, Any]:
     """
     ruta = _ruta_sesion()
     presente = ruta.is_file()
-    antiguedad: Optional[int] = None
+    antiguedad: int | None = None
     if presente:
         try:
             segundos = max(0.0, time.time() - ruta.stat().st_mtime)
@@ -439,13 +445,13 @@ def _extraer_job_id(valor: Any) -> str:
     return encontrado.group(1)
 
 
-def _limpiar(texto: Optional[str]) -> Optional[str]:
+def _limpiar(texto: str | None) -> str | None:
     """Normalize whitespace and blank lines of extracted text."""
     if not texto:
         return None
     lineas = [linea.strip() for linea in texto.replace("\r", "\n").split("\n")]
     # Collapse runs of blank lines and trim both ends.
-    salida: List[str] = []
+    salida: list[str] = []
     for linea in lineas:
         if not linea and salida and not salida[-1]:
             continue
@@ -454,7 +460,7 @@ def _limpiar(texto: Optional[str]) -> Optional[str]:
     return limpio or None
 
 
-def _cargar_sesion(ruta: Path) -> Dict[str, Any]:
+def _cargar_sesion(ruta: Path) -> dict[str, Any]:
     """Read and validate LinkedIn's ``storage_state``.
 
     Two formats are accepted:
@@ -468,39 +474,35 @@ def _cargar_sesion(ruta: Path) -> Dict[str, Any]:
     """
     if not ruta.exists():
         raise LinkedInError(
-            "No existe la sesión de LinkedIn en %s. "
+            f"No existe la sesión de LinkedIn en {ruta}. "
             "Ejecuta `python scripts/export_session.py` para copiarla desde "
             "~/.linkedin-mcp/cookies.json, o define SESSION_PATH con la ruta "
-            "correcta." % ruta
+            "correcta."
         )
 
     try:
         with ruta.open("r", encoding="utf-8") as fichero:
             datos = json.load(fichero)
     except json.JSONDecodeError as exc:
-        raise LinkedInError(
-            "La sesión de LinkedIn en %s no es JSON válido: %s" % (ruta, exc)
-        ) from exc
+        raise LinkedInError(f"La sesión de LinkedIn en {ruta} no es JSON válido: {exc}") from exc
     except OSError as exc:
-        raise LinkedInError(
-            "No se pudo leer la sesión de LinkedIn en %s: %s" % (ruta, exc)
-        ) from exc
+        raise LinkedInError(f"No se pudo leer la sesión de LinkedIn en {ruta}: {exc}") from exc
 
     if isinstance(datos, list):
-        estado: Dict[str, Any] = {"cookies": datos, "origins": []}
+        estado: dict[str, Any] = {"cookies": datos, "origins": []}
     elif isinstance(datos, dict):
         estado = datos
     else:
         raise LinkedInError(
-            "Formato de sesión no reconocido en %s (se esperaba un objeto "
-            "storage_state o una lista de cookies)." % ruta
+            f"Formato de sesión no reconocido en {ruta} (se esperaba un objeto "
+            "storage_state o una lista de cookies)."
         )
 
     cookies = estado.get("cookies")
     if not isinstance(cookies, list) or not cookies:
         raise LinkedInError(
-            "La sesión de LinkedIn en %s no contiene cookies; expórtala de "
-            "nuevo con `python scripts/export_session.py`." % ruta
+            f"La sesión de LinkedIn en {ruta} no contiene cookies; expórtala de "
+            "nuevo con `python scripts/export_session.py`."
         )
 
     # Soft check: without `li_at` there is no authenticated session. Warn but do
@@ -534,10 +536,14 @@ class ClienteLinkedIn:
         cliente.cerrar()
     """
 
-    def __init__(self, ruta_sesion: Optional[Path] = None, headless: Optional[bool] = None):
+    def __init__(self, ruta_sesion: Path | None = None, headless: bool | None = None):
         self.ruta_sesion = ruta_sesion or _ruta_sesion()
         if headless is None:
-            headless = os.environ.get("LINKEDIN_HEADLESS", "1").strip() not in ("0", "false", "False")
+            headless = os.environ.get("LINKEDIN_HEADLESS", "1").strip() not in (
+                "0",
+                "false",
+                "False",
+            )
         self.headless = headless
         self._playwright = None
         self._navegador = None
@@ -548,7 +554,7 @@ class ClienteLinkedIn:
 
     # -- lifecycle --------------------------------------------------------- #
 
-    def __enter__(self) -> "ClienteLinkedIn":
+    def __enter__(self) -> ClienteLinkedIn:
         self._arrancar()
         return self
 
@@ -601,9 +607,9 @@ class ClienteLinkedIn:
             except Exception as exc:  # noqa: BLE001 — re-raised as typed error
                 self._limpiar_recursos()
                 raise LinkedInError(
-                    "No se pudo abrir el navegador con patchright: %s. "
+                    f"No se pudo abrir el navegador con patchright: {exc}. "
                     "Comprueba `patchright install chromium` (y, en Docker, "
-                    "que exista /dev/shm o esté activo --disable-dev-shm-usage)." % exc
+                    "que exista /dev/shm o esté activo --disable-dev-shm-usage)."
                 ) from exc
 
     def _limpiar_recursos(self) -> None:
@@ -641,7 +647,7 @@ class ClienteLinkedIn:
                 break
             except Exception as exc:  # noqa: BLE001
                 if intento == 2:
-                    raise LinkedInError("No se pudo cargar %s: %s" % (url, exc)) from exc
+                    raise LinkedInError(f"No se pudo cargar {url}: {exc}") from exc
                 log.warning("Navegación fallida (%s); reintentando...", type(exc).__name__)
                 time.sleep(random.uniform(2.0, 4.0))
         _pausa(PAUSA_TRAS_NAVEGAR)
@@ -653,8 +659,8 @@ class ClienteLinkedIn:
         url = (self._pagina.url or "").lower()
         if any(ruta in url for ruta in RUTAS_BLOQUEO):
             raise LinkedInError(
-                "LinkedIn ha redirigido a %s: la sesión ha caducado o no es válida. "
-                "Vuelve a exportarla con scripts/export_session.py." % url
+                f"LinkedIn ha redirigido a {url}: la sesión ha caducado o no es válida. "
+                "Vuelve a exportarla con scripts/export_session.py."
             )
         try:
             cuerpo = (self._pagina.inner_text("body", timeout=5_000) or "").lower()
@@ -663,8 +669,8 @@ class ClienteLinkedIn:
         for marca in TEXTOS_BLOQUEO:
             if marca in cuerpo:
                 raise LinkedInError(
-                    "LinkedIn ha mostrado un control anti-bot (%r). "
-                    "Espera un rato antes de reintentar y baja el ritmo." % marca
+                    f"LinkedIn ha mostrado un control anti-bot ({marca!r}). "
+                    "Espera un rato antes de reintentar y baja el ritmo."
                 )
 
     def _click_si_existe(self, selectores: Sequence[str]) -> bool:
@@ -741,7 +747,7 @@ class ClienteLinkedIn:
     }
     """
 
-    def _extraer_tarjetas(self) -> List[Dict[str, Any]]:
+    def _extraer_tarjetas(self) -> list[dict[str, Any]]:
         assert self._pagina is not None
         try:
             crudo = self._pagina.evaluate(
@@ -754,16 +760,16 @@ class ClienteLinkedIn:
                 ],
             )
         except Exception as exc:  # noqa: BLE001
-            raise LinkedInError("No se pudo leer la lista de resultados: %s" % exc) from exc
+            raise LinkedInError(f"No se pudo leer la lista de resultados: {exc}") from exc
         return [t for t in (crudo or []) if isinstance(t, dict) and t.get("job_id")]
 
-    def buscar(self, query: str, maximo: int) -> List[Dict[str, Any]]:
+    def buscar(self, query: str, maximo: int) -> list[dict[str, Any]]:
         """Search ``query`` and return up to ``maximo`` cards.
 
         Pages 25 at a time and stops once it has enough postings or the list
         stops growing.
         """
-        encontradas: Dict[str, Dict[str, Any]] = {}
+        encontradas: dict[str, dict[str, Any]] = {}
         inicio = 0
         self._arrancar()
         assert self._pagina is not None
@@ -803,7 +809,10 @@ class ClienteLinkedIn:
 
             log.info(
                 "%r: %s tarjetas en la página, %s nuevas, %s acumuladas.",
-                query, len(tarjetas), nuevas, len(encontradas),
+                query,
+                len(tarjetas),
+                nuevas,
+                len(encontradas),
             )
             if not nuevas:
                 break  # LinkedIn stopped returning distinct results.
@@ -844,7 +853,7 @@ class ClienteLinkedIn:
     }
     """
 
-    def abrir_oferta(self, job_id: str) -> Dict[str, Any]:
+    def abrir_oferta(self, job_id: str) -> dict[str, Any]:
         """Open a posting page and return the raw extracted text.
 
         Nothing is interpreted: fields are returned as the DOM gives them
@@ -884,7 +893,7 @@ class ClienteLinkedIn:
                 ],
             )
         except Exception as exc:  # noqa: BLE001
-            raise LinkedInError("No se pudo leer la oferta %s: %s" % (job_id, exc)) from exc
+            raise LinkedInError(f"No se pudo leer la oferta {job_id}: {exc}") from exc
 
         if not isinstance(crudo, dict):
             crudo = {}
@@ -892,7 +901,7 @@ class ClienteLinkedIn:
         crudo["url"] = URL_OFERTA.format(job_id=job_id)
         if not (crudo.get("titulo") or crudo.get("descripcion")):
             raise LinkedInError(
-                "La oferta %s no tiene contenido legible (¿retirada o bloqueada?)." % job_id
+                f"La oferta {job_id} no tiene contenido legible (¿retirada o bloqueada?)."
             )
         return crudo
 
@@ -901,7 +910,7 @@ class ClienteLinkedIn:
 # Shared instance (one browser per process)
 # --------------------------------------------------------------------------- #
 
-_CLIENTE: Optional[ClienteLinkedIn] = None
+_CLIENTE: ClienteLinkedIn | None = None
 _LOCK_CLIENTE = threading.Lock()
 
 
@@ -939,7 +948,7 @@ def _cerrar_silencioso() -> None:
 # --------------------------------------------------------------------------- #
 
 
-def _clasificar(texto: Optional[str], tabla: Sequence[Sequence[Any]]) -> Optional[str]:
+def _clasificar(texto: str | None, tabla: Sequence[Sequence[Any]]) -> str | None:
     """Return the normalized value of the first vocabulary match."""
     if not texto:
         return None
@@ -950,17 +959,17 @@ def _clasificar(texto: Optional[str], tabla: Sequence[Sequence[Any]]) -> Optiona
     return None
 
 
-def _limpiar_ubicacion(texto: Optional[str]) -> Optional[str]:
+def _limpiar_ubicacion(texto: str | None) -> str | None:
     """Trim the location line to the part before the first ' · '."""
     if not texto:
         return None
-    primera = next((l.strip() for l in texto.splitlines() if l.strip()), "")
+    primera = next((linea.strip() for linea in texto.splitlines() if linea.strip()), "")
     if not primera:
         return None
     return primera.split(" · ")[0].strip() or None
 
 
-def _extraer_requisitos(descripcion: Optional[str]) -> Optional[str]:
+def _extraer_requisitos(descripcion: str | None) -> str | None:
     """Trim the requirements block out of the description, if it has a heading.
 
     Pure extraction: a known heading is located and the text below it is
@@ -973,15 +982,17 @@ def _extraer_requisitos(descripcion: Optional[str]) -> Optional[str]:
         limpia = linea.strip().lower().rstrip(":").strip()
         if not limpia or len(limpia) > 60:
             continue
-        if any(limpia == enc or limpia.startswith(enc + " ") or limpia.startswith(enc + ":")
-               for enc in ENCABEZADOS_REQUISITOS):
-            bloque = "\n".join(lineas[indice + 1:]).strip()
+        if any(
+            limpia == enc or limpia.startswith(enc + " ") or limpia.startswith(enc + ":")
+            for enc in ENCABEZADOS_REQUISITOS
+        ):
+            bloque = "\n".join(lineas[indice + 1 :]).strip()
             if bloque:
                 return bloque
     return None
 
 
-def _extraer_salario(textos: Iterable[Optional[str]]) -> Optional[str]:
+def _extraer_salario(textos: Iterable[str | None]) -> str | None:
     """Return the first text fragment that looks like a salary."""
     for texto in textos:
         if not texto:
@@ -993,7 +1004,7 @@ def _extraer_salario(textos: Iterable[Optional[str]]) -> Optional[str]:
     return None
 
 
-def normalizar_detalle(crudo: Dict[str, Any], job_id: str) -> Dict[str, Any]:
+def normalizar_detalle(crudo: dict[str, Any], job_id: str) -> dict[str, Any]:
     """Turn the raw page text into the contract dict.
 
     ``crudo`` comes from ``ClienteLinkedIn.abrir_oferta``. Every field comes
@@ -1020,8 +1031,7 @@ def normalizar_detalle(crudo: Dict[str, Any], job_id: str) -> Dict[str, Any]:
         "requisitos": _extraer_requisitos(descripcion),
         "salario": _extraer_salario([texto_insights, descripcion]),
         # Work mode: conditions block first, then the location.
-        "remoto": _clasificar(texto_insights, _MODALIDADES)
-        or _clasificar(ubicacion, _MODALIDADES),
+        "remoto": _clasificar(texto_insights, _MODALIDADES) or _clasificar(ubicacion, _MODALIDADES),
         "contrato": _clasificar(texto_insights, _CONTRATOS)
         or _clasificar(descripcion[:1500] if descripcion else None, _CONTRATOS),
     }
@@ -1032,7 +1042,7 @@ def normalizar_detalle(crudo: Dict[str, Any], job_id: str) -> Dict[str, Any]:
 # --------------------------------------------------------------------------- #
 
 
-def search_jobs(queries: Iterable[str] | str, limit: int = 20) -> List[Dict[str, Any]]:
+def search_jobs(queries: Iterable[str] | str, limit: int = 20) -> list[dict[str, Any]]:
     """Search LinkedIn postings for one or several queries.
 
     Args:
@@ -1063,14 +1073,15 @@ def search_jobs(queries: Iterable[str] | str, limit: int = 20) -> List[Dict[str,
     restante = _cooldown_restante()
     if restante > 0:
         raise LinkedInError(
-            "LinkedIn en cooldown (%s restantes por bloqueo previo): se omite "
-            "este run." % _formato_duracion(restante)
+            f"LinkedIn en cooldown ({_formato_duracion(restante)} restantes por bloqueo previo): "
+            "se omite este run."
+            "este run."
         )
 
     cliente = _obtener_cliente()
 
-    encontradas: Dict[str, Dict[str, Any]] = {}
-    errores: List[str] = []
+    encontradas: dict[str, dict[str, Any]] = {}
+    errores: list[str] = []
     consultas_vacias = 0
 
     for indice, query in enumerate(lista_queries):
@@ -1082,7 +1093,7 @@ def search_jobs(queries: Iterable[str] | str, limit: int = 20) -> List[Dict[str,
             # A session/block failure invalidates the whole run: propagate.
             if "sesión" in str(exc).lower() or "anti-bot" in str(exc).lower():
                 raise
-            errores.append("%s: %s" % (query, exc))
+            errores.append(f"{query}: {exc}")
             log.warning("Búsqueda %r fallida: %s", query, exc)
             continue
 
@@ -1094,10 +1105,9 @@ def search_jobs(queries: Iterable[str] | str, limit: int = 20) -> List[Dict[str,
             if consultas_vacias >= UMBRAL_CONSULTAS_VACIAS:
                 _marcar_cooldown()
                 raise LinkedInError(
-                    "LinkedIn devolvió 0 resultados en %d consultas seguidas "
+                    f"LinkedIn devolvió 0 resultados en {consultas_vacias} consultas seguidas "
                     "(bloqueo anti-bot probable). Se detiene la búsqueda y se "
-                    "activa un cooldown de %s."
-                    % (consultas_vacias, _formato_duracion(COOLDOWN_SEGUNDOS))
+                    f"activa un cooldown de {_formato_duracion(COOLDOWN_SEGUNDOS)}."
                 )
         else:
             consultas_vacias = 0
@@ -1125,7 +1135,7 @@ def search_jobs(queries: Iterable[str] | str, limit: int = 20) -> List[Dict[str,
     return list(encontradas.values())[:limit]
 
 
-def get_job_details(job_id: str) -> Dict[str, Any]:
+def get_job_details(job_id: str) -> dict[str, Any]:
     """Return the normalized detail of a posting.
 
     Reuses the same browser as ``search_jobs`` (does not open a new one). The

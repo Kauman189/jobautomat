@@ -55,21 +55,39 @@ class ClienteFalso:
         self.llamadas.append(("buscar", query, maximo))
         # Dos tarjetas repetidas a propósito (la segunda es un duplicado).
         return [
-            {"job_id": "1111111111", "titulo": "Product Designer", "empresa": "Acme",
-             "url": "https://www.linkedin.com/jobs/view/1111111111/"},
-            {"job_id": "2222222222", "titulo": "Senior Product Designer", "empresa": "Globex",
-             "url": "https://www.linkedin.com/jobs/view/2222222222/"},
-            {"job_id": "1111111111", "titulo": "Product Designer", "empresa": "Acme",
-             "url": "https://www.linkedin.com/jobs/view/1111111111/"},
+            {
+                "job_id": "1111111111",
+                "titulo": "Product Designer",
+                "empresa": "Acme",
+                "url": "https://www.linkedin.com/jobs/view/1111111111/",
+            },
+            {
+                "job_id": "2222222222",
+                "titulo": "Senior Product Designer",
+                "empresa": "Globex",
+                "url": "https://www.linkedin.com/jobs/view/2222222222/",
+            },
+            {
+                "job_id": "1111111111",
+                "titulo": "Product Designer",
+                "empresa": "Acme",
+                "url": "https://www.linkedin.com/jobs/view/1111111111/",
+            },
         ]
 
     def abrir_oferta(self, job_id):
         self.llamadas.append(("abrir_oferta", job_id))
         if job_id == "2222222222":
             # Oferta "pelada": todo lo opcional ausente -> None.
-            return {"job_id": job_id, "titulo": "Senior Product Designer",
-                    "empresa": "Globex", "ubicacion": "Madrid, España", "insights": [],
-                    "descripcion": "Diseño de producto.", "url": None}
+            return {
+                "job_id": job_id,
+                "titulo": "Senior Product Designer",
+                "empresa": "Globex",
+                "ubicacion": "Madrid, España",
+                "insights": [],
+                "descripcion": "Diseño de producto.",
+                "url": None,
+            }
         return {
             "job_id": job_id,
             "titulo": "Product Designer",
@@ -103,8 +121,10 @@ def main() -> int:
     comprobar(issubclass(LinkedInError, RuntimeError), "LinkedInError hereda de RuntimeError")
 
     firma_busqueda = inspect.signature(search_jobs)
-    comprobar(list(firma_busqueda.parameters) == ["queries", "limit"],
-              f"firma search_jobs{tuple(firma_busqueda.parameters)}")
+    comprobar(
+        list(firma_busqueda.parameters) == ["queries", "limit"],
+        f"firma search_jobs{tuple(firma_busqueda.parameters)}",
+    )
     comprobar(firma_busqueda.parameters["limit"].default == 20, "search_jobs(limit=20) por defecto")
     firma_detalle = inspect.signature(get_job_details)
     comprobar(list(firma_detalle.parameters) == ["job_id"], "firma get_job_details(job_id)")
@@ -136,9 +156,16 @@ def main() -> int:
 
     print("\n3) Formatos de sesión aceptados")
     carpeta = Path(tempfile.mkdtemp(prefix="linkedin_offline_"))
-    cookie = {"name": "li_at", "value": "x", "domain": ".linkedin.com",
-              "path": "/", "expires": 4102444800, "httpOnly": True, "secure": True,
-              "sameSite": "None"}
+    cookie = {
+        "name": "li_at",
+        "value": "x",
+        "domain": ".linkedin.com",
+        "path": "/",
+        "expires": 4102444800,
+        "httpOnly": True,
+        "secure": True,
+        "sameSite": "None",
+    }
 
     estado_completo = carpeta / "estado.json"
     estado_completo.write_text(json.dumps({"cookies": [cookie], "origins": []}), encoding="utf-8")
@@ -148,8 +175,10 @@ def main() -> int:
     lista_suelta = carpeta / "lista.json"
     lista_suelta.write_text(json.dumps([cookie]), encoding="utf-8")
     cargado = modulo._cargar_sesion(lista_suelta)
-    comprobar(len(cargado["cookies"]) == 1 and "origins" in cargado,
-              "lista suelta de cookies se envuelve en storage_state")
+    comprobar(
+        len(cargado["cookies"]) == 1 and "origins" in cargado,
+        "lista suelta de cookies se envuelve en storage_state",
+    )
 
     vacio = carpeta / "vacio.json"
     vacio.write_text(json.dumps({"cookies": [], "origins": []}), encoding="utf-8")
@@ -164,32 +193,56 @@ def main() -> int:
     modulo._CLIENTE = falso  # inyecta el doble: _obtener_cliente lo reutiliza
     ofertas = search_jobs(["Product Designer"], limit=2)
     comprobar(len(ofertas) == 2, f"respeta limit (devueltas {len(ofertas)})")
-    comprobar(len({o['job_id'] for o in ofertas}) == len(ofertas), "deduplica por job_id")
-    comprobar(all(set(o) == {"job_id", "titulo", "empresa", "url"} for o in ofertas),
-              "cada oferta trae exactamente job_id/titulo/empresa/url")
+    comprobar(len({o["job_id"] for o in ofertas}) == len(ofertas), "deduplica por job_id")
+    comprobar(
+        all(set(o) == {"job_id", "titulo", "empresa", "url"} for o in ofertas),
+        "cada oferta trae exactamente job_id/titulo/empresa/url",
+    )
     comprobar(ofertas[0]["url"].endswith("/jobs/view/1111111111/"), "url bien formada")
 
     detalle = get_job_details("1111111111")
-    comprobar(set(detalle) == {
-        "job_id", "titulo", "empresa", "url", "ubicacion",
-        "descripcion", "requisitos", "salario", "remoto", "contrato",
-    }, "detalle con las 10 claves del contrato")
+    comprobar(
+        set(detalle)
+        == {
+            "job_id",
+            "titulo",
+            "empresa",
+            "url",
+            "ubicacion",
+            "descripcion",
+            "requisitos",
+            "salario",
+            "remoto",
+            "contrato",
+        },
+        "detalle con las 10 claves del contrato",
+    )
     comprobar(detalle["ubicacion"] == "Barcelona, España", "ubicación recortada antes de ' · '")
     comprobar(detalle["remoto"] == "Remoto", f"modalidad normalizada ({detalle['remoto']!r})")
-    comprobar(detalle["contrato"] == "Jornada completa", f"contrato normalizado ({detalle['contrato']!r})")
+    comprobar(
+        detalle["contrato"] == "Jornada completa", f"contrato normalizado ({detalle['contrato']!r})"
+    )
     comprobar(bool(detalle["salario"]), f"salario extraído ({detalle['salario']!r})")
-    comprobar((detalle["requisitos"] or "").startswith("- 3 años"),
-              "requisitos recortados tras el encabezado")
+    comprobar(
+        (detalle["requisitos"] or "").startswith("- 3 años"),
+        "requisitos recortados tras el encabezado",
+    )
 
     pelada = get_job_details("2222222222")
-    comprobar(pelada["salario"] is None and pelada["remoto"] is None
-              and pelada["contrato"] is None, "campos ausentes quedan en None")
-    comprobar(pelada["url"].endswith("/jobs/view/2222222222/"), "url de respaldo si la página no la da")
+    comprobar(
+        pelada["salario"] is None and pelada["remoto"] is None and pelada["contrato"] is None,
+        "campos ausentes quedan en None",
+    )
+    comprobar(
+        pelada["url"].endswith("/jobs/view/2222222222/"), "url de respaldo si la página no la da"
+    )
 
     # El mismo cliente se ha usado para búsqueda y detalle (un navegador).
     tipos = [llamada[0] for llamada in falso.llamadas]
-    comprobar(tipos.count("buscar") == 1 and tipos.count("abrir_oferta") == 2,
-              "un único cliente sirve búsqueda y detalles")
+    comprobar(
+        tipos.count("buscar") == 1 and tipos.count("abrir_oferta") == 2,
+        "un único cliente sirve búsqueda y detalles",
+    )
 
     modulo._CLIENTE = None
     os.environ.pop("SESSION_PATH", None)

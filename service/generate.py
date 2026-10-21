@@ -46,19 +46,44 @@ _RUTA_CV_ES = os.path.join(_RAIZ, "assets", "cv", "base-cv-es.md")
 _RUTA_CV_EN = os.path.join(_RAIZ, "assets", "cv", "base-cv-en.md")
 
 # Per-job deliverables: ../candidaturas/<id>/cv.pdf and cover.pdf.
-_DIR_CANDIDATURAS = os.environ.get("CANDIDATURAS_DIR", "").strip() or os.path.join(_RAIZ, "candidaturas")
+_DIR_CANDIDATURAS = os.environ.get("CANDIDATURAS_DIR", "").strip() or os.path.join(
+    _RAIZ, "candidaturas"
+)
 
 # Words that reveal an English ad (to pick the CV and language).
 _STOPWORDS_EN = {
-    "the", "and", "with", "for", "you", "your", "our", "we", "are", "is",
-    "role", "team", "will", "have", "experience", "design", "product",
-    "about", "this", "that", "from", "work", "who", "what", "looking",
+    "the",
+    "and",
+    "with",
+    "for",
+    "you",
+    "your",
+    "our",
+    "we",
+    "are",
+    "is",
+    "role",
+    "team",
+    "will",
+    "have",
+    "experience",
+    "design",
+    "product",
+    "about",
+    "this",
+    "that",
+    "from",
+    "work",
+    "who",
+    "what",
+    "looking",
 }
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _texto(valor):
     """Turn any value into clean text ('' when None)."""
@@ -72,9 +97,21 @@ def _texto(valor):
 def _texto_oferta(job):
     """Concatenate the offer's textual fields."""
     claves = (
-        "titulo", "title", "empresa", "company", "descripcion", "description",
-        "requisitos", "requirements", "ubicacion", "location", "remoto",
-        "remote", "contrato", "salario", "salary",
+        "titulo",
+        "title",
+        "empresa",
+        "company",
+        "descripcion",
+        "description",
+        "requisitos",
+        "requirements",
+        "ubicacion",
+        "location",
+        "remoto",
+        "remote",
+        "contrato",
+        "salario",
+        "salary",
     )
     return " ".join(_texto(job.get(k)) for k in claves if job.get(k))
 
@@ -99,7 +136,9 @@ def idioma_oferta(job):
     palabras = re.findall(r"[a-záéíóúñü]+", texto)
     inglesas = sum(1 for p in palabras if p in _STOPWORDS_EN)
     espanolas = sum(
-        1 for p in palabras if p in {"de", "para", "con", "que", "el", "la", "los", "las", "y", "en"}
+        1
+        for p in palabras
+        if p in {"de", "para", "con", "que", "el", "la", "los", "las", "y", "en"}
     )
     # Accents and eñes are a strong Spanish signal.
     if re.search(r"[áéíóúñ¿¡]", texto):
@@ -141,9 +180,7 @@ def _adjuntar_pdf(job, texto, nombre_archivo, clave, generador):
             return ruta
         _log.warning("PDF no escrito para %s: %s", job.get("id"), nombre_archivo)
     except Exception as err:  # noqa: BLE001 — el PDF es un extra, no el pipeline.
-        _log.warning(
-            "PDF %s no generado para %s: %s", nombre_archivo, (job or {}).get("id"), err
-        )
+        _log.warning("PDF %s no generado para %s: %s", nombre_archivo, (job or {}).get("id"), err)
     return None
 
 
@@ -181,9 +218,7 @@ def _verificar_pdf_cv(job, texto_cv, perfil, ruta_pdf):
                 "; ".join(str(f) for f in faltantes),
             )
         elif resultado.get("ok") is False:
-            _log.warning(
-                "Gate PDF del CV (%s): %s", job.get("id"), resultado.get("motivo")
-            )
+            _log.warning("Gate PDF del CV (%s): %s", job.get("id"), resultado.get("motivo"))
         else:
             _log.info(
                 "Gate PDF del CV (%s): OK (%s páginas, %s)",
@@ -193,9 +228,7 @@ def _verificar_pdf_cv(job, texto_cv, perfil, ruta_pdf):
             )
         return resultado
     except Exception as err:  # noqa: BLE001 — el gate jamás tumba la candidatura.
-        _log.warning(
-            "Gate PDF del CV (%s) falló y se ignora: %s", (job or {}).get("id"), err
-        )
+        _log.warning("Gate PDF del CV (%s) falló y se ignora: %s", (job or {}).get("id"), err)
         return None
 
 
@@ -203,12 +236,12 @@ def _leer_cv(idioma):
     """Read the base CV in the given language (Spanish fallback)."""
     ruta = _RUTA_CV_EN if idioma == "en" else _RUTA_CV_ES
     try:
-        with open(ruta, "r", encoding="utf-8") as fh:
+        with open(ruta, encoding="utf-8") as fh:
             return fh.read()
     except OSError:
         # Fallback: try the other language before failing.
         alternativa = _RUTA_CV_ES if idioma == "en" else _RUTA_CV_EN
-        with open(alternativa, "r", encoding="utf-8") as fh:
+        with open(alternativa, encoding="utf-8") as fh:
             return fh.read()
 
 
@@ -216,19 +249,18 @@ def _resumen_perfil(perfil):
     """Compact, faithful profile summary for the prompts."""
     perfil = perfil or {}
     lineas = [
-        "NOMBRE: %s" % (perfil.get("identity") or {}).get("nombre", ""),
-        "HEADLINE: %s" % perfil.get("headline", ""),
+        "NOMBRE: {}".format((perfil.get("identity") or {}).get("nombre", "")),
+        "HEADLINE: {}".format(perfil.get("headline", "")),
     ]
     pos = perfil.get("positioning_emphasis") or {}
     if pos.get("declaracion_principal"):
-        lineas.append("POSICIONAMIENTO: %s" % pos["declaracion_principal"])
+        lineas.append("POSICIONAMIENTO: {}".format(pos["declaracion_principal"]))
     if pos.get("matiz_liderazgo"):
-        lineas.append("MATIZ DE LIDERAZGO: %s" % pos["matiz_liderazgo"])
+        lineas.append("MATIZ DE LIDERAZGO: {}".format(pos["matiz_liderazgo"]))
 
     for exp in perfil.get("experience") or []:
         lineas.append(
-            "- %s en %s (%s, %s)"
-            % (
+            "- {} en {} ({}, {})".format(
                 exp.get("titulo_cv", ""),
                 exp.get("empresa", ""),
                 exp.get("periodo", ""),
@@ -236,25 +268,26 @@ def _resumen_perfil(perfil):
             )
         )
         for bullet in (exp.get("bullets") or [])[:4]:
-            lineas.append("  · %s" % bullet)
+            lineas.append(f"  · {bullet}")
         if exp.get("nota"):
-            lineas.append("  (límite: %s)" % exp["nota"])
+            lineas.append("  (límite: {})".format(exp["nota"]))
 
     for proj in perfil.get("projects") or []:
         lineas.append(
-            "- Proyecto %s (%s): %s"
-            % (proj.get("nombre", ""), proj.get("rol", ""), proj.get("descripcion", ""))
+            "- Proyecto {} ({}): {}".format(
+                proj.get("nombre", ""), proj.get("rol", ""), proj.get("descripcion", "")
+            )
         )
 
     skills = perfil.get("skills") or {}
     for grupo, items in skills.items():
-        lineas.append("SKILLS %s: %s" % (grupo, ", ".join(items)))
+        lineas.append("SKILLS {}: {}".format(grupo, ", ".join(items)))
 
     idiomas = perfil.get("languages") or {}
     lineas.append(
         "IDIOMAS: "
         + "; ".join(
-            "%s=%s" % (k, (v or {}).get("nivel") or "sin nivel acreditado")
+            "{}={}".format(k, (v or {}).get("nivel") or "sin nivel acreditado")
             for k, v in idiomas.items()
         )
     )
@@ -267,9 +300,8 @@ def _bloque_oferta(job):
     if len(descripcion) > 6000:
         descripcion = descripcion[:6000] + "\n[...recortado...]"
     return (
-        "Título: %s\nEmpresa: %s\nUbicación: %s\nModalidad: %s\n"
-        "Salario: %s\nContrato: %s\nURL: %s\nDescripción:\n%s"
-        % (
+        "Título: {}\nEmpresa: {}\nUbicación: {}\nModalidad: {}\n"
+        "Salario: {}\nContrato: {}\nURL: {}\nDescripción:\n{}".format(
             _texto(job.get("titulo") or job.get("title")) or "(sin título)",
             _texto(job.get("empresa") or job.get("company")) or "(sin empresa)",
             _texto(job.get("ubicacion") or job.get("location")) or "(sin ubicación)",
@@ -303,15 +335,11 @@ def _chat(sistema, usuario, temperature=0.6, max_tokens=1800):
         {"role": "user", "content": usuario},
     ]
     try:
-        respuesta = llm.chat(
-            mensajes, temperature=temperature, max_tokens=max_tokens
-        )
+        respuesta = llm.chat(mensajes, temperature=temperature, max_tokens=max_tokens)
     except llm.LLMError as err:
         if "max_tokens" not in str(err) and "vacío" not in str(err):
             raise
-        respuesta = llm.chat(
-            mensajes, temperature=temperature, max_tokens=max_tokens * 2
-        )
+        respuesta = llm.chat(mensajes, temperature=temperature, max_tokens=max_tokens * 2)
     return _limpiar_salida(respuesta)
 
 
@@ -374,11 +402,55 @@ Devuelve sólo el documento final, en el mismo idioma, formato y extensión."""
 # Words a document cannot end with: when the verifier's reply ends in one of
 # them, it was cut by the token budget.
 _PALABRAS_SIN_CIERRE = {
-    "de", "del", "el", "la", "los", "las", "un", "una", "unos", "unas", "y",
-    "o", "u", "que", "con", "para", "por", "en", "mi", "mis", "su", "sus",
-    "al", "se", "es", "son", "a", "como", "más", "sin", "sobre", "entre",
-    "cuando", "donde", "mientras", "muy", "the", "and", "with", "for", "to",
-    "of", "in", "my", "your", "our", "that", "is", "are",
+    "de",
+    "del",
+    "el",
+    "la",
+    "los",
+    "las",
+    "un",
+    "una",
+    "unos",
+    "unas",
+    "y",
+    "o",
+    "u",
+    "que",
+    "con",
+    "para",
+    "por",
+    "en",
+    "mi",
+    "mis",
+    "su",
+    "sus",
+    "al",
+    "se",
+    "es",
+    "son",
+    "a",
+    "como",
+    "más",
+    "sin",
+    "sobre",
+    "entre",
+    "cuando",
+    "donde",
+    "mientras",
+    "muy",
+    "the",
+    "and",
+    "with",
+    "for",
+    "to",
+    "of",
+    "in",
+    "my",
+    "your",
+    "our",
+    "that",
+    "is",
+    "are",
 }
 
 _INSTRUCCIONES_TIPO = {
@@ -516,7 +588,7 @@ def _parece_truncado(texto, tipo):
         return True
     if tipo == TIPO_CV:
         return False
-    if limpio[-1] in ".!?:\"”»)*_]":
+    if limpio[-1] in '.!?:"”»)*_]':
         return False
     if limpio[-1] in ",-–—":
         return True
@@ -577,7 +649,7 @@ def _desenvolver_salida(texto):
         texto,
         flags=re.IGNORECASE,
     ).strip()
-    if len(texto) > 1 and texto[0] in "\"“" and texto[-1] in "\"”":
+    if len(texto) > 1 and texto[0] in '"“' and texto[-1] in '"”':
         texto = texto[1:-1].strip()
     return texto
 
@@ -605,26 +677,21 @@ def _verificar_y_humanizar(texto, job, perfil, tipo):
         return texto
 
     tipo = tipo if tipo in _INSTRUCCIONES_TIPO else TIPO_CARTA
-    usuario = """PERFIL VERIFICADO DEL CANDIDATO (única fuente sobre el candidato)
-{perfil}
+    usuario = f"""PERFIL VERIFICADO DEL CANDIDATO (única fuente sobre el candidato)
+{_resumen_perfil(perfil)}
 
 OFERTA (única fuente sobre el puesto)
-{oferta}
+{_bloque_oferta(job or {})}
 
 TIPO DE DOCUMENTO
-{tipo}
+{_INSTRUCCIONES_TIPO[tipo]}
 
 TEXTO A REVISAR
 {texto}
 
 TAREA
 Aplica la verificación factual y la humanización. Devuelve sólo el documento
-final, sin comentarios.""".format(
-        perfil=_resumen_perfil(perfil),
-        oferta=_bloque_oferta(job or {}),
-        tipo=_INSTRUCCIONES_TIPO[tipo],
-        texto=texto,
-    )
+final, sin comentarios."""
 
     try:
         revisado = _chat(
@@ -690,20 +757,16 @@ def generar_cover_letter(job, perfil):
     """
     idioma = idioma_oferta(job)
     nombre_idioma = "inglés" if idioma == "en" else "español"
-    usuario = """PERFIL DEL CANDIDATO
-{perfil}
+    usuario = f"""PERFIL DEL CANDIDATO
+{_resumen_perfil(perfil)}
 
 OFERTA
-{oferta}
+{_bloque_oferta(job)}
 
 TAREA
-Escribe la carta de presentación en {idioma}. Elige dos o tres evidencias
+Escribe la carta de presentación en {nombre_idioma}. Elige dos o tres evidencias
 reales del perfil que respondan a lo que pide el anuncio. Firma con el
-nombre del candidato. Devuelve sólo el texto de la carta.""".format(
-        perfil=_resumen_perfil(perfil),
-        oferta=_bloque_oferta(job),
-        idioma=nombre_idioma,
-    )
+nombre del candidato. Devuelve sólo el texto de la carta."""
     carta = _verificar_y_humanizar(
         _chat(_SISTEMA_CARTA, usuario, temperature=0.6, max_tokens=3000),
         job,
@@ -753,24 +816,20 @@ def generar_cv_adaptado(job, perfil):
     """
     idioma = idioma_oferta(job)
     cv_base = _leer_cv(idioma)
-    usuario = """CV BASE
-{cv}
+    usuario = f"""CV BASE
+{cv_base}
 
 PERFIL ESTRUCTURADO (referencia de evidencia, no añadir nada que no esté
 en el CV base)
-{perfil}
+{_resumen_perfil(perfil)}
 
 OFERTA
-{oferta}
+{_bloque_oferta(job)}
 
 TAREA
 Adapta el CV base a esta oferta: reescribe el resumen profesional para
 destacar el encaje, reordena las secciones y prioriza los bullets y skills
-más relevantes. No inventes nada. Devuelve el CV completo en markdown.""".format(
-        cv=cv_base,
-        perfil=_resumen_perfil(perfil),
-        oferta=_bloque_oferta(job),
-    )
+más relevantes. No inventes nada. Devuelve el CV completo en markdown."""
     cv = _verificar_y_humanizar(
         _chat(_SISTEMA_CV, usuario, temperature=0.4, max_tokens=8000),
         job,
@@ -781,15 +840,12 @@ más relevantes. No inventes nada. Devuelve el CV completo en markdown.""".forma
     # sections, fall back to the full base CV: whole and honest beats cut.
     if _cv_truncado(cv, cv_base):
         _log.warning(
-            "CV adaptado truncado (%d chars frente a %d del base): "
-            "se usa el CV base completo.",
+            "CV adaptado truncado (%d chars frente a %d del base): se usa el CV base completo.",
             len(cv or ""),
             len(cv_base or ""),
         )
         cv = cv_base
-    ruta_cv = _adjuntar_pdf(
-        job, cv, "cv.pdf", "cv_pdf", _funcion_pdf("generar_pdf_cv")
-    )
+    ruta_cv = _adjuntar_pdf(job, cv, "cv.pdf", "cv_pdf", _funcion_pdf("generar_pdf_cv"))
     # Deterministic (non-blocking) gate: checks the PDF keeps the profile's
     # hard data and stores the result in job["pdf_check"].
     _verificar_pdf_cv(job, cv, perfil, ruta_cv)
@@ -820,18 +876,14 @@ def generar_mensaje(job, perfil):
     """
     idioma = idioma_oferta(job)
     nombre_idioma = "inglés" if idioma == "en" else "español"
-    usuario = """PERFIL
-{perfil}
+    usuario = f"""PERFIL
+{_resumen_perfil(perfil)}
 
 OFERTA
-{oferta}
+{_bloque_oferta(job)}
 
 TAREA
-Escribe el mensaje en {idioma} (máximo 300 caracteres).""".format(
-        perfil=_resumen_perfil(perfil),
-        oferta=_bloque_oferta(job),
-        idioma=nombre_idioma,
-    )
+Escribe el mensaje en {nombre_idioma} (máximo 300 caracteres)."""
     return _verificar_y_humanizar(
         _chat(_SISTEMA_MENSAJE, usuario, temperature=0.7, max_tokens=2500),
         job,
@@ -842,14 +894,15 @@ Escribe el mensaje en {idioma} (máximo 300 caracteres).""".format(
 
 if __name__ == "__main__":
     # Self-check with a fictitious offer.
-    with open(
-        os.path.join(_RAIZ, "data", "perfil.json"), "r", encoding="utf-8"
-    ) as fh:
+    with open(os.path.join(_RAIZ, "data", "perfil.json"), encoding="utf-8") as fh:
         _perfil = json.load(fh)
     _job = {
         "titulo": "Product Designer (Remote)",
         "empresa": "Acme",
         "remoto": "100% remoto",
-        "descripcion": "Diseño de producto en Figma para SaaS B2B; design systems y colaboración con frontend Angular.",
+        "descripcion": (
+            "Diseño de producto en Figma para SaaS B2B; design systems y colaboración "
+            "con frontend Angular."
+        ),
     }
     print(generar_cover_letter(_job, _perfil))

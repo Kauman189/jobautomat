@@ -1,8 +1,7 @@
 """Tests de ``service/health.py`` con la red mockeada (nunca sale a internet)."""
 
-import pytest
-
 import health
+import pytest
 
 CLAVES_ESPERADAS = {
     "deepseek",
@@ -59,9 +58,7 @@ def red_falsa(monkeypatch):
 
     monkeypatch.setattr(health.urllib.request, "urlopen", _urlopen)
     # Chromium depende del entorno (patchright/playwright instalados o no).
-    monkeypatch.setattr(
-        health, "_comprobar_chromium", lambda cfg: {"ok": True, "detalle": "mock"}
-    )
+    monkeypatch.setattr(health, "_comprobar_chromium", lambda cfg: {"ok": True, "detalle": "mock"})
     return llamadas
 
 
@@ -81,9 +78,7 @@ def test_diagnostico_no_sale_a_internet(cfg_sana, red_falsa):
     health.diagnostico(cfg_sana)
     # Sólo endpoints de DeepSeek y Telegram (getMe), nunca otro host.
     assert red_falsa, "se esperaban llamadas mockeadas"
-    assert all(
-        "api.deepseek.com" in url or "api.telegram.org" in url for url in red_falsa
-    )
+    assert all("api.deepseek.com" in url or "api.telegram.org" in url for url in red_falsa)
 
 
 def test_diagnostico_falla_si_deepseek_no_responde(cfg_sana, red_falsa, monkeypatch):

@@ -64,14 +64,13 @@ try:
 except ImportError:  # pragma: no cover — non-POSIX platforms only.
     fcntl = None  # type: ignore[assignment]
 
-from flask import Flask, Response, jsonify, request, send_from_directory
-
 import config
 import db
 import generate as generate_mod
 import health
 import llm
 import notify as notify_mod
+from flask import Flask, Response, jsonify, request, send_from_directory
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 WEB_DIR = os.path.join(BASE_DIR, "web")
@@ -81,9 +80,9 @@ INDEX_HTML = os.path.join(WEB_DIR, "index.html")
 # Single-process self-hosted service: no Redis, no new dependencies. State is
 # lost on restart, which is acceptable for this use case (30 LLM questions per
 # hour and IP).
-RATE_LIMIT_PREGUNTAS = 30       # max POST /api/preguntar per window and IP
-RATE_LIMIT_ACCIONES = 120       # max approve/discard calls per window and IP
-RATE_LIMIT_VENTANA = 3600       # sliding window length in seconds
+RATE_LIMIT_PREGUNTAS = 30  # max POST /api/preguntar per window and IP
+RATE_LIMIT_ACCIONES = 120  # max approve/discard calls per window and IP
+RATE_LIMIT_VENTANA = 3600  # sliding window length in seconds
 
 # Extra origins allowed for POST (besides the request Host itself).
 # Comma-separated list in ``ORIGENES_PERMITIDOS``, e.g.
@@ -120,6 +119,7 @@ app = Flask(__name__, static_folder=WEB_DIR, static_url_path="/static")
 # ---------------------------------------------------------------------------
 # Authentication
 # ---------------------------------------------------------------------------
+
 
 def _password():
     """Return the panel password from ``WEB_PASSWORD`` or ``service/.env``.
@@ -252,15 +252,16 @@ def _aplicar_limites():
     if not _origen_permitido()[0]:
         return None
     maximo, ventana = regla
-    espera = _consumir_limite("%s|%s" % (request.endpoint, _ip_cliente()), maximo, ventana)
+    espera = _consumir_limite(f"{request.endpoint}|{_ip_cliente()}", maximo, ventana)
     if not espera:
         return None
-    print("[web] límite alcanzado en %s desde %s (%ss)" % (
-        request.endpoint, _ip_cliente(), espera))
-    respuesta = jsonify({
-        "error": "demasiadas solicitudes; espera %ds" % espera,
-        "reintenta_en": espera,
-    })
+    print(f"[web] límite alcanzado en {request.endpoint} desde {_ip_cliente()} ({espera}s)")
+    respuesta = jsonify(
+        {
+            "error": f"demasiadas solicitudes; espera {espera}s",
+            "reintenta_en": espera,
+        }
+    )
     respuesta.status_code = 429
     respuesta.headers["Retry-After"] = str(espera)
     return respuesta
@@ -269,6 +270,7 @@ def _aplicar_limites():
 # ---------------------------------------------------------------------------
 # CSRF / same-origin on state-changing POSTs
 # ---------------------------------------------------------------------------
+
 
 def _host_de(url):
     """Return the normalized host (with port) of a URL.
@@ -299,7 +301,7 @@ def _origen_permitido():
         referer = (request.headers.get("Referer") or "").strip()
         if referer:
             partes = urlsplit(referer)
-            origen = "%s://%s" % (partes.scheme, partes.netloc) if partes.netloc else ""
+            origen = f"{partes.scheme}://{partes.netloc}" if partes.netloc else ""
     if not origen:
         return True, ""
     origen_norm = origen.rstrip("/").lower()
@@ -326,15 +328,18 @@ def _exigir_same_origin():
     ok, origen = _origen_permitido()
     if ok:
         return None
-    print("[web] origen rechazado: %s (host %s)" % (origen, request.host))
-    return jsonify({
-        "error": "origen no permitido (se esperaba %s)" % request.host,
-    }), 403
+    print(f"[web] origen rechazado: {origen} (host {request.host})")
+    return jsonify(
+        {
+            "error": f"origen no permitido (se esperaba {request.host})",
+        }
+    ), 403
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _directorio_candidaturas():
     """Return the directory where generate.py drops the deliverables.
@@ -394,7 +399,7 @@ def _respuestas_formulario(op):
     if not _url_formulario(op.get("url")):
         return {}, None
 
-    clave = "%s|%s" % (op.get("id"), op.get("url"))
+    clave = "{}|{}".format(op.get("id"), op.get("url"))
     with _LOCK_RESPUESTAS:
         if clave in _CACHE_RESPUESTAS:
             return _CACHE_RESPUESTAS[clave], None
@@ -413,15 +418,13 @@ def _respuestas_formulario(op):
         for campo in formulario:
             k = (campo.get("nombre") or campo.get("pregunta") or "").strip()
             if k:
-                pregunta_de[k] = (
-                    campo.get("pregunta") or campo.get("etiqueta") or ""
-                ).strip()
+                pregunta_de[k] = (campo.get("pregunta") or campo.get("etiqueta") or "").strip()
         detalle = [
             {"campo": k, "pregunta": pregunta_de.get(k) or k, "respuesta": v}
             for k, v in respuestas.items()
         ]
     except Exception as err:  # noqa: BLE001 — best-effort.
-        print("[web] formulario fallido para %s: %s" % (op.get("id"), err))
+        print("[web] formulario fallido para {}: {}".format(op.get("id"), err))
         return {}, str(err)
 
     with _LOCK_RESPUESTAS:
@@ -448,21 +451,19 @@ def _generar_pack(op):
         try:
             return func(op, perfil)
         except Exception as err:  # noqa: BLE001 — one material does not sink the rest.
-            print("[web] generación fallida (%s): %s" % (etiqueta, err))
-            errores.append("%s: %s" % (etiqueta, err))
+            print(f"[web] generación fallida ({etiqueta}): {err}")
+            errores.append(f"{etiqueta}: {err}")
             return ""
 
-    cover = op.get("cover_letter") or _gen(
-        generate_mod.generar_cover_letter, "cover_letter"
-    )
+    cover = op.get("cover_letter") or _gen(generate_mod.generar_cover_letter, "cover_letter")
     cv = op.get("cv_adaptado") or _gen(generate_mod.generar_cv_adaptado, "cv")
     mensaje = op.get("mensaje") or _gen(generate_mod.generar_mensaje, "mensaje")
 
     try:
         db.guardar_materiales(op["id"], cover, cv, mensaje)
     except Exception as err:  # noqa: BLE001 — persisting is secondary.
-        print("[web] no se guardaron los materiales de %s: %s" % (op["id"], err))
-        errores.append("guardar_materiales: %s" % err)
+        print("[web] no se guardaron los materiales de {}: {}".format(op["id"], err))
+        errores.append(f"guardar_materiales: {err}")
 
     # cover.txt next to the PDFs (the Telegram flow attaches it).
     cover_txt = None
@@ -474,8 +475,8 @@ def _generar_pack(op):
             with open(cover_txt, "w", encoding="utf-8") as fh:
                 fh.write(cover)
         except Exception as err:  # noqa: BLE001 — the .txt is a nice-to-have.
-            print("[web] no se escribió cover.txt: %s" % err)
-            errores.append("cover.txt: %s" % err)
+            print(f"[web] no se escribió cover.txt: {err}")
+            errores.append(f"cover.txt: {err}")
             cover_txt = None
 
     rutas = _rutas_materiales(op["id"])
@@ -504,10 +505,7 @@ def _enlaces(id_, rutas):
     for clave in ("cv_pdf", "cover_pdf", "cover_txt"):
         ruta = rutas.get(clave)
         if ruta:
-            enlaces[clave] = "/candidaturas/%s/%s" % (
-                _id_url(id_),
-                os.path.basename(ruta),
-            )
+            enlaces[clave] = f"/candidaturas/{_id_url(id_)}/{os.path.basename(ruta)}"
     return enlaces
 
 
@@ -566,15 +564,14 @@ def _resumen(op):
         "remoto": op.get("remoto"),
         "fecha": op.get("created_at"),
         "url": op.get("url"),
-        "tiene_materiales": bool(
-            op.get("cover_letter") or op.get("mensaje")
-        ),
+        "tiene_materiales": bool(op.get("cover_letter") or op.get("mensaje")),
     }
 
 
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
+
 
 @app.after_request
 def _no_cache_api(resp):
@@ -616,15 +613,11 @@ def api_ofertas():
     filtro = _filtro_estado(request.args.get("estado"))
     try:
         if filtro == "pendientes":
-            ofertas = [
-                op
-                for op in db.listar()
-                if (op.get("estado") or "") in _ESTADOS_PENDIENTES
-            ]
+            ofertas = [op for op in db.listar() if (op.get("estado") or "") in _ESTADOS_PENDIENTES]
         else:
             ofertas = db.listar(filtro)
     except Exception as err:  # noqa: BLE001 — surface a readable DB error.
-        return jsonify({"error": "no se pudo leer la base: %s" % err}), 500
+        return jsonify({"error": f"no se pudo leer la base: {err}"}), 500
 
     # Highest score first; ties keep the created_at order from db.listar.
     ofertas.sort(key=lambda o: (-(o.get("score") or 0),))
@@ -702,7 +695,7 @@ def api_aprobar(id_):
     if request.args.get("formulario", "1") != "0":
         respuestas, error_formulario = _respuestas_formulario(op)
     if error_formulario:
-        pack["errores"].append("formulario: %s" % error_formulario)
+        pack["errores"].append(f"formulario: {error_formulario}")
 
     rutas = {
         "cv_pdf": pack.get("cv_pdf"),
@@ -802,7 +795,7 @@ def _responder_pregunta(pregunta, contexto):
         {"role": "system", "content": SYSTEM_PREGUNTAR},
         {
             "role": "user",
-            "content": "%s\n\nPregunta a responder:\n%s" % (contexto, pregunta),
+            "content": f"{contexto}\n\nPregunta a responder:\n{pregunta}",
         },
     ]
     max_tokens = _MAX_TOKENS_PREGUNTA
@@ -811,9 +804,7 @@ def _responder_pregunta(pregunta, contexto):
     except llm.LLMError as err:
         if "max_tokens" not in str(err) and "vacío" not in str(err):
             raise
-        respuesta = llm.chat(
-            mensajes, temperature=0.6, max_tokens=max_tokens * 2
-        )
+        respuesta = llm.chat(mensajes, temperature=0.6, max_tokens=max_tokens * 2)
     return (respuesta or "").strip()
 
 
@@ -855,7 +846,7 @@ def api_perfil():
     try:
         perfil = notify_mod._cargar_perfil()
     except Exception as err:  # noqa: BLE001 — surface a readable error.
-        return jsonify({"error": "no se pudo cargar el perfil: %s" % err}), 500
+        return jsonify({"error": f"no se pudo cargar el perfil: {err}"}), 500
     if not isinstance(perfil, dict):
         return jsonify({"error": "el perfil no es un objeto JSON"}), 500
     return jsonify(perfil)
@@ -897,7 +888,7 @@ SYSTEM_PERFIL = (
     "'set' cambia un valor existente, 'agregar' añade un elemento a una lista "
     "(valor = item completo), 'quitar' elimina. NO inventes nada que no esté en "
     "el texto del usuario; evidencia siempre 'USR'. Si el texto no aporta un dato "
-    "concreto, devuelve {\"cambios\": [], \"nota\": '...'}."
+    'concreto, devuelve {"cambios": [], "nota": \'...\'}.'
 )
 
 
@@ -950,12 +941,11 @@ def _tokens_ruta(ruta):
     for parte in limpia.split("."):
         pieza = parte.strip()
         if not pieza:
-            raise ValueError("la ruta '%s' tiene un tramo vacío" % limpia)
+            raise ValueError(f"la ruta '{limpia}' tiene un tramo vacío")
         tokens.append(int(pieza) if re.fullmatch(r"\d+", pieza) else pieza)
     if tokens[0] not in CLAVES_PERFIL:
         raise ValueError(
-            "clave desconocida '%s'; válidas: %s"
-            % (tokens[0], ", ".join(CLAVES_PERFIL))
+            "clave desconocida '{}'; válidas: {}".format(tokens[0], ", ".join(CLAVES_PERFIL))
         )
     return tokens
 
@@ -982,20 +972,18 @@ def _padre_de(perfil, tokens):
         contenedor = _texto_ruta(tokens[:i]) or "el perfil"
         if isinstance(token, int):
             if not isinstance(actual, list):
-                raise ValueError("'%s' no es una lista" % contenedor)
+                raise ValueError(f"'{contenedor}' no es una lista")
             if not 0 <= token < len(actual):
-                raise ValueError("índice fuera de rango en '%s'" % previa)
+                raise ValueError(f"índice fuera de rango en '{previa}'")
             actual = actual[token]
         else:
             if not isinstance(actual, dict):
-                raise ValueError("'%s' no es un objeto" % contenedor)
+                raise ValueError(f"'{contenedor}' no es un objeto")
             if token not in actual:
-                raise ValueError("no existe '%s'" % previa)
+                raise ValueError(f"no existe '{previa}'")
             actual = actual[token]
     if not isinstance(actual, (dict, list)):
-        raise ValueError(
-            "'%s' no contiene más claves" % (_texto_ruta(tokens[:-1]) or "el perfil")
-        )
+        raise ValueError("'%s' no contiene más claves" % (_texto_ruta(tokens[:-1]) or "el perfil"))
     return actual
 
 
@@ -1016,12 +1004,12 @@ def _resolver_ruta(perfil, tokens):
     clave = tokens[-1]
     if isinstance(padre, list):
         if not isinstance(clave, int) or not 0 <= clave < len(padre):
-            raise ValueError("índice fuera de rango en '%s'" % _texto_ruta(tokens))
+            raise ValueError(f"índice fuera de rango en '{_texto_ruta(tokens)}'")
         return padre[clave]
     if isinstance(clave, int):
-        raise ValueError("'%s' es un objeto, no una lista" % _texto_ruta(tokens[:-1]))
+        raise ValueError(f"'{_texto_ruta(tokens[:-1])}' es un objeto, no una lista")
     if clave not in padre:
-        raise ValueError("no existe '%s'" % _texto_ruta(tokens))
+        raise ValueError(f"no existe '{_texto_ruta(tokens)}'")
     return padre[clave]
 
 
@@ -1045,36 +1033,34 @@ def _aplicar_cambio(perfil, cambio):
 
     tipo = str(cambio.get("tipo") or "").strip().lower()
     if tipo not in ("set", "agregar", "quitar"):
-        raise ValueError("tipo '%s' no válido (set, agregar, quitar)" % cambio.get("tipo"))
+        raise ValueError("tipo '{}' no válido (set, agregar, quitar)".format(cambio.get("tipo")))
 
     tokens = _tokens_ruta(cambio.get("ruta"))
     valor = cambio.get("valor")
     if tipo != "quitar":
         if "valor" not in cambio:
-            raise ValueError("falta 'valor' en un cambio '%s'" % tipo)
+            raise ValueError(f"falta 'valor' en un cambio '{tipo}'")
         try:
             json.dumps(valor, ensure_ascii=False)
         except (TypeError, ValueError):
-            raise ValueError("'valor' no es JSON serializable")
+            raise ValueError("'valor' no es JSON serializable") from None
 
     if tipo == "quitar":
         padre = _padre_de(perfil, tokens)
         clave = tokens[-1]
         if isinstance(padre, list):
             if not isinstance(clave, int) or not 0 <= clave < len(padre):
-                raise ValueError("índice fuera de rango en '%s'" % _texto_ruta(tokens))
+                raise ValueError(f"índice fuera de rango en '{_texto_ruta(tokens)}'")
             del padre[clave]
         else:
             if isinstance(clave, int) or clave not in padre:
-                raise ValueError("no existe '%s'" % _texto_ruta(tokens))
+                raise ValueError(f"no existe '{_texto_ruta(tokens)}'")
             del padre[clave]
 
     elif tipo == "agregar":
         destino = _resolver_ruta(perfil, tokens)
         if not isinstance(destino, list):
-            raise ValueError(
-                "'agregar' necesita una lista en '%s'" % _texto_ruta(tokens)
-            )
+            raise ValueError(f"'agregar' necesita una lista en '{_texto_ruta(tokens)}'")
         destino.append(valor)
 
     else:  # set: replace an existing key (or add it to a dict)
@@ -1082,13 +1068,11 @@ def _aplicar_cambio(perfil, cambio):
         clave = tokens[-1]
         if isinstance(padre, list):
             if not isinstance(clave, int) or not 0 <= clave < len(padre):
-                raise ValueError("índice fuera de rango en '%s'" % _texto_ruta(tokens))
+                raise ValueError(f"índice fuera de rango en '{_texto_ruta(tokens)}'")
             padre[clave] = valor
         else:
             if isinstance(clave, int):
-                raise ValueError(
-                    "'%s' es un objeto, no una lista" % _texto_ruta(tokens[:-1])
-                )
+                raise ValueError(f"'{_texto_ruta(tokens[:-1])}' es un objeto, no una lista")
             padre[clave] = valor
 
     # Everything that arrives here comes from the user (USR): the prompt already
@@ -1122,11 +1106,11 @@ def _parsear_json_modelo(texto):
         crudo = fence.group(1).strip()
     inicio, fin = crudo.find("{"), crudo.rfind("}")
     if inicio != -1 and fin > inicio:
-        crudo = crudo[inicio: fin + 1]
+        crudo = crudo[inicio : fin + 1]
     try:
         return json.loads(crudo)
     except json.JSONDecodeError as err:
-        raise ValueError("la respuesta del modelo no es JSON válido: %s" % err)
+        raise ValueError(f"la respuesta del modelo no es JSON válido: {err}") from err
 
 
 def _guardar_perfil(ruta, perfil):
@@ -1145,9 +1129,7 @@ def _guardar_perfil(ruta, perfil):
     if os.path.isfile(ruta):
         shutil.copy2(ruta, ruta + ".bak")
         modo = os.stat(ruta).st_mode & 0o777
-    descriptor, temporal = tempfile.mkstemp(
-        prefix=".perfil-", suffix=".tmp", dir=directorio
-    )
+    descriptor, temporal = tempfile.mkstemp(prefix=".perfil-", suffix=".tmp", dir=directorio)
     try:
         with os.fdopen(descriptor, "w", encoding="utf-8") as fh:
             json.dump(perfil, fh, ensure_ascii=False, indent=2)
@@ -1187,7 +1169,7 @@ def _validar_claves_perfil(nuevo, actual):
     permitidas = set(CLAVES_PERFIL) | set(actual or {})
     desconocidas = [k for k in nuevo if k not in permitidas]
     if desconocidas:
-        return "clave(s) no reconocida(s): %s. Válidas: %s" % (
+        return "clave(s) no reconocida(s): {}. Válidas: {}".format(
             ", ".join(desconocidas), ", ".join(sorted(permitidas))
         )
     return None
@@ -1239,22 +1221,24 @@ def api_perfil_agregar():
         try:
             perfil, ruta = _perfil_para_editar()
         except Exception as err:  # noqa: BLE001
-            return jsonify({"error": "no se pudo cargar el perfil: %s" % err}), 500
+            return jsonify({"error": f"no se pudo cargar el perfil: {err}"}), 500
 
         mensajes = [
             {"role": "system", "content": SYSTEM_PERFIL},
             {
                 "role": "user",
-                "content": "PERFIL ACTUAL (data/perfil.json):\n%s\n\nTEXTO NUEVO DEL USUARIO:\n%s"
-                % (_perfil_texto(perfil), texto),
+                "content": (
+                    f"PERFIL ACTUAL (data/perfil.json):\n{_perfil_texto(perfil)}\n\n"
+                    f"TEXTO NUEVO DEL USUARIO:\n{texto}"
+                ),
             },
         ]
         try:
             respuesta = llm.chat(mensajes, temperature=0.1, max_tokens=2000, json_mode=True)
         except llm.LLMError as err:
-            return jsonify({"error": "el LLM no pudo analizar el texto: %s" % err}), 502
+            return jsonify({"error": f"el LLM no pudo analizar el texto: {err}"}), 502
         except Exception as err:  # noqa: BLE001 — surface a readable error.
-            return jsonify({"error": "el LLM no pudo analizar el texto: %s" % err}), 502
+            return jsonify({"error": f"el LLM no pudo analizar el texto: {err}"}), 502
 
         try:
             plan = _parsear_json_modelo(respuesta)
@@ -1279,25 +1263,29 @@ def api_perfil_agregar():
                 # state and n+1 fails, nothing is written.
                 aplicados.append(_aplicar_cambio(copia, cambio))
             except ValueError as err:
-                return jsonify({
-                    "error": "cambio %d no válido: %s" % (posicion, err),
-                }), 400
+                return jsonify(
+                    {
+                        "error": f"cambio {posicion} no válido: {err}",
+                    }
+                ), 400
 
         if not aplicados:
-            return jsonify({
-                "ok": True,
-                "cambios": [],
-                "nota": nota or "El texto no aporta ningún dato concreto; no se cambió nada.",
-            })
+            return jsonify(
+                {
+                    "ok": True,
+                    "cambios": [],
+                    "nota": nota or "El texto no aporta ningún dato concreto; no se cambió nada.",
+                }
+            )
 
         try:
             _guardar_perfil(ruta, copia)
         except Exception as err:  # noqa: BLE001
-            print("[web] no se pudo escribir el perfil: %s" % err)
-            return jsonify({"error": "no se pudo guardar el perfil: %s" % err}), 500
+            print(f"[web] no se pudo escribir el perfil: {err}")
+            return jsonify({"error": f"no se pudo guardar el perfil: {err}"}), 500
 
-    print("[web] perfil actualizado (%d cambio(s)): %s" % (
-        len(aplicados), ", ".join("%s %s" % (c["tipo"], c["ruta"]) for c in aplicados)))
+    cambios_txt = ", ".join("{} {}".format(c["tipo"], c["ruta"]) for c in aplicados)
+    print(f"[web] perfil actualizado ({len(aplicados)} cambio(s)): {cambios_txt}")
     return jsonify({"ok": True, "cambios": aplicados, "nota": nota})
 
 
@@ -1323,7 +1311,7 @@ def api_perfil_borrar():
         try:
             perfil, ruta_fichero = _perfil_para_editar()
         except Exception as err:  # noqa: BLE001
-            return jsonify({"error": "no se pudo cargar el perfil: %s" % err}), 500
+            return jsonify({"error": f"no se pudo cargar el perfil: {err}"}), 500
 
         copia = copy.deepcopy(perfil)
         try:
@@ -1334,10 +1322,10 @@ def api_perfil_borrar():
         try:
             _guardar_perfil(ruta_fichero, copia)
         except Exception as err:  # noqa: BLE001
-            print("[web] no se pudo escribir el perfil: %s" % err)
-            return jsonify({"error": "no se pudo guardar el perfil: %s" % err}), 500
+            print(f"[web] no se pudo escribir el perfil: {err}")
+            return jsonify({"error": f"no se pudo guardar el perfil: {err}"}), 500
 
-    print("[web] perfil: borrado %s" % borrado["ruta"])
+    print("[web] perfil: borrado {}".format(borrado["ruta"]))
     return jsonify({"ok": True, "ruta": borrado["ruta"]})
 
 
@@ -1366,7 +1354,7 @@ def api_perfil_put():
         try:
             actual, ruta = _perfil_para_editar()
         except Exception as err:  # noqa: BLE001
-            return jsonify({"error": "no se pudo cargar el perfil: %s" % err}), 500
+            return jsonify({"error": f"no se pudo cargar el perfil: {err}"}), 500
 
         error = _validar_claves_perfil(nuevo, actual)
         if error:
@@ -1375,8 +1363,8 @@ def api_perfil_put():
         try:
             _guardar_perfil(ruta, nuevo)
         except Exception as err:  # noqa: BLE001
-            print("[web] no se pudo escribir el perfil (PUT): %s" % err)
-            return jsonify({"error": "no se pudo guardar el perfil: %s" % err}), 500
+            print(f"[web] no se pudo escribir el perfil (PUT): {err}")
+            return jsonify({"error": f"no se pudo guardar el perfil: {err}"}), 500
 
     print("[web] perfil reemplazado vía JSON (modo técnico)")
     return jsonify({"ok": True})
@@ -1405,7 +1393,7 @@ def api_preguntar():
     try:
         perfil = notify_mod._cargar_perfil()
     except Exception as err:  # noqa: BLE001
-        return jsonify({"error": "no se pudo cargar el perfil: %s" % err}), 500
+        return jsonify({"error": f"no se pudo cargar el perfil: {err}"}), 500
 
     empresa = (datos.get("empresa") or "").strip()
     oferta = (datos.get("contexto") or datos.get("oferta") or "").strip()
@@ -1414,13 +1402,13 @@ def api_preguntar():
     if oferta:
         partes.append(
             "CONTEXTO DE LA OFERTA / EMPRESA (pegado por el usuario; fuente para "
-            "lo relativo a la empresa y al puesto):\n%s" % oferta
+            f"lo relativo a la empresa y al puesto):\n{oferta}"
         )
     elif empresa:
-        partes.append("EMPRESA: %s" % empresa)
+        partes.append(f"EMPRESA: {empresa}")
     partes.append(
         "PERFIL DEL CANDIDATO (data/perfil.json, única fuente de verdad sobre "
-        "el candidato):\n%s" % _perfil_texto(perfil)
+        f"el candidato):\n{_perfil_texto(perfil)}"
     )
     contexto = "\n\n".join(partes)
 
@@ -1430,25 +1418,27 @@ def api_preguntar():
         try:
             respuestas.append(_responder_pregunta(pregunta, contexto))
         except Exception as err:  # noqa: BLE001 — one question does not sink the rest.
-            print("[web] pregunta fallida: %s" % err)
+            print(f"[web] pregunta fallida: {err}")
             respuestas.append("")
             errores.append(str(err))
 
     if not any(respuestas):
         detalle = errores[0] if errores else "sin respuesta del modelo"
         return jsonify(
-            {"error": "el LLM no devolvió respuesta: %s" % detalle,
-             "respuestas": respuestas, "errores": errores}
+            {
+                "error": f"el LLM no devolvió respuesta: {detalle}",
+                "respuestas": respuestas,
+                "errores": errores,
+            }
         ), 502
 
-    return jsonify(
-        {"respuestas": respuestas, "preguntas": preguntas, "errores": errores}
-    )
+    return jsonify({"respuestas": respuestas, "preguntas": preguntas, "errores": errores})
 
 
 # ---------------------------------------------------------------------------
 # Editable configuration (data/settings.json)
 # ---------------------------------------------------------------------------
+
 
 def _config_efectiva():
     """Return the effective config (.env + settings.json) without required keys.
@@ -1459,7 +1449,7 @@ def _config_efectiva():
     try:
         return config.load_config(estricto=False)
     except Exception as err:  # noqa: BLE001 — the panel must still answer.
-        print("[web] no se pudo cargar la config: %s" % err)
+        print(f"[web] no se pudo cargar la config: {err}")
         return config.config_por_defecto()
 
 
@@ -1522,15 +1512,13 @@ def api_config_put():
     cambios = {}
     for clave, valor in datos.items():
         if clave == "SETTINGS_PATH":
-            return jsonify(
-                {"error": "SETTINGS_PATH no es editable desde el panel"}
-            ), 400
+            return jsonify({"error": "SETTINGS_PATH no es editable desde el panel"}), 400
         try:
             cambios[clave] = config.normalizar_valor(clave, valor)
         except KeyError:
             return jsonify(
                 {
-                    "error": "clave desconocida: %s" % clave,
+                    "error": f"clave desconocida: {clave}",
                     "claves": sorted(config.CONFIG_SPEC),
                 }
             ), 400
@@ -1558,9 +1546,7 @@ def api_config_put():
     try:
         config.guardar_settings(cambios, ruta=config.ruta_settings(base))
     except Exception as err:  # noqa: BLE001 — surface a readable error.
-        return jsonify(
-            {"error": "no se pudo guardar la configuración: %s" % err}
-        ), 500
+        return jsonify({"error": f"no se pudo guardar la configuración: {err}"}), 500
 
     return _respuesta_config({"guardado": sorted(cambios)})
 
@@ -1594,6 +1580,7 @@ def healthz():
 # ---------------------------------------------------------------------------
 # Metrics (read-only)
 # ---------------------------------------------------------------------------
+
 
 def _host_fuente(url):
     """Derive the source name from a URL (no ``www.``, no port).
@@ -1630,7 +1617,7 @@ def _ruta_base_lectura():
     try:
         return db._resolver_path(None)  # only reads DB_PATH from the config.
     except Exception as err:  # noqa: BLE001 — unreadable config.
-        raise RuntimeError("no se pudo resolver DB_PATH: %s" % err)
+        raise RuntimeError(f"no se pudo resolver DB_PATH: {err}") from err
 
 
 def _metricas_bd():
@@ -1652,12 +1639,10 @@ def _metricas_bd():
 
     # mode=ro: another connection writing does not block this one and is never
     # modified; if the file cannot be opened the error surfaces as a 500.
-    uri = "file:%s?mode=ro" % ruta.replace("?", "%3f").replace("#", "%23")
+    uri = "file:{}?mode=ro".format(ruta.replace("?", "%3f").replace("#", "%23"))
     conn = sqlite3.connect(uri, uri=True, timeout=10)
     try:
-        columnas = {
-            fila[1] for fila in conn.execute("PRAGMA table_info(oportunidades)")
-        }
+        columnas = {fila[1] for fila in conn.execute("PRAGMA table_info(oportunidades)")}
         if not columnas:
             return vacio
 
@@ -1712,13 +1697,14 @@ def api_metrics():
     try:
         datos = _metricas_bd()
     except Exception as err:  # noqa: BLE001 — surface a readable error.
-        return jsonify({"error": "no se pudieron leer las métricas: %s" % err}), 500
+        return jsonify({"error": f"no se pudieron leer las métricas: {err}"}), 500
     return jsonify(datos)
 
 
 # ---------------------------------------------------------------------------
 # Self-host: health, export/import and source diagnostics
 # ---------------------------------------------------------------------------
+
 
 @app.get("/api/salud")
 def api_salud():
@@ -1736,8 +1722,8 @@ def api_salud():
         cfg = config.load_config(estricto=False)
         return jsonify(health.diagnostico(cfg))
     except Exception as err:  # noqa: BLE001 — surface a readable error.
-        print("[web] diagnóstico de salud fallido: %s" % err)
-        return jsonify({"error": "no se pudo ejecutar el diagnóstico: %s" % err}), 500
+        print(f"[web] diagnóstico de salud fallido: {err}")
+        return jsonify({"error": f"no se pudo ejecutar el diagnóstico: {err}"}), 500
 
 
 @app.get("/api/export")
@@ -1754,14 +1740,14 @@ def api_export():
     try:
         perfil = notify_mod._cargar_perfil()
     except Exception as err:  # noqa: BLE001
-        return jsonify({"error": "no se pudo cargar el perfil: %s" % err}), 500
+        return jsonify({"error": f"no se pudo cargar el perfil: {err}"}), 500
     if not isinstance(perfil, dict):
         return jsonify({"error": "el perfil no es un objeto JSON"}), 500
 
     try:
         settings = config.enmascarar_config(_config_efectiva())
     except Exception as err:  # noqa: BLE001
-        return jsonify({"error": "no se pudo cargar la configuración: %s" % err}), 500
+        return jsonify({"error": f"no se pudo cargar la configuración: {err}"}), 500
 
     return jsonify({"perfil": perfil, "settings": settings})
 
@@ -1793,9 +1779,11 @@ def api_import():
     if nuevos_settings is not None and not isinstance(nuevos_settings, dict):
         return jsonify({"error": "'settings' debe ser un objeto JSON"}), 400
     if nuevo_perfil is None and nuevos_settings is None:
-        return jsonify({
-            "error": "no hay nada que importar: faltan 'perfil' y 'settings'",
-        }), 400
+        return jsonify(
+            {
+                "error": "no hay nada que importar: faltan 'perfil' y 'settings'",
+            }
+        ), 400
 
     # 1) Full validation before writing anything (no half-applied imports).
     ruta_perfil = _ruta_perfil() if nuevo_perfil is not None else ""
@@ -1814,14 +1802,18 @@ def api_import():
     if nuevos_settings is not None:
         for clave, valor in nuevos_settings.items():
             if clave == "SETTINGS_PATH":
-                return jsonify({
-                    "error": "SETTINGS_PATH no es importable desde el panel",
-                }), 400
+                return jsonify(
+                    {
+                        "error": "SETTINGS_PATH no es importable desde el panel",
+                    }
+                ), 400
             if clave not in config.CONFIG_SPEC:
-                return jsonify({
-                    "error": "clave de configuración desconocida: %s" % clave,
-                    "claves": sorted(config.CONFIG_SPEC),
-                }), 400
+                return jsonify(
+                    {
+                        "error": f"clave de configuración desconocida: {clave}",
+                        "claves": sorted(config.CONFIG_SPEC),
+                    }
+                ), 400
             if config.es_secreta(clave) and not valor:
                 continue  # secret masked by the export: leave it untouched.
             cambios[clave] = valor
@@ -1834,8 +1826,8 @@ def api_import():
                 os.makedirs(os.path.dirname(ruta_perfil) or ".", exist_ok=True)
                 _guardar_perfil(ruta_perfil, nuevo_perfil)
             except Exception as err:  # noqa: BLE001
-                print("[web] no se pudo importar el perfil: %s" % err)
-                return jsonify({"error": "no se pudo guardar el perfil: %s" % err}), 500
+                print(f"[web] no se pudo importar el perfil: {err}")
+                return jsonify({"error": f"no se pudo guardar el perfil: {err}"}), 500
         importado.append("perfil")
 
     if nuevos_settings is not None and cambios:
@@ -1843,11 +1835,13 @@ def api_import():
         try:
             config.guardar_settings(cambios, ruta=config.ruta_settings(base))
         except Exception as err:  # noqa: BLE001
-            print("[web] no se pudo importar la configuración: %s" % err)
-            return jsonify({
-                "error": "no se pudo guardar la configuración: %s" % err,
-                "importado": importado,
-            }), 500
+            print(f"[web] no se pudo importar la configuración: {err}")
+            return jsonify(
+                {
+                    "error": f"no se pudo guardar la configuración: {err}",
+                    "importado": importado,
+                }
+            ), 500
         importado.append("settings")
 
     print("[web] importado: %s" % (", ".join(importado) or "nada"))
@@ -1878,16 +1872,18 @@ def api_fuente_probar():
     try:
         from search.boards import probar_fuente
     except Exception as err:  # noqa: BLE001 — module missing in this deploy.
-        return jsonify({
-            "ok": False,
-            "detalle": "no se pudo cargar search.boards: %s" % err,
-        }), 500
+        return jsonify(
+            {
+                "ok": False,
+                "detalle": f"no se pudo cargar search.boards: {err}",
+            }
+        ), 500
 
     try:
         resultado = probar_fuente(nombre, parametros or {})
     except Exception as err:  # noqa: BLE001 — probar_fuente should not raise.
-        print("[web] prueba de fuente fallida (%s): %s" % (nombre, err))
-        return jsonify({"ok": False, "detalle": "error en la prueba: %s" % err})
+        print(f"[web] prueba de fuente fallida ({nombre}): {err}")
+        return jsonify({"ok": False, "detalle": f"error en la prueba: {err}"})
 
     if not isinstance(resultado, dict):
         return jsonify({"ok": False, "detalle": "respuesta inesperada de la fuente"})
@@ -1932,10 +1928,10 @@ def api_log():
         try:
             mtime = os.path.getmtime(ruta)
             activo = (time.time() - mtime) < 90
-            with open(ruta, "r", encoding="utf-8", errors="replace") as fh:
-                lineas = [l.rstrip("\n") for l in fh.readlines()[-n:]]
+            with open(ruta, encoding="utf-8", errors="replace") as fh:
+                lineas = [linea.rstrip("\n") for linea in fh.readlines()[-n:]]
         except Exception as err:  # noqa: BLE001
-            lineas = ["[web] no se pudo leer el log: %s" % err]
+            lineas = [f"[web] no se pudo leer el log: {err}"]
     return jsonify({"lineas": lineas, "mtime": mtime, "activo": activo, "ruta": ruta})
 
 
@@ -1960,7 +1956,7 @@ def _ruta_db():
     try:
         return _ruta_base_lectura()
     except Exception as err:  # noqa: BLE001 — the lock must not break the panel.
-        print("[web] no se pudo resolver la base para el lock: %s" % err)
+        print(f"[web] no se pudo resolver la base para el lock: {err}")
         return os.path.join(BASE_DIR, "state.db")
 
 
@@ -1990,7 +1986,7 @@ def _busqueda_activa():
         os.makedirs(os.path.dirname(ruta) or ".", exist_ok=True)
         descriptor = os.open(ruta, os.O_CREAT | os.O_RDWR, 0o644)
     except OSError as err:
-        print("[web] no se pudo abrir el lock %s: %s" % (ruta, err))
+        print(f"[web] no se pudo abrir el lock {ruta}: {err}")
         return False
     try:
         try:
@@ -2013,7 +2009,7 @@ def api_buscar_estado():
     try:
         activo = bool(_busqueda_activa())
     except Exception as err:  # noqa: BLE001 — surface a readable error.
-        return jsonify({"error": "no se pudo comprobar la búsqueda: %s" % err}), 500
+        return jsonify({"error": f"no se pudo comprobar la búsqueda: {err}"}), 500
     return jsonify({"activo": activo})
 
 
@@ -2048,12 +2044,10 @@ def api_buscar():
             stderr=subprocess.DEVNULL,
         )
     except Exception as err:  # noqa: BLE001 — surface a readable error.
-        print("[web] no se pudo lanzar la búsqueda manual: %s" % err)
-        return jsonify(
-            {"ok": False, "detalle": "no se pudo lanzar la búsqueda: %s" % err}
-        ), 500
+        print(f"[web] no se pudo lanzar la búsqueda manual: {err}")
+        return jsonify({"ok": False, "detalle": f"no se pudo lanzar la búsqueda: {err}"}), 500
 
-    print("[web] búsqueda manual lanzada (%s)" % " ".join(comando))
+    print("[web] búsqueda manual lanzada ({})".format(" ".join(comando)))
     return jsonify({"ok": True, "detalle": "búsqueda lanzada"}), 202
 
 
@@ -2064,6 +2058,7 @@ if __name__ == "__main__":
     logging.getLogger("werkzeug").setLevel(logging.WARNING)
 
     puerto = int(os.environ.get("WEB_PORT") or 8085)
-    print("[web] panel en http://0.0.0.0:%d (auth: %s)" % (
-        puerto, "sí" if _password() else "NO — sólo LAN"))
+    print(
+        f"[web] panel en http://0.0.0.0:{puerto} (auth: {'sí' if _password() else 'NO — sólo LAN'})"
+    )
     app.run(host="0.0.0.0", port=puerto, threaded=True)

@@ -1,0 +1,98 @@
+name: Bug report
+description: Something does not work as expected
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Please remove tokens, cookies and personal
+        data (CV, profile, application history) from anything you paste here.
+        For security problems use the private channel described in SECURITY.md.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened
+      description: A clear description of the bug and what you expected instead.
+      placeholder: |
+        What I did / what happened / what I expected instead (e.g. the pipeline
+        crashes while scoring an offer with an empty salary field).
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Numbered steps, starting from a clean state when possible.
+      placeholder: |
+        1. docker compose up -d
+        2. Open the panel and click "Buscar"
+        3. ...
+        4. Error appears in the scheduler logs
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Output of `docker compose logs --tail=100` or the traceback. Redact secrets.
+      render: shell
+    validations:
+      required: false
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Image tag, git tag or commit (`git rev-parse --short HEAD`).
+      placeholder: v1.0.0 / ghcr.io/kauman189/jobautomat:latest
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Linux (amd64)
+        - Linux (arm64 / Raspberry Pi)
+        - macOS (Apple Silicon)
+        - macOS (Intel)
+        - Windows (WSL2)
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: python
+    attributes:
+      label: Python version (if not using Docker)
+      placeholder: "3.12.4"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options:
+        - Search / scraping
+        - Scoring
+        - Document generation (CV / letter)
+        - Web panel
+        - Docker / deployment
+        - Telegram notifications
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: Workarounds tried, related issues, screenshots.
+    validations:
+      required: false

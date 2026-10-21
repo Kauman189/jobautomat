@@ -53,3 +53,11 @@ service/smoke_verificacion.py
 # Local/machine-specific (deploy notes + macOS launchd scheduler)
 README-deploy.md
 service/scheduler/
+
+# Artefactos de tooling (coverage, ruff, pre-commit)
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+.ruff_cache/
+.pytest_cache/

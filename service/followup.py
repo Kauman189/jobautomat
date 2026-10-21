@@ -73,6 +73,7 @@ _LEDGER_POR_DEFECTO = os.path.join(
 # Date helpers
 # ---------------------------------------------------------------------------
 
+
 def _parsear_fecha(valor):
     """Convert an ISO-8601 date (with or without zone) to an aware UTC datetime.
 
@@ -90,13 +91,13 @@ def _parsear_fecha(valor):
         except ValueError:
             return None
     if fecha.tzinfo is None:
-        fecha = fecha.replace(tzinfo=datetime.timezone.utc)
+        fecha = fecha.replace(tzinfo=datetime.UTC)
     return fecha
 
 
 def _ahora_utc():
     """Current UTC instant (separate function to ease testing)."""
-    return datetime.datetime.now(datetime.timezone.utc)
+    return datetime.datetime.now(datetime.UTC)
 
 
 def _fecha_referencia(op):
@@ -134,6 +135,7 @@ def _flag_hecho(op):
 # Local follow-up ledger (JSON, no SQLite schema change)
 # ---------------------------------------------------------------------------
 
+
 def _cargar_ledger(ruta=None):
     """Read the follow-up ledger and return a dict.
 
@@ -144,7 +146,7 @@ def _cargar_ledger(ruta=None):
     if not os.path.isfile(ruta):
         return {}
     try:
-        with open(ruta, "r", encoding="utf-8") as fh:
+        with open(ruta, encoding="utf-8") as fh:
             datos = json.load(fh)
     except (OSError, ValueError):
         return {}
@@ -193,6 +195,7 @@ def marcar_seguimiento_hecho(id_, canal=None, nota=None, cuando=None, ruta=None)
 # Pending follow-ups
 # ---------------------------------------------------------------------------
 
+
 def seguimientos_pendientes(
     dias=7,
     estados=ESTADOS_ENVIADA,
@@ -225,7 +228,7 @@ def seguimientos_pendientes(
     try:
         dias = float(dias)
     except (TypeError, ValueError):
-        raise ValueError("dias debe ser un número.")
+        raise ValueError("dias debe ser un número.") from None
     if dias < 0:
         raise ValueError("dias no puede ser negativo.")
 
@@ -252,9 +255,7 @@ def seguimientos_pendientes(
 
             bruto = ledger.get(str(op.get("id")))
             entrada = bruto if isinstance(bruto, dict) else None
-            fecha_seguimiento = _parsear_fecha(
-                (entrada or {}).get("ultimo_seguimiento")
-            )
+            fecha_seguimiento = _parsear_fecha((entrada or {}).get("ultimo_seguimiento"))
             ya_seguida = _flag_hecho(op) or (
                 fecha_seguimiento is not None and fecha_seguimiento >= fecha
             )
@@ -276,6 +277,7 @@ def seguimientos_pendientes(
 # ---------------------------------------------------------------------------
 # Follow-up message drafting
 # ---------------------------------------------------------------------------
+
 
 def _resumen_perfil(perfil):
     """Extract only verified profile data for the prompt.
@@ -334,15 +336,12 @@ def redactar_seguimiento(op, perfil, dias=None, canal="email", max_tokens=2000):
         _, fecha = _fecha_referencia(op)
         if fecha is not None:
             dias = round((_ahora_utc() - fecha).total_seconds() / 86400.0, 1)
-    dias_txt = (
-        f"{dias:g} días" if isinstance(dias, (int, float)) else "varios días"
-    )
+    dias_txt = f"{dias:g} días" if isinstance(dias, (int, float)) else "varios días"
 
     canal = (canal or "email").lower()
     if canal == "linkedin":
         formato = (
-            "Mensaje para LinkedIn: máximo 90 palabras, sin asunto, saludo "
-            "breve y cierre cordial."
+            "Mensaje para LinkedIn: máximo 90 palabras, sin asunto, saludo breve y cierre cordial."
         )
     else:
         formato = (
