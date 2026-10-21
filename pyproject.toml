@@ -1,0 +1,34 @@
+[project]
+name = "jobautomat"
+version = "1.0.0"
+description = "Self-hosted job search assistant"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+dependencies = [
+    "patchright",
+    "python-jobspy",
+    "reportlab",
+    "flask",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["service/smoke_test.py"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "UP", "B"]
+
+[tool.ruff.lint.per-file-ignores]
+# Estas líneas largas viven dentro de literales multilínea (JS inyectado y prompts):
+# partirlas cambiaría el contenido que se envía al navegador o al modelo.
+"service/apply_form.py" = ["E501"]
+"service/offer.py" = ["E501"]
+
+[tool.coverage.run]
+branch = true
+source = ["service", "mcp"]
+
+[tool.coverage.report]
+omit = ["service/smoke_test.py", "service/smoke_verificacion.py"]

@@ -1,0 +1,63 @@
+# Datos personales y secretos
+.env
+*.env
+.secrets/
+
+# Credenciales de sesión
+.linkedin-mcp/
+data/linkedin_session.json
+data/linkedin_cooldown.json
+*.tmp
+
+# macOS
+.DS_Store
+
+# Node (por si se añaden scripts)
+node_modules/
+.venv/
+
+# Logs del contenedor
+logs/
+data/logs/
+
+# Estado local del servicio (SQLite / caché Python)
+*.db
+*.db-shm
+*.db-wal
+state.db
+__pycache__/
+*.pyc
+
+# Salida de candidaturas (pack CV/carta generados) y offset del bot
+candidaturas/
+service/telegram_offset.json
+
+# Copias de seguridad locales (scripts/backup.sh)
+backups/
+
+# Personal data — use the .example files instead
+data/perfil.json
+data/settings.json
+data/oportunidades.json
+sources/perfil_maestro.md
+assets/cv/base-cv-es.md
+assets/cv/base-cv-en.md
+assets/cover-letters/templates/cover-es.md
+assets/cover-letters/templates/cover-en.md
+docs/adaptacion-cv.md
+PLAN.md
+IDEA.md
+service/README.md
+service/smoke_verificacion.py
+
+# Local/machine-specific (deploy notes + macOS launchd scheduler)
+README-deploy.md
+service/scheduler/
+
+# Artefactos de tooling (coverage, ruff, pre-commit)
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+.ruff_cache/
+.pytest_cache/

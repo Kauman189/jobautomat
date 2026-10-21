@@ -1,0 +1,28 @@
+# Hooks que se ejecutan antes de cada commit (o de cada push).
+# Instalación:
+#   pip install pre-commit
+#   pre-commit install
+# Ejecutarlos todos a mano:
+#   pre-commit run --all-files
+repos:
+  # Lint y formato de Python con ruff. La configuración vive en pyproject.toml
+  # ([tool.ruff]): line-length 100, target py312, reglas E/F/I/W/UP/B.
+  # La rev se mantiene alineada con la versión que resuelve requirements-dev.txt
+  # (ruff>=0.6,<1): un salto de versión de ruff puede cambiar el formato.
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.17.1
+    hooks:
+      - id: ruff
+        args: ["--fix", "--exit-non-zero-on-fix"]
+      - id: ruff-format
+
+  # Tests: el mismo comando que el job `test` de CI. Necesita las dependencias
+  # de requirements-dev.txt instaladas en el entorno activo.
+  - repo: local
+    hooks:
+      - id: pytest
+        name: pytest (tests/)
+        entry: python -m pytest tests/ -q
+        language: system
+        types: [python]
+        pass_filenames: false
