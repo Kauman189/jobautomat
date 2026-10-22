@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="es" class="h-full">
+<html lang="en" class="h-full">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>jobautomat · panel de ofertas</title>
+<title>jobautomat · job board panel</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -51,22 +51,22 @@
         <span id="btn-linkedin-dot" class="h-2 w-2 shrink-0 rounded-full bg-[#999]"></span>
         <span>LinkedIn</span>
       </button>
-      <button id="btn-buscar" type="button" title="Buscar ahora" aria-label="Buscar ahora"
+      <button id="btn-buscar" type="button" title="Buscar ahora" aria-label="Buscar ahora" data-i18n-title="btn_buscar" data-i18n-aria="btn_buscar"
         class="flex items-center gap-1.5 rounded-full border border-[#0d927d]/50 bg-[#0d927d]/5 px-3 py-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-[#0d927d] transition hover:border-[#0d927d] hover:bg-[#0d927d]/10 disabled:cursor-not-allowed disabled:opacity-60">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 4 20 12 6 20 6 4"/></svg>
         <span data-i18n="btn_buscar">Buscar ahora</span>
       </button>
-      <button id="btn-idioma" type="button" title="Idioma / Language" aria-label="Idioma / Language"
+      <button id="btn-idioma" type="button" title="Idioma" aria-label="Idioma" data-i18n-title="idioma_btn" data-i18n-aria="idioma_btn"
         class="flex items-center gap-1.5 rounded-full border border-[#ddd] bg-white px-3 py-1.5 text-[#2d325b] transition hover:border-[#3898ec] hover:text-[#3898ec]">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
         <span id="idioma-label" class="text-[0.68rem] font-semibold uppercase tracking-[0.12em]">ES</span>
       </button>
-      <button data-vista="ayuda" type="button" title="Ayuda / Help" aria-label="Ayuda / Help"
+      <button data-vista="ayuda" type="button" title="Ayuda" aria-label="Ayuda" data-i18n-title="nav_ayuda" data-i18n-aria="nav_ayuda"
         class="vista rounded-full border border-[#ddd] bg-white p-2 text-[#2d325b] transition hover:border-[#3898ec] hover:text-[#3898ec]">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
       </button>
       <span id="contador" class="tabular-nums">—</span>
-      <button id="refrescar" title="Recargar"
+      <button id="refrescar" title="Recargar" data-i18n-title="btn_recargar"
         class="rounded-full border border-[#ddd] px-3 py-1.5 text-[#2d325b] transition hover:border-[#3898ec] hover:text-[#3898ec]">↻</button>
     </div>
   </div>
@@ -84,7 +84,7 @@
       <span id="estado-run-texto" class="text-xs text-[#999]">…</span>
       <span class="ml-auto text-[0.68rem] uppercase tracking-[0.18em] text-[#999]" data-i18n="auto_actualiza">se actualiza solo</span>
     </summary>
-    <pre id="log" class="max-h-72 overflow-y-auto border-t border-[#ddd] bg-[#2d325b] p-4 font-mono text-[11px] leading-relaxed text-[#c9cdf0] whitespace-pre-wrap">(sin actividad todavía)</pre>
+    <pre id="log" class="max-h-72 overflow-y-auto border-t border-[#ddd] bg-[#2d325b] p-4 font-mono text-[11px] leading-relaxed text-[#c9cdf0] whitespace-pre-wrap">(no activity yet)</pre>
   </details>
 </div>
 
@@ -98,10 +98,10 @@
       <span id="metricas-fecha" class="ml-auto text-[0.68rem] uppercase tracking-[0.18em] text-[#999]">
         <span data-i18n="metricas_ultima">Última actualización</span>: —
       </span>
-      <button id="metricas-refrescar" type="button" title="Recargar métricas"
+      <button id="metricas-refrescar" type="button" title="Recargar métricas" data-i18n-title="btn_recargar_metricas"
         class="rounded-full border border-[#ddd] px-2.5 py-1 text-xs text-[#999] transition hover:border-[#3898ec] hover:text-[#3898ec]">↻</button>
     </div>
-    <div id="metricas-estados" class="mt-3 flex flex-wrap items-center gap-2 text-xs text-[#999]">Cargando métricas…</div>
+    <div id="metricas-estados" class="mt-3 flex flex-wrap items-center gap-2 text-xs text-[#999]" data-i18n="cargando">Loading…</div>
     <div id="metricas-fuentes" class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.7rem] text-[#999]"></div>
     <div id="metricas-error" class="mt-2 hidden text-xs text-[#c94f4f]"></div>
   </section>
@@ -114,17 +114,17 @@
     <div class="mb-4 flex items-baseline justify-between">
       <h2 class="font-['Oswald'] text-sm uppercase tracking-[0.18em] text-[#999]" data-i18n="titulo_ofertas">Ofertas</h2>
     </div>
-    <div id="estado-carga" class="hidden rounded-xl border border-[#ddd] bg-white px-5 py-4 text-sm text-[#999]">Cargando ofertas…</div>
-    <div id="sin-ofertas" class="hidden rounded-xl border border-dashed border-[#ddd] bg-white px-5 py-16 text-center text-sm text-[#999]">
-      No hay ofertas con este filtro.
+    <div id="estado-carga" class="hidden rounded-xl border border-[#ddd] bg-white px-5 py-4 text-sm text-[#999]" data-i18n="cargando_ofertas">Loading jobs…</div>
+    <div id="sin-ofertas" class="hidden rounded-xl border border-dashed border-[#ddd] bg-white px-5 py-16 text-center text-sm text-[#999]" data-i18n="sin_ofertas">
+      No jobs match this filter.
     </div>
     <ul id="lista" class="flex flex-col gap-3"></ul>
   </section>
 
   <!-- Detail -->
   <aside id="panel" class="lg:sticky lg:top-[5.4rem] lg:self-start scroll-mt-24">
-    <div id="panel-vacio" class="rounded-xl border border-dashed border-[#ddd] bg-white px-6 py-16 text-center text-sm text-[#999]">
-      Selecciona una oferta para ver el detalle y su justificación.
+    <div id="panel-vacio" class="rounded-xl border border-dashed border-[#ddd] bg-white px-6 py-16 text-center text-sm text-[#999]" data-i18n="panel_vacio">
+      Select a job to see its details and rationale.
     </div>
 
     <article id="panel-detalle" class="hidden overflow-hidden rounded-xl border border-[#ddd] bg-white shadow-[0_2px_18px_rgba(45,50,91,0.06)]">
@@ -139,27 +139,27 @@
             <span id="d-salario"></span>
           </div>
         </div>
-        <button id="cerrar" class="rounded-full px-2 py-1 text-[#999] transition hover:bg-[#fafafa] hover:text-[#2d325b]" title="Cerrar">✕</button>
+        <button id="cerrar" class="rounded-full px-2 py-1 text-[#999] transition hover:bg-[#fafafa] hover:text-[#2d325b]" title="Cerrar" data-i18n-title="btn_cerrar" data-i18n-aria="btn_cerrar">✕</button>
       </div>
 
       <div class="max-h-[72vh] space-y-5 overflow-y-auto px-6 py-5 text-sm">
         <div class="flex flex-wrap gap-2">
           <button id="btn-aprobar"
-            class="rounded-full bg-[#3898ec] px-5 py-2.5 font-medium text-white transition hover:bg-[#2b83d1] disabled:opacity-50">Aprobar y generar pack</button>
+            class="rounded-full bg-[#3898ec] px-5 py-2.5 font-medium text-white transition hover:bg-[#2b83d1] disabled:opacity-50">Approve and generate pack</button>
           <button id="btn-descartar"
-            class="rounded-full border border-[#f66d6d] px-5 py-2.5 font-medium text-[#f66d6d] transition hover:bg-[#f66d6d] hover:text-white disabled:opacity-40">Descartar</button>
+            class="rounded-full border border-[#f66d6d] px-5 py-2.5 font-medium text-[#f66d6d] transition hover:bg-[#f66d6d] hover:text-white disabled:opacity-40">Discard</button>
           <a id="d-url" href="#" target="_blank" rel="noopener"
-            class="rounded-full border border-[#ddd] px-5 py-2.5 font-medium text-[#2d325b] transition hover:border-[#3898ec] hover:text-[#3898ec]">Abrir oferta ↗</a>
+            class="rounded-full border border-[#ddd] px-5 py-2.5 font-medium text-[#2d325b] transition hover:border-[#3898ec] hover:text-[#3898ec]" data-i18n="abrir_oferta">Open job ↗</a>
         </div>
 
         <div id="aviso" class="hidden rounded-lg border px-4 py-3 text-xs"></div>
 
         <details class="rounded-lg border border-[#ddd] bg-[#fafafa]/60">
-          <summary class="cursor-pointer px-4 py-3 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#999]">Descripción y requisitos</summary>
+          <summary class="cursor-pointer px-4 py-3 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#999]" data-i18n="desc_y_req">Description and requirements</summary>
           <div class="space-y-4 px-4 pb-4 text-[#2d325b]/90">
             <p id="d-descripcion" class="whitespace-pre-wrap leading-relaxed"></p>
             <div id="d-requisitos-wrap" class="hidden">
-              <h3 class="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#999]">Requisitos</h3>
+              <h3 class="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#999]" data-i18n="requisitos">Requirements</h3>
               <p id="d-requisitos" class="whitespace-pre-wrap leading-relaxed"></p>
             </div>
           </div>
@@ -167,7 +167,7 @@
 
         <!-- Score rationale -->
         <div id="justificacion" class="hidden space-y-2">
-          <h3 class="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#999]">Por qué este score</h3>
+          <h3 class="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#999]" data-i18n="porque_score">Why this score</h3>
           <ul id="j-motivos" class="space-y-1.5"></ul>
           <ul id="j-gaps" class="space-y-1.5"></ul>
         </div>
@@ -176,8 +176,8 @@
         <div id="materiales" class="hidden space-y-5">
           <div>
             <div class="mb-1.5 flex items-center justify-between">
-              <h3 class="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#999]">Carta de presentación</h3>
-              <button data-copiar="cover" class="text-xs font-medium text-[#3898ec] hover:underline">Copiar</button>
+              <h3 class="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#999]" data-i18n="carta_titulo">Cover letter</h3>
+              <button data-copiar="cover" class="text-xs font-medium text-[#3898ec] hover:underline" data-i18n="btn_copiar">Copy</button>
             </div>
             <textarea id="m-cover" readonly rows="1"
               class="w-full resize-y rounded-lg border border-[#ddd] bg-[#fafafa]/60 p-4 text-sm leading-relaxed text-[#2d325b] focus:border-[#3898ec] focus:outline-none"></textarea>
@@ -185,21 +185,21 @@
 
           <div id="m-mensaje-wrap">
             <div class="mb-1.5 flex items-center justify-between">
-              <h3 class="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#999]">Mensaje de contacto</h3>
-              <button data-copiar="mensaje" class="text-xs font-medium text-[#3898ec] hover:underline">Copiar</button>
+              <h3 class="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#999]" data-i18n="mensaje_titulo">Contact message</h3>
+              <button data-copiar="mensaje" class="text-xs font-medium text-[#3898ec] hover:underline" data-i18n="btn_copiar">Copy</button>
             </div>
             <textarea id="m-mensaje" readonly rows="2"
               class="w-full resize-y rounded-lg border border-[#ddd] bg-[#fafafa]/60 p-4 text-sm leading-relaxed text-[#2d325b] focus:border-[#3898ec] focus:outline-none"></textarea>
           </div>
 
           <div>
-            <h3 class="mb-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#999]">Descargas</h3>
+            <h3 class="mb-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#999]" data-i18n="descargas">Downloads</h3>
             <div id="m-enlaces" class="flex flex-wrap gap-2"></div>
           </div>
 
           <div id="m-respuestas-wrap" class="hidden">
-            <h3 class="mb-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#999]">Respuestas del formulario</h3>
-            <p class="mb-2 text-xs text-[#999]">Pégalas tú: este panel nunca envía la candidatura.</p>
+            <h3 class="mb-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#999]" data-i18n="respuestas_form">Form answers</h3>
+            <p class="mb-2 text-xs text-[#999]" data-i18n="respuestas_hint">Paste them yourself: this panel never sends the application.</p>
             <div id="m-respuestas" class="space-y-3"></div>
           </div>
         </div>
@@ -213,29 +213,29 @@
 <!-- ===================== View: My profile ===================== -->
 <div id="vista-perfil" class="mx-auto hidden max-w-[86rem] px-6 py-10">
   <div class="mb-8 flex flex-wrap items-center justify-between gap-3">
-    <h1 class="font-['Oswald'] text-2xl font-medium uppercase tracking-[0.08em] text-[#2d325b]">Mi perfil</h1>
+    <h1 class="font-['Oswald'] text-2xl font-medium uppercase tracking-[0.08em] text-[#2d325b]" data-i18n="titulo_perfil">My profile</h1>
     <div class="flex flex-wrap items-center gap-2">
       <button id="btn-perfil-nuevo" type="button"
         class="flex items-center gap-2 rounded-full bg-[#3898ec] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#2b83d1]">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-        Añadir dato
+        <span data-i18n="btn_anadir_dato">Add data</span>
       </button>
       <button id="btn-perfil-borrar-abrir" type="button"
         class="flex items-center gap-2 rounded-full border border-[#f66d6d] px-4 py-2 text-sm font-medium text-[#f66d6d] transition hover:bg-[#f66d6d] hover:text-white">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
-        Eliminar
+        <span data-i18n="btn_eliminar">Delete</span>
       </button>
       <button id="btn-perfil-json-abrir" type="button"
         class="flex items-center gap-2 rounded-full border border-[#ddd] px-4 py-2 text-sm text-[#2d325b] transition hover:border-[#3898ec] hover:text-[#3898ec]">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H7a2 2 0 0 0-2 2v5a2 2 0 0 1-2 2 2 2 0 0 1 2 2v5c0 1.1.9 2 2 2h1"/><path d="M16 21h1a2 2 0 0 0 2-2v-5c0-1.1.9-2 2-2a2 2 0 0 1-2-2V5a2 2 0 0 0-2-2h-1"/></svg>
-        Editar JSON
+        <span data-i18n="btn_editar_json">Edit JSON</span>
       </button>
     </div>
   </div>
 
   <div id="perfil-aviso" class="mb-6 hidden rounded-lg border px-4 py-3 text-sm"></div>
 
-  <div id="perfil-carga" class="rounded-xl border border-[#ddd] bg-white px-5 py-4 text-sm text-[#999]">Cargando perfil…</div>
+  <div id="perfil-carga" class="rounded-xl border border-[#ddd] bg-white px-5 py-4 text-sm text-[#999]" data-i18n="cargando_perfil">Loading profile…</div>
   <div id="perfil-error" class="hidden rounded-xl border border-[#f66d6d]/50 bg-[#f66d6d]/10 px-5 py-4 text-sm text-[#c94f4f]"></div>
   <div id="perfil-contenido" class="hidden space-y-10"></div>
 </div>
@@ -244,25 +244,25 @@
 <div id="perfil-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-[#2d325b]/40 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="perfil-modal-titulo">
   <div class="w-full max-w-xl rounded-2xl border border-[#ddd] bg-white p-6 shadow-2xl">
     <div class="flex items-start justify-between gap-4">
-      <h2 id="perfil-modal-titulo" class="font-['Oswald'] text-lg font-medium tracking-[0.02em] text-[#2d325b]">Añadir o actualizar un dato</h2>
-      <button id="btn-perfil-modal-cerrar" type="button" class="-mr-1 -mt-1 rounded-full p-1.5 text-[#999] transition hover:bg-[#fafafa] hover:text-[#2d325b]" aria-label="Cerrar">
+      <h2 id="perfil-modal-titulo" class="font-['Oswald'] text-lg font-medium tracking-[0.02em] text-[#2d325b]" data-i18n="modal_anadir_titulo">Add or update a data point</h2>
+      <button id="btn-perfil-modal-cerrar" type="button" class="-mr-1 -mt-1 rounded-full p-1.5 text-[#999] transition hover:bg-[#fafafa] hover:text-[#2d325b]" aria-label="Cerrar" data-i18n-aria="btn_cerrar">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
       </button>
     </div>
-    <p class="mt-2 text-xs leading-relaxed text-[#999]">
-      Escríbelo en lenguaje natural. DeepSeek lo analiza y lo integra en tu perfil
-      <strong class="font-semibold text-[#2d325b]/80">sin inventar nada</strong>, marcado como declarado por ti
-      (evidencia <code class="rounded bg-[#fafafa] px-1 py-0.5 text-[#2d325b]">USR</code>).
-      Ej: «ahora lidero 4 personas en [empresa]» o «mi inglés es C1 certificado».
+    <p class="mt-2 text-xs leading-relaxed text-[#999]" data-i18n-html="modal_anadir_desc">
+      Write it in plain language. DeepSeek analyzes it and folds it into your profile
+      <strong class="font-semibold text-[#2d325b]/80">without inventing anything</strong>, marked as declared by you
+      (evidence <code class="rounded bg-[#fafafa] px-1 py-0.5 text-[#2d325b]">USR</code>).
+      E.g. “I now lead 4 people at [company]” or “my English is certified C1”.
     </p>
     <textarea id="perfil-texto" rows="5" maxlength="4000"
-      placeholder="Ej: mi inglés es C1 certificado&#10;Ej: ahora lidero 4 personas en [empresa]"
+      placeholder="e.g. my English is certified C1&#10;e.g. I now lead 4 people at [company]" data-i18n-ph="modal_texto_ph"
       class="mt-4 w-full resize-y rounded-lg border border-[#ddd] bg-[#fafafa]/60 p-4 text-sm leading-relaxed text-[#2d325b] placeholder:text-[#bbb] focus:border-[#3898ec] focus:outline-none"></textarea>
     <div class="mt-4 flex flex-wrap items-center gap-3">
       <button id="btn-perfil-agregar" type="button"
-        class="rounded-full bg-[#3898ec] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#2b83d1] disabled:opacity-50">Analizar y añadir</button>
+        class="rounded-full bg-[#3898ec] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#2b83d1] disabled:opacity-50" data-i18n="btn_analizar">Analyze and add</button>
       <button id="btn-perfil-modal-cancelar" type="button"
-        class="rounded-full border border-[#ddd] px-5 py-2.5 text-sm text-[#2d325b] transition hover:border-[#3898ec] hover:text-[#3898ec]">Cancelar</button>
+        class="rounded-full border border-[#ddd] px-5 py-2.5 text-sm text-[#2d325b] transition hover:border-[#3898ec] hover:text-[#3898ec]" data-i18n="btn_cancelar">Cancel</button>
       <span id="perfil-agregar-estado" class="text-xs text-[#999]"></span>
     </div>
     <div id="perfil-agregar-aviso" class="mt-4 hidden whitespace-pre-line rounded-lg border px-4 py-3 text-xs"></div>
@@ -274,19 +274,19 @@
   <div class="flex max-h-[90vh] w-full max-w-xl flex-col rounded-2xl border border-[#ddd] bg-white shadow-2xl">
     <div class="flex items-start justify-between gap-4 border-b border-[#ddd] p-6 pb-4">
       <div>
-        <h2 id="perfil-borrar-titulo" class="font-['Oswald'] text-lg font-medium tracking-[0.02em] text-[#2d325b]">Eliminar datos</h2>
-        <p class="mt-1 text-xs leading-relaxed text-[#999]">Marca los apartados o líneas que quieras borrar. Se guarda copia en <code class="rounded bg-[#fafafa] px-1 py-0.5">perfil.json.bak</code>.</p>
+        <h2 id="perfil-borrar-titulo" class="font-['Oswald'] text-lg font-medium tracking-[0.02em] text-[#2d325b]" data-i18n="modal_borrar_titulo">Delete data</h2>
+        <p class="mt-1 text-xs leading-relaxed text-[#999]" data-i18n-html="modal_borrar_desc">Tick the sections or lines you want to delete. A backup is saved to <code class="rounded bg-[#fafafa] px-1 py-0.5">perfil.json.bak</code>.</p>
       </div>
-      <button id="btn-perfil-borrar-cerrar" type="button" class="-mr-1 -mt-1 rounded-full p-1.5 text-[#999] transition hover:bg-[#fafafa] hover:text-[#2d325b]" aria-label="Cerrar">
+      <button id="btn-perfil-borrar-cerrar" type="button" class="-mr-1 -mt-1 rounded-full p-1.5 text-[#999] transition hover:bg-[#fafafa] hover:text-[#2d325b]" aria-label="Cerrar" data-i18n-aria="btn_cerrar">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
       </button>
     </div>
     <div id="perfil-borrar-lista" class="flex-1 overflow-y-auto p-6 pt-4"></div>
     <div class="flex flex-wrap items-center gap-3 border-t border-[#ddd] p-6 pt-4">
       <button id="btn-perfil-borrar-confirmar" type="button"
-        class="rounded-full bg-[#f66d6d] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#d95454] disabled:opacity-50">Eliminar seleccionados</button>
+        class="rounded-full bg-[#f66d6d] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#d95454] disabled:opacity-50" data-i18n="btn_eliminar_sel">Delete selected</button>
       <button id="btn-perfil-borrar-cancelar" type="button"
-        class="rounded-full border border-[#ddd] px-5 py-2.5 text-sm text-[#2d325b] transition hover:border-[#3898ec] hover:text-[#3898ec]">Cancelar</button>
+        class="rounded-full border border-[#ddd] px-5 py-2.5 text-sm text-[#2d325b] transition hover:border-[#3898ec] hover:text-[#3898ec]" data-i18n="btn_cancelar">Cancel</button>
       <span id="perfil-borrar-estado" class="text-xs text-[#999]"></span>
     </div>
   </div>
@@ -297,10 +297,10 @@
   <div class="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-2xl border border-[#ddd] bg-white shadow-2xl">
     <div class="flex items-start justify-between gap-4 border-b border-[#ddd] p-6 pb-4">
       <div>
-        <h2 id="perfil-json-titulo" class="font-['Oswald'] text-lg font-medium tracking-[0.02em] text-[#2d325b]">Editar JSON</h2>
-        <p class="mt-1 text-xs leading-relaxed text-[#999]">El JSON completo de <code class="rounded bg-[#fafafa] px-1 py-0.5">data/perfil.json</code>. Se valida la estructura antes de escribir y se guarda copia en <code class="rounded bg-[#fafafa] px-1 py-0.5">perfil.json.bak</code>.</p>
+        <h2 id="perfil-json-titulo" class="font-['Oswald'] text-lg font-medium tracking-[0.02em] text-[#2d325b]" data-i18n="btn_editar_json">Edit JSON</h2>
+        <p class="mt-1 text-xs leading-relaxed text-[#999]" data-i18n-html="modal_json_desc">The full JSON of <code class="rounded bg-[#fafafa] px-1 py-0.5">data/perfil.json</code>. The structure is validated before writing and a backup is saved to <code class="rounded bg-[#fafafa] px-1 py-0.5">perfil.json.bak</code>.</p>
       </div>
-      <button id="btn-perfil-json-cerrar" type="button" class="-mr-1 -mt-1 rounded-full p-1.5 text-[#999] transition hover:bg-[#fafafa] hover:text-[#2d325b]" aria-label="Cerrar">
+      <button id="btn-perfil-json-cerrar" type="button" class="-mr-1 -mt-1 rounded-full p-1.5 text-[#999] transition hover:bg-[#fafafa] hover:text-[#2d325b]" aria-label="Cerrar" data-i18n-aria="btn_cerrar">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
       </button>
     </div>
@@ -310,9 +310,9 @@
     </div>
     <div class="flex flex-wrap items-center gap-3 border-t border-[#ddd] p-6 pt-4">
       <button id="btn-perfil-json-guardar" type="button"
-        class="rounded-full bg-[#3898ec] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#2b83d1] disabled:opacity-50">Validar y guardar</button>
+        class="rounded-full bg-[#3898ec] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#2b83d1] disabled:opacity-50" data-i18n="btn_validar_guardar">Validate and save</button>
       <button id="btn-perfil-json-cancelar" type="button"
-        class="rounded-full border border-[#ddd] px-5 py-2.5 text-sm text-[#2d325b] transition hover:border-[#3898ec] hover:text-[#3898ec]">Cancelar</button>
+        class="rounded-full border border-[#ddd] px-5 py-2.5 text-sm text-[#2d325b] transition hover:border-[#3898ec] hover:text-[#3898ec]" data-i18n="btn_cancelar">Cancel</button>
       <span id="perfil-json-estado" class="text-xs text-[#999]"></span>
     </div>
     <div id="perfil-json-aviso" class="hidden border-t border-[#ddd] px-6 py-3 text-xs"></div>
@@ -323,27 +323,27 @@
 <div id="vista-preguntar" class="mx-auto hidden max-w-[86rem] px-6 py-10">
   <div class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,30rem)]">
     <section class="rounded-xl border border-[#ddd] bg-white p-6">
-      <h2 class="font-['Oswald'] text-sm uppercase tracking-[0.18em] text-[#999]">Asistente de candidatura</h2>
-      <p class="mt-2 text-xs leading-relaxed text-[#999]">
-        Responde con lo que hay en <code class="rounded bg-[#fafafa] px-1 py-0.5 text-[#2d325b]">data/perfil.json</code>
-        (sin inventar: marca PEND lo que falta) y, si le pasas el contexto de la oferta, también contesta
-        preguntas sobre la empresa y el puesto.
+      <h2 class="font-['Oswald'] text-sm uppercase tracking-[0.18em] text-[#999]" data-i18n="preg_titulo">Application assistant</h2>
+      <p class="mt-2 text-xs leading-relaxed text-[#999]" data-i18n-html="preg_desc">
+        Answers using what is in <code class="rounded bg-[#fafafa] px-1 py-0.5 text-[#2d325b]">data/perfil.json</code>
+        (no inventing: missing data is marked PEND) and, if you pass the job context, it also answers
+        questions about the company and the role.
       </p>
       <div class="mt-4">
-        <label for="empresa-texto" class="mb-1 block text-xs font-medium text-[#999]">Empresa (opcional)</label>
+        <label for="empresa-texto" class="mb-1 block text-xs font-medium text-[#999]" data-i18n="lbl_empresa">Company (optional)</label>
         <input id="empresa-texto" type="text" placeholder="Joko"
           class="w-full rounded-lg border border-[#ddd] bg-[#fafafa]/60 px-4 py-2.5 text-sm text-[#2d325b] placeholder:text-[#bbb] focus:border-[#3898ec] focus:outline-none" />
       </div>
       <div class="mt-3">
-        <label for="oferta-contexto-texto" class="mb-1 block text-xs font-medium text-[#999]">Contexto de la oferta / empresa (opcional)</label>
+        <label for="oferta-contexto-texto" class="mb-1 block text-xs font-medium text-[#999]" data-i18n="lbl_contexto">Job / company context (optional)</label>
         <textarea id="oferta-contexto-texto" rows="4"
-          placeholder="Pega la descripción del puesto o qué hace la empresa. Necesario para preguntas tipo «what makes X special?» o «what interests you about this role?»."
+          placeholder="Paste the job description or what the company does. Needed for questions like “what makes X special?” or “what interests you about this role?”." data-i18n-ph="contexto_ph"
           class="w-full resize-y rounded-lg border border-[#ddd] bg-[#fafafa]/60 p-4 text-sm leading-relaxed text-[#2d325b] placeholder:text-[#bbb] focus:border-[#3898ec] focus:outline-none"></textarea>
       </div>
       <div class="mt-3">
-        <label for="preguntas-texto" class="mb-1 block text-xs font-medium text-[#999]">Preguntas (una por línea)</label>
+        <label for="preguntas-texto" class="mb-1 block text-xs font-medium text-[#999]" data-i18n="lbl_preguntas">Questions (one per line)</label>
         <textarea id="preguntas-texto" rows="10"
-          placeholder="¿Cuántos años de experiencia tienes con Figma?&#10;Do you need visa sponsorship?&#10;¿Cuál es tu expectativa salarial?"
+          placeholder="How many years of experience do you have with Figma?&#10;Do you need visa sponsorship?&#10;What is your salary expectation?" data-i18n-ph="preguntas_ph"
           class="mt-2 w-full resize-y rounded-lg border border-[#ddd] bg-[#fafafa]/60 p-4 text-sm leading-relaxed text-[#2d325b] placeholder:text-[#bbb] focus:border-[#3898ec] focus:outline-none"></textarea>
       </div>
       <div class="mt-4 flex flex-wrap items-center gap-3">
@@ -358,13 +358,13 @@
 
     <aside class="lg:sticky lg:top-[5.4rem] lg:self-start">
       <div class="rounded-xl border border-dashed border-[#ddd] bg-white px-6 py-6 text-xs leading-relaxed text-[#999]">
-        <p class="mb-2 font-['Oswald'] text-sm uppercase tracking-[0.18em] text-[#2d325b]">Cómo responde</p>
+        <p class="mb-2 font-['Oswald'] text-sm uppercase tracking-[0.18em] text-[#2d325b]" data-i18n="como_responde">How it answers</p>
         <ul class="list-disc space-y-1.5 pl-4">
-          <li>Una llamada al modelo por pregunta (temperatura 0.6).</li>
-          <li>Sin inventar empresas, fechas, métricas ni idiomas.</li>
-          <li>Contesta en el idioma de cada pregunta.</li>
-          <li>Si pasas el contexto de la oferta, responde sobre la empresa y el puesto; si no, te lo pide en vez de inventar.</li>
-          <li>Puedes pegar hasta 12 preguntas de golpe.</li>
+          <li data-i18n="como_1">One model call per question (temperature 0.6).</li>
+          <li data-i18n="como_2">Never invents companies, dates, metrics or languages.</li>
+          <li data-i18n="como_3">Answers in the language of each question.</li>
+          <li data-i18n="como_4">If you pass the job context, it answers about the company and the role; otherwise it asks you instead of inventing.</li>
+          <li data-i18n="como_5">You can paste up to 12 questions at once.</li>
         </ul>
       </div>
     </aside>
@@ -372,7 +372,7 @@
 
   <section id="respuestas-wrap" class="mt-8 hidden">
     <div class="mb-4 flex items-baseline justify-between">
-      <h2 class="font-['Oswald'] text-sm uppercase tracking-[0.18em] text-[#999]">Respuestas</h2>
+      <h2 class="font-['Oswald'] text-sm uppercase tracking-[0.18em] text-[#999]" data-i18n="respuestas_titulo">Answers</h2>
       <span id="respuestas-contador" class="text-xs text-[#999]"></span>
     </div>
     <div id="respuestas" class="space-y-4"></div>
@@ -470,10 +470,10 @@
           <label for="cfg-modalidad" class="mb-1 block text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#999]" data-i18n="cfg_lbl_modalidad">Modalidad</label>
           <select id="cfg-modalidad" data-cfg="MODALIDAD" data-tipo="texto"
             class="w-full rounded-lg border border-[#ddd] bg-[#fafafa]/60 px-3 py-2 text-sm text-[#2d325b] focus:border-[#3898ec] focus:outline-none">
-            <option value="remoto">remoto</option>
-            <option value="hibrido">híbrido</option>
-            <option value="presencial">presencial</option>
-            <option value="indiferente">indiferente</option>
+            <option value="remoto" data-i18n="modalidad_remoto">remote</option>
+            <option value="hibrido" data-i18n="modalidad_hibrido">hybrid</option>
+            <option value="presencial" data-i18n="modalidad_presencial">on-site</option>
+            <option value="indiferente" data-i18n="modalidad_indiferente">no preference</option>
           </select>
         </div>
         <p class="self-end text-[0.68rem] leading-relaxed text-[#999]" data-i18n="cfg_hint_listas">
@@ -554,7 +554,7 @@
           </div>
           <div class="flex flex-wrap items-center gap-2">
             <span class="w-32 shrink-0 text-xs text-[#2d325b]">remotive</span>
-            <input type="text" data-slug="remotive" placeholder="slug (opcional)" aria-label="slug remotive"
+            <input type="text" data-slug="remotive" placeholder="slug (optional)" data-i18n-ph="ph_slug_opcional" aria-label="slug remotive"
               class="w-28 rounded-lg border border-[#ddd] bg-[#fafafa]/60 px-2 py-1 text-xs text-[#2d325b] placeholder:text-[#bbb] focus:border-[#3898ec] focus:outline-none">
             <button type="button" data-fuente="remotive" data-i18n="btn_probar"
               class="rounded-full border border-[#ddd] px-2.5 py-1 text-[0.68rem] text-[#2d325b] transition hover:border-[#3898ec] hover:text-[#3898ec] disabled:opacity-50">probar</button>
@@ -562,7 +562,7 @@
           </div>
           <div class="flex flex-wrap items-center gap-2">
             <span class="w-32 shrink-0 text-xs text-[#2d325b]">weworkremotely</span>
-            <input type="text" data-slug="weworkremotely" placeholder="slug (opcional)" aria-label="slug weworkremotely"
+            <input type="text" data-slug="weworkremotely" placeholder="slug (optional)" data-i18n-ph="ph_slug_opcional" aria-label="slug weworkremotely"
               class="w-28 rounded-lg border border-[#ddd] bg-[#fafafa]/60 px-2 py-1 text-xs text-[#2d325b] placeholder:text-[#bbb] focus:border-[#3898ec] focus:outline-none">
             <button type="button" data-fuente="weworkremotely" data-i18n="btn_probar"
               class="rounded-full border border-[#ddd] px-2.5 py-1 text-[0.68rem] text-[#2d325b] transition hover:border-[#3898ec] hover:text-[#3898ec] disabled:opacity-50">probar</button>
@@ -604,7 +604,7 @@
           <select id="cfg-idioma" data-cfg="IDIOMA_SCORING" data-tipo="texto"
             class="w-full rounded-lg border border-[#ddd] bg-[#fafafa]/60 px-3 py-2 text-sm text-[#2d325b] focus:border-[#3898ec] focus:outline-none">
             <option value="en">English</option>
-            <option value="es">Español</option>
+            <option value="es" data-i18n="lang_espanol">Spanish</option>
           </select>
         </div>
       </div>
@@ -621,7 +621,7 @@
         </div>
         <div>
           <label for="cfg-dias" class="mb-1 block text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#999]" data-i18n="cfg_lbl_dias">Días activos</label>
-          <input type="text" id="cfg-dias" data-cfg="DIAS_BUSQUEDA" data-tipo="lista" placeholder="lunes, martes (vacío = todos)"
+          <input type="text" id="cfg-dias" data-cfg="DIAS_BUSQUEDA" data-tipo="lista" placeholder="monday, tuesday (empty = every day)" data-i18n-ph="ph_dias"
             class="w-full rounded-lg border border-[#ddd] bg-[#fafafa]/60 px-3 py-2 text-sm text-[#2d325b] placeholder:text-[#bbb] focus:border-[#3898ec] focus:outline-none">
         </div>
       </div>
@@ -671,7 +671,7 @@
             <span data-badge="DEEPSEEK_API_KEY" class="rounded-full border border-[#ddd] px-2.5 py-1 text-[0.68rem] text-[#999]">…</span>
           </div>
           <input type="password" data-secreto="DEEPSEEK_API_KEY" autocomplete="new-password"
-            placeholder="nuevo valor (vacío = no cambiar)"
+            placeholder="new value (empty = do not change)" data-i18n-ph="ph_nuevo_valor"
             class="mt-3 w-full rounded-lg border border-[#ddd] bg-white px-3 py-2 text-sm text-[#2d325b] placeholder:text-[#bbb] focus:border-[#3898ec] focus:outline-none">
         </div>
         <div class="rounded-lg border border-[#ddd] bg-[#fafafa]/60 p-4">
@@ -680,7 +680,7 @@
             <span data-badge="TELEGRAM_BOT_TOKEN" class="rounded-full border border-[#ddd] px-2.5 py-1 text-[0.68rem] text-[#999]">…</span>
           </div>
           <input type="password" data-secreto="TELEGRAM_BOT_TOKEN" autocomplete="new-password"
-            placeholder="nuevo valor (vacío = no cambiar)"
+            placeholder="new value (empty = do not change)" data-i18n-ph="ph_nuevo_valor"
             class="mt-3 w-full rounded-lg border border-[#ddd] bg-white px-3 py-2 text-sm text-[#2d325b] placeholder:text-[#bbb] focus:border-[#3898ec] focus:outline-none">
         </div>
         <div class="rounded-lg border border-[#ddd] bg-[#fafafa]/60 p-4">
@@ -689,7 +689,7 @@
             <span data-badge="WEB_PASSWORD" class="rounded-full border border-[#ddd] px-2.5 py-1 text-[0.68rem] text-[#999]">…</span>
           </div>
           <input type="password" data-secreto="WEB_PASSWORD" autocomplete="new-password"
-            placeholder="nuevo valor (vacío = no cambiar)"
+            placeholder="new value (empty = do not change)" data-i18n-ph="ph_nuevo_valor"
             class="mt-3 w-full rounded-lg border border-[#ddd] bg-white px-3 py-2 text-sm text-[#2d325b] placeholder:text-[#bbb] focus:border-[#3898ec] focus:outline-none">
         </div>
       </div>
@@ -758,11 +758,6 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({
   "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
 }[c]));
 
-const ETIQUETAS = {
-  para_confirmar: "pendiente", pendiente: "pendiente", nueva: "nueva",
-  aprobada: "aprobada", descartada: "descartada", enviada: "enviada",
-};
-
 function claseScore(score) {
   const n = Number(score ?? 0);
   if (n >= 65) return "score-alto";
@@ -802,7 +797,7 @@ async function cargar() {
   } catch (err) {
     state.ofertas = [];
     pintarLista();
-    $("estado-carga").textContent = "Error al cargar: " + err.message;
+    $("estado-carga").textContent = tr("err_cargar") + err.message;
     $("estado-carga").classList.remove("hidden");
     return;
   }
@@ -813,7 +808,7 @@ function pintarLista() {
   const lista = $("lista");
   lista.innerHTML = "";
   $("sin-ofertas").classList.toggle("hidden", state.ofertas.length > 0);
-  $("contador").textContent = state.ofertas.length + (state.ofertas.length === 1 ? " oferta" : " ofertas");
+  $("contador").textContent = state.ofertas.length + " " + tr(state.ofertas.length === 1 ? "ofertas_uno" : "ofertas_varias");
 
   for (const o of state.ofertas) {
     const activa = state.actual && state.actual.id === o.id;
@@ -827,16 +822,16 @@ function pintarLista() {
         <div class="flex items-start gap-4">
           <span class="mt-0.5 rounded-full border px-3 py-1 text-sm font-semibold tabular-nums ${claseScore(o.score)}">${esc(o.score ?? "–")}</span>
           <div class="min-w-0 flex-1">
-            <p class="truncate font-medium text-[#2d325b]">${esc(o.titulo || "(sin título)")}</p>
+            <p class="truncate font-medium text-[#2d325b]">${esc(o.titulo || tr("sin_titulo"))}</p>
             <p class="truncate text-sm text-[#999]">${esc(o.empresa || "")}</p>
             <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[#999]">
               ${o.ubicacion ? `<span>${esc(o.ubicacion)}</span>` : ""}
               ${o.salario ? `<span>${esc(o.salario)}</span>` : ""}
               <span>${esc(fecha(o.fecha))}</span>
-              ${o.tiene_materiales ? '<span class="text-[#0d927d]">materiales listos</span>' : ""}
+              ${o.tiene_materiales ? `<span class="text-[#0d927d]">${esc(tr("materiales_listos"))}</span>` : ""}
             </div>
           </div>
-          <span class="shrink-0 self-center rounded-full bg-[#f9c5d1]/40 px-3 py-1 text-xs text-[#2d325b]">${esc(ETIQUETAS[o.estado] || o.estado || "—")}</span>
+          <span class="shrink-0 self-center rounded-full bg-[#f9c5d1]/40 px-3 py-1 text-xs text-[#2d325b]">${esc(etiquetaEstado(o.estado))}</span>
         </div>
       </button>`;
     li.querySelector("button").addEventListener("click", () => abrir(o.id));
@@ -855,7 +850,7 @@ async function abrir(id) {
   $("materiales").classList.add("hidden");
   $("m-respuestas-wrap").classList.add("hidden");
   ocultarAviso();
-  $("d-titulo").textContent = "Cargando…";
+  $("d-titulo").textContent = tr("cargando");
 
   try {
     const res = await fetch("/api/oferta/" + encodeURIComponent(id));
@@ -864,7 +859,7 @@ async function abrir(id) {
     state.actual = d;
     pintarDetalle(d);
   } catch (err) {
-    aviso("No se pudo cargar el detalle: " + err.message, "error");
+    aviso(tr("err_detalle") + err.message, "error");
   }
 }
 
@@ -888,23 +883,23 @@ function pintarBotones(estado) {
   const aprobada = estado === "aprobada";
   const ap = $("btn-aprobar");
   const de = $("btn-descartar");
-  ap.textContent = aprobada ? "Regenerar / ver pack" : "Aprobar y generar pack";
+  ap.textContent = aprobada ? tr("btn_regenerar_pack") : tr("btn_aprobar_pack");
   ap.disabled = false;
-  de.textContent = "Descartar";
+  de.textContent = tr("btn_descartar");
   de.disabled = estado === "descartada";
-  $("d-estado").textContent = ETIQUETAS[estado] || estado || "—";
+  $("d-estado").textContent = etiquetaEstado(estado);
 }
 
 function pintarDetalle(d) {
-  $("d-titulo").textContent = d.titulo || "(sin título)";
+  $("d-titulo").textContent = d.titulo || tr("sin_titulo");
   $("d-empresa").textContent = d.empresa || "";
   const sc = $("d-score");
   sc.textContent = "score " + (d.score ?? "–");
   sc.className = "rounded-full border px-2.5 py-1 font-semibold tabular-nums " + claseScore(d.score);
-  $("d-estado").textContent = ETIQUETAS[d.estado] || d.estado || "—";
+  $("d-estado").textContent = etiquetaEstado(d.estado);
   $("d-ubicacion").textContent = d.ubicacion || "";
   $("d-salario").textContent = d.salario || "";
-  $("d-descripcion").textContent = d.descripcion || "Sin descripción guardada.";
+  $("d-descripcion").textContent = d.descripcion || tr("sin_descripcion");
   const req = d.requisitos;
   $("d-requisitos-wrap").classList.toggle("hidden", !req);
   $("d-requisitos").textContent = req || "";
@@ -939,16 +934,16 @@ function pintarDetalle(d) {
 
 function pintarMateriales(pack) {
   $("materiales").classList.remove("hidden");
-  $("m-cover").value = pack.cover_letter || "(sin carta generada)";
+  $("m-cover").value = pack.cover_letter || tr("sin_carta");
   $("m-mensaje").value = pack.mensaje || "";
   $("m-mensaje-wrap").classList.toggle("hidden", !pack.mensaje);
 
   const caja = $("m-enlaces");
   caja.innerHTML = "";
-  const nombres = { cv_pdf: "CV (PDF)", cover_pdf: "Carta (PDF)", cover_txt: "Carta (texto)" };
+  const nombres = { cv_pdf: tr("pack_cv_pdf"), cover_pdf: tr("pack_cover_pdf"), cover_txt: tr("pack_cover_txt") };
   const hay = Object.entries(pack.enlaces || {});
   if (!hay.length) {
-    caja.innerHTML = '<span class="text-xs text-[#999]">Aún no hay PDFs generados.</span>';
+    caja.innerHTML = `<span class="text-xs text-[#999]">${esc(tr("sin_pdfs"))}</span>`;
   }
   for (const [clave, href] of hay) {
     const a = document.createElement("a");
@@ -976,21 +971,21 @@ const TIEMPO_MAX_ACCION_MS = 5 * 60 * 1000;
 
 async function accion(tipo) {
   if (!state.actual || !state.actual.id) {
-    aviso("Selecciona una oferta antes de actuar.", "error");
+    aviso(tr("selecciona_oferta"), "error");
     return;
   }
   if (state.ocupado) {
-    aviso("Ya hay una acción en curso. Espera a que termine.", "info");
+    aviso(tr("accion_en_curso"), "info");
     return;
   }
   const id = state.actual.id;
   state.ocupado = true;
   const btn = tipo === "aprobar" ? $("btn-aprobar") : $("btn-descartar");
   btn.disabled = true;
-  btn.textContent = tipo === "aprobar" ? "Generando pack… (puede tardar 1-2 min)" : "Descartando…";
+  btn.textContent = tipo === "aprobar" ? tr("generando_pack_btn") : tr("descartando_btn");
   aviso(tipo === "aprobar"
-    ? "Generando carta, CV y mensaje. No cierres la pestaña."
-    : "Marcando como descartada…", "info");
+    ? tr("generando_pack_aviso")
+    : tr("marcando_descartada"), "info");
 
   try {
     // Without a timeout, a hung POST left `state.ocupado` true forever
@@ -1015,12 +1010,12 @@ async function accion(tipo) {
           respuestas,
         });
       } catch (e) {
-        errores.push("no se pudo pintar el pack: " + e.message);
+        errores.push(tr("err_pintar_pack") + e.message);
       }
-      aviso("Aprobada. Materiales listos" + (respuestas.length ? ` y ${respuestas.length} respuesta(s) de formulario.` : ".")
-            + (errores.length ? " Avisos: " + errores.join("; ") : ""), errores.length ? "info" : "ok");
+      aviso(tr("ok_aprobada") + (respuestas.length ? tr("ok_respuestas").replace("{n}", String(respuestas.length)) : ".")
+            + (errores.length ? tr("avisos") + errores.join("; ") : ""), errores.length ? "info" : "ok");
     } else {
-      aviso("Oferta descartada.", "ok");
+      aviso(tr("ok_descartada"), "ok");
       $("materiales").classList.add("hidden");
       if (state.filtro === "pendientes") { $("panel-detalle").classList.add("hidden"); $("panel-vacio").classList.remove("hidden"); }
     }
@@ -1043,9 +1038,9 @@ async function copiar(clave) {
   const el = clave === "cover" ? $("m-cover") : $("m-mensaje");
   try {
     await navigator.clipboard.writeText(el.value);
-    aviso("Copiado al portapapeles.", "ok");
+    aviso(tr("copiado_portapapeles"), "ok");
   } catch {
-    el.select(); document.execCommand("copy"); aviso("Copiado.", "ok");
+    el.select(); document.execCommand("copy"); aviso(tr("copiado_ok"), "ok");
   }
 }
 
@@ -1075,29 +1070,11 @@ function cambiarVista(nombre, actualizarHash = true) {
 
 const statePerfil = { datos: null, cargando: false };
 
-const NOMBRES_IDIOMA = {
-  espanol: "Español", ingles: "Inglés", catalan: "Catalán",
-  frances: "Francés", aleman: "Alemán", chino_mandarin: "Chino mandarín",
-};
-
-const NOMBRES_SKILLS = {
-  producto_diseno: "Producto y diseño",
-  ia_llm: "IA y LLM",
-  frontend: "Frontend",
-  backend_datos: "Backend y datos",
-  monetizacion: "Monetización",
-  transferibles: "Transferibles",
-};
-
-const NOMBRES_CRITERIO = {
-  rol_prioritario: "Rol prioritario",
-  modalidad: "Modalidad",
-  salario_minimo: "Salario mínimo",
-  salario_objetivo: "Salario objetivo",
-  geografia: "Geografía",
-  zona_horaria: "Zona horaria",
-  tipo_contrato: "Tipo de contrato",
-};
+/* Display names for the language-neutral keys stored in perfil.json. They are
+   resolved through the i18n dictionary so they follow the current language. */
+const nombreIdioma = (clave) => tr("lang_" + clave, String(clave || "").replace(/_/g, " "));
+const nombreSkills = (cat) => tr("sk_" + cat, String(cat || "").replace(/_/g, " "));
+const nombreCriterio = (k) => tr("crit_" + k, String(k || "").replace(/_/g, " "));
 
 function listaBullets(items) {
   if (!Array.isArray(items) || !items.length) return "";
@@ -1156,7 +1133,7 @@ function pintarPerfil(p) {
 
   const cabecera = `<section class="overflow-hidden rounded-xl border border-[#ddd] bg-white shadow-[0_2px_18px_rgba(45,50,91,0.06)]">
     <div class="border-b border-[#ddd] bg-[#f9c5d1]/20 px-6 py-6">
-      <p class="text-[0.68rem] uppercase tracking-[0.22em] text-[#999]">Perfil</p>
+      <p class="text-[0.68rem] uppercase tracking-[0.22em] text-[#999]">${esc(tr("p_perfil"))}</p>
       <h2 class="mt-1 font-['Oswald'] text-3xl font-medium tracking-[0.02em] text-[#2d325b]">${esc(idn.nombre || "—")}</h2>
       <p class="mt-1 text-sm text-[#2d325b]/80">${esc(p.headline || "")}</p>
       <div class="mt-4 flex flex-wrap items-center gap-2 text-xs text-[#2d325b]/80">${chips.join("")}</div>
@@ -1165,16 +1142,16 @@ function pintarPerfil(p) {
 
   // Positioning
   const roles = Array.isArray(pos.roles) ? pos.roles : [];
-  const posicionamiento = seccion("Posicionamiento", `
+  const posicionamiento = seccion(tr("p_posicionamiento"), `
     <div class="rounded-xl border border-[#ddd] bg-white p-6">
       <p class="text-sm leading-relaxed text-[#2d325b]/90">${esc(pos.declaracion_principal || "—")}</p>
       ${roles.length ? `<div class="mt-4 flex flex-wrap gap-2">` + roles.map((r) =>
         `<span class="rounded-full bg-[#2d325b] px-3 py-1 text-xs text-white">${esc(r)}</span>`).join("") + `</div>` : ""}
-      ${pos.matiz_liderazgo ? `<p class="mt-4 text-xs leading-relaxed text-[#999]"><span class="font-semibold uppercase tracking-wider">Liderazgo:</span> ${esc(pos.matiz_liderazgo)}</p>` : ""}
+      ${pos.matiz_liderazgo ? `<p class="mt-4 text-xs leading-relaxed text-[#999]"><span class="font-semibold uppercase tracking-wider">${esc(tr("p_liderazgo"))}</span> ${esc(pos.matiz_liderazgo)}</p>` : ""}
     </div>`);
 
   // Experience
-  const experiencia = seccion("Experiencia", `<div class="space-y-3">` +
+  const experiencia = seccion(tr("p_experiencia"), `<div class="space-y-3">` +
     (p.experience || []).map((e) => `
       <article class="rounded-xl border border-[#ddd] bg-white p-5">
         ${tarjetaTitulo(e.empresa, e.periodo)}
@@ -1186,7 +1163,7 @@ function pintarPerfil(p) {
       </article>`).join("") + `</div>`);
 
   // Projects
-  const proyectos = seccion("Proyectos", `<div class="grid gap-3 md:grid-cols-2">` +
+  const proyectos = seccion(tr("p_proyectos"), `<div class="grid gap-3 md:grid-cols-2">` +
     (p.projects || []).map((pr) => `
       <article class="rounded-xl border border-[#ddd] bg-white p-5">
         ${tarjetaTitulo(pr.nombre, "")}
@@ -1198,7 +1175,7 @@ function pintarPerfil(p) {
       </article>`).join("") + `</div>`);
 
   // Education
-  const educacion = seccion("Educación", `<div class="space-y-3">` +
+  const educacion = seccion(tr("p_educacion"), `<div class="space-y-3">` +
     (p.education || []).map((ed) => `
       <article class="rounded-xl border border-[#ddd] bg-white p-5">
         ${tarjetaTitulo(ed.institucion, ed.periodo)}
@@ -1211,14 +1188,14 @@ function pintarPerfil(p) {
       </article>`).join("") + `</div>`);
 
   // Languages
-  const idiomas = seccion("Idiomas", `<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">` +
+  const idiomas = seccion(tr("p_idiomas"), `<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">` +
     Object.entries(p.languages || {}).map(([clave, v]) => {
       const nivel = (v && v.nivel) || "PEND";
       const nota = (v && v.nota) || "";
       const esPend = String(nivel).toUpperCase() === "PEND";
       return `<article class="rounded-xl border border-[#ddd] bg-white p-4">
         <div class="flex items-baseline justify-between gap-2">
-          <h3 class="text-sm font-medium text-[#2d325b]">${esc(NOMBRES_IDIOMA[clave] || clave)}</h3>
+          <h3 class="text-sm font-medium text-[#2d325b]">${esc(nombreIdioma(clave))}</h3>
           <span class="rounded-full border px-2.5 py-1 text-xs ${esPend ? "score-medio" : "score-alto"}">${esc(nivel)}</span>
         </div>
         ${nota ? `<p class="mt-2 text-xs leading-relaxed text-[#999]">${esc(nota)}</p>` : ""}
@@ -1226,7 +1203,7 @@ function pintarPerfil(p) {
     }).join("") + `</div>`);
 
   // Certifications
-  const certs = seccion("Certificaciones", `<div class="space-y-3">` +
+  const certs = seccion(tr("p_certificaciones"), `<div class="space-y-3">` +
     ((p.certifications || []).length
       ? (p.certifications || []).map((c) => `
         <article class="rounded-xl border border-[#ddd] bg-white p-5">
@@ -1234,14 +1211,14 @@ function pintarPerfil(p) {
           <p class="text-sm text-[#2d325b]/80">${esc(c.emisor || "")}</p>
           ${notaPerfil(c.nota)}
         </article>`).join("")
-      : `<p class="rounded-xl border border-dashed border-[#ddd] bg-white px-5 py-6 text-sm text-[#999]">Sin certificaciones registradas.</p>`)
+      : `<p class="rounded-xl border border-dashed border-[#ddd] bg-white px-5 py-6 text-sm text-[#999]">${esc(tr("p_sin_certs"))}</p>`)
     + `</div>`);
 
   // Skills
   const skills = seccion("Skills", `<div class="grid gap-3 md:grid-cols-2">` +
     Object.entries(p.skills || {}).map(([cat, items]) => `
       <article class="rounded-xl border border-[#ddd] bg-white p-5">
-        <h3 class="mb-3 font-['Oswald'] text-xs uppercase tracking-[0.18em] text-[#999]">${esc(NOMBRES_SKILLS[cat] || cat.replace(/_/g, " "))}</h3>
+        <h3 class="mb-3 font-['Oswald'] text-xs uppercase tracking-[0.18em] text-[#999]">${esc(nombreSkills(cat))}</h3>
         <div class="flex flex-wrap gap-1.5">
           ${(items || []).map((s) => `<span class="rounded-full border border-[#ddd] bg-[#fafafa] px-2.5 py-1 text-xs text-[#2d325b]/90">${esc(s)}</span>`).join("")}
         </div>
@@ -1249,16 +1226,16 @@ function pintarPerfil(p) {
 
   // Compensation
   const comp = p.compensation || {};
-  const compensacion = seccion("Compensación", `
+  const compensacion = seccion(tr("p_compensacion"), `
     <div class="rounded-xl border border-[#ddd] bg-white p-6">
       <div class="flex flex-wrap items-baseline gap-x-8 gap-y-2">
         <div>
-          <p class="text-[0.68rem] uppercase tracking-[0.18em] text-[#999]">Mínimo</p>
+          <p class="text-[0.68rem] uppercase tracking-[0.18em] text-[#999]">${esc(tr("p_minimo"))}</p>
           <p class="font-['Oswald'] text-2xl text-[#2d325b]">${esc(comp.minimo ?? "PEND")} <span class="text-sm font-normal">${esc(comp.moneda || "")}</span></p>
           ${comp.concepto ? `<p class="text-xs text-[#999]">${esc(comp.concepto)}</p>` : ""}
         </div>
         <div>
-          <p class="text-[0.68rem] uppercase tracking-[0.18em] text-[#999]">Objetivo</p>
+          <p class="text-[0.68rem] uppercase tracking-[0.18em] text-[#999]">${esc(tr("p_objetivo"))}</p>
           <p class="font-['Oswald'] text-2xl text-[#3898ec]">${esc(comp.objetivo || "PEND")}</p>
         </div>
       </div>
@@ -1266,11 +1243,11 @@ function pintarPerfil(p) {
     </div>`);
 
   // Search criteria
-  const criterios = seccion("Criterios de búsqueda", `
+  const criterios = seccion(tr("p_criterios"), `
     <div class="grid gap-px overflow-hidden rounded-xl border border-[#ddd] bg-[#ddd] sm:grid-cols-2">
       ${Object.entries(p.search_criteria || {}).map(([k, v]) => `
         <div class="bg-white px-5 py-4">
-          <p class="text-[0.68rem] uppercase tracking-[0.18em] text-[#999]">${esc(NOMBRES_CRITERIO[k] || k.replace(/_/g, " "))}</p>
+          <p class="text-[0.68rem] uppercase tracking-[0.18em] text-[#999]">${esc(nombreCriterio(k))}</p>
           <p class="mt-1 text-sm leading-relaxed text-[#2d325b]/90">${esc(v)}</p>
         </div>`).join("")}
     </div>`);
@@ -1297,7 +1274,7 @@ async function cargarPerfil(forzar = false) {
     $("perfil-carga").classList.add("hidden");
   } catch (err) {
     $("perfil-carga").classList.add("hidden");
-    $("perfil-error").textContent = "No se pudo cargar el perfil: " + err.message;
+    $("perfil-error").textContent = tr("err_cargar_perfil") + err.message;
     $("perfil-error").classList.remove("hidden");
   } finally {
     statePerfil.cargando = false;
@@ -1375,43 +1352,43 @@ function construirListaBorrado() {
   }
 
   const otros = [];
-  if (p.headline !== undefined) otros.push(fila("headline", "Titular (headline)", String(p.headline)));
-  if (p.positioning_emphasis) otros.push(fila("positioning_emphasis", "Posicionamiento", ""));
-  if (p.compensation) otros.push(fila("compensation", "Compensación", ""));
-  if (p.search_criteria) otros.push(fila("search_criteria", "Criterios de búsqueda", ""));
-  if (p.pendientes) otros.push(fila("pendientes", "Pendientes", ""));
+  if (p.headline !== undefined) otros.push(fila("headline", tr("editor_titular"), String(p.headline)));
+  if (p.positioning_emphasis) otros.push(fila("positioning_emphasis", tr("p_posicionamiento"), ""));
+  if (p.compensation) otros.push(fila("compensation", tr("p_compensacion"), ""));
+  if (p.search_criteria) otros.push(fila("search_criteria", tr("p_criterios"), ""));
+  if (p.pendientes) otros.push(fila("pendientes", tr("editor_pendientes"), ""));
 
   const lista = [
-    grupo("Experiencia", (p.experience || []).map((e, i) =>
+    grupo(tr("p_experiencia"), (p.experience || []).map((e, i) =>
       fila(`experience.${i}`, e.empresa || e.titulo_cv || "—", e.titulo_cv || ""))),
-    grupo("Educación", (p.education || []).map((ed, i) =>
+    grupo(tr("p_educacion"), (p.education || []).map((ed, i) =>
       fila(`education.${i}`, ed.institucion || ed.titulo || "—", ed.titulo || ""))),
-    grupo("Proyectos", (p.projects || []).map((pr, i) =>
+    grupo(tr("p_proyectos"), (p.projects || []).map((pr, i) =>
       fila(`projects.${i}`, pr.nombre || pr.rol || "—", pr.rol || ""))),
-    grupo("Certificaciones", (p.certifications || []).map((c, i) =>
+    grupo(tr("p_certificaciones"), (p.certifications || []).map((c, i) =>
       fila(`certifications.${i}`, c.nombre || c.emisor || "—", c.emisor || ""))),
-    grupo("Idiomas", Object.entries(p.languages || {}).map(([clave, v]) =>
-      fila(`languages.${clave}`, NOMBRES_IDIOMA[clave] || clave, (v && v.nivel) || ""))),
+    grupo(tr("p_idiomas"), Object.entries(p.languages || {}).map(([clave, v]) =>
+      fila(`languages.${clave}`, nombreIdioma(clave), (v && v.nivel) || ""))),
     grupo("Skills", Object.entries(p.skills || {}).map(([cat, items]) =>
-      fila(`skills.${cat}`, NOMBRES_SKILLS[cat] || cat, (items || []).length + " items"))),
-    grupo("Otros apartados", otros),
+      fila(`skills.${cat}`, nombreSkills(cat), (items || []).length + " items"))),
+    grupo(tr("editor_otros"), otros),
   ].join("");
 
   $("perfil-borrar-lista").innerHTML = lista ||
-    `<p class="text-sm text-[#999]">No hay nada borrable en el perfil.</p>`;
+    `<p class="text-sm text-[#999]">${esc(tr("editor_vacio"))}</p>`;
 }
 
 async function borrarSeleccionados() {
   const checks = [...document.querySelectorAll("#perfil-borrar-lista input[type=checkbox]:checked")];
   if (!checks.length) {
-    $("perfil-borrar-estado").textContent = "Marca al menos una línea.";
+    $("perfil-borrar-estado").textContent = tr("err_marca");
     return;
   }
   const rutas = checks.map((c) => c.dataset.ruta);
   const total = rutas.length;
   const btn = $("btn-perfil-borrar-confirmar");
   btn.disabled = true;
-  btn.textContent = "Borrando…";
+  btn.textContent = tr("borrando");
   $("perfil-borrar-estado").textContent = "";
 
   let borrados = 0;
@@ -1437,13 +1414,13 @@ async function borrarSeleccionados() {
   }
 
   btn.disabled = false;
-  btn.textContent = "Eliminar seleccionados";
+  btn.textContent = tr("btn_eliminar_sel");
   await cargarPerfil(true);
   cerrarModalBorrar();
   if (fallos.length) {
-    avisoVista("Borrados " + borrados + "/" + total + ".\n" + fallos.join("\n"), "error");
+    avisoVista(tr("borrados_n").replace("{n}", String(borrados)).replace("{t}", String(total)) + "\n" + fallos.join("\n"), "error");
   } else {
-    avisoVista("Borrados " + borrados + " dato(s). Copia anterior en perfil.json.bak.", "ok");
+    avisoVista(tr("borrados_ok").replace("{n}", String(borrados)), "ok");
   }
 }
 
@@ -1464,16 +1441,16 @@ async function guardarJson() {
   try {
     nuevo = JSON.parse($("perfil-json-texto").value);
   } catch (err) {
-    mostrarJsonAviso("JSON no válido: " + err.message, "error");
+    mostrarJsonAviso(tr("json_invalido") + err.message, "error");
     return;
   }
   if (!nuevo || typeof nuevo !== "object" || Array.isArray(nuevo)) {
-    mostrarJsonAviso("El perfil debe ser un objeto JSON ({...}).", "error");
+    mostrarJsonAviso(tr("json_objeto"), "error");
     return;
   }
   const btn = $("btn-perfil-json-guardar");
   btn.disabled = true;
-  $("perfil-json-estado").textContent = "Validando y guardando…";
+  $("perfil-json-estado").textContent = tr("validando");
   $("perfil-json-aviso").classList.add("hidden");
   try {
     const opciones = {
@@ -1490,9 +1467,9 @@ async function guardarJson() {
     if (!res.ok) throw new Error(datos.error || ("HTTP " + res.status));
     await cargarPerfil(true);
     cerrarModalJson();
-    avisoVista("Perfil guardado. Copia anterior en perfil.json.bak.", "ok");
+    avisoVista(tr("perfil_guardado"), "ok");
   } catch (err) {
-    mostrarJsonAviso("No se pudo guardar: " + (err && err.message ? err.message : err), "error");
+    mostrarJsonAviso(tr("err_guardar") + (err && err.message ? err.message : err), "error");
   } finally {
     btn.disabled = false;
     $("perfil-json-estado").textContent = "";
@@ -1526,14 +1503,14 @@ function valorCorto(valor) {
 async function agregarPerfil() {
   const texto = $("perfil-texto").value.trim();
   if (!texto) {
-    avisoEditor("perfil-agregar-aviso", "Escribe primero el dato o el cambio que quieres añadir.", "error");
+    avisoEditor("perfil-agregar-aviso", tr("perfil_texto_vacio"), "error");
     return;
   }
   const btn = $("btn-perfil-agregar");
   const etiqueta = btn.textContent;
   btn.disabled = true;
-  btn.textContent = "Analizando…";
-  $("perfil-agregar-estado").textContent = "DeepSeek está leyendo el texto…";
+  btn.textContent = tr("analizando");
+  $("perfil-agregar-estado").textContent = tr("deepseek_leyendo");
   $("perfil-agregar-aviso").classList.add("hidden");
 
   try {
@@ -1561,14 +1538,14 @@ async function agregarPerfil() {
       await cargarPerfil(true);
       avisoVista(
         (nota ? nota + "\n\n" : "") +
-        "Cambios aplicados (" + cambios.length + "):\n" + lineas.join("\n"), "ok");
+        tr("cambios_aplicados").replace("{n}", String(cambios.length)) + "\n" + lineas.join("\n"), "ok");
     } else {
       avisoEditor("perfil-agregar-aviso",
-        nota || "El texto no aporta ningún dato concreto; no se cambió nada.", "info");
+        nota || tr("sin_dato"), "info");
     }
   } catch (err) {
     avisoEditor("perfil-agregar-aviso",
-      "No se pudo actualizar el perfil: " + (err && err.message ? err.message : err), "error");
+      tr("err_actualizar_perfil") + (err && err.message ? err.message : err), "error");
   } finally {
     btn.disabled = false;
     btn.textContent = etiqueta;
@@ -1616,7 +1593,7 @@ function pintarRespuestas(preguntas, respuestas, errores) {
   caja.innerHTML = "";
   $("respuestas-wrap").classList.remove("hidden");
   const conTexto = respuestas.filter((r) => (r || "").trim()).length;
-  $("respuestas-contador").textContent = conTexto + " de " + preguntas.length + " respondidas";
+  $("respuestas-contador").textContent = tr("respuestas_contador").replace("{n}", String(conTexto)).replace("{m}", String(preguntas.length));
 
   preguntas.forEach((pregunta, i) => {
     const respuesta = (respuestas[i] || "").trim();
@@ -1628,18 +1605,18 @@ function pintarRespuestas(preguntas, respuestas, errores) {
         <span class="mt-0.5 shrink-0 rounded-full bg-[#f9c5d1]/40 px-2.5 py-1 text-xs font-semibold tabular-nums text-[#2d325b]">${i + 1}</span>
         <div class="min-w-0 flex-1">
           <p class="text-sm font-medium leading-snug text-[#2d325b]">${esc(pregunta)}</p>
-          <div class="mt-3 whitespace-pre-wrap rounded-lg bg-[#fafafa]/70 p-4 text-sm leading-relaxed text-[#2d325b]/90">${esc(respuesta || "(sin respuesta)")}</div>
-          ${fallo ? `<p class="mt-2 text-xs text-[#c94f4f]">${esc((errores && errores[0]) || "El modelo no devolvió texto para esta pregunta.")}</p>` : ""}
+          <div class="mt-3 whitespace-pre-wrap rounded-lg bg-[#fafafa]/70 p-4 text-sm leading-relaxed text-[#2d325b]/90">${esc(respuesta || tr("sin_respuesta"))}</div>
+          ${fallo ? `<p class="mt-2 text-xs text-[#c94f4f]">${esc((errores && errores[0]) || tr("modelo_sin_texto"))}</p>` : ""}
         </div>
         <button data-indice="${i}"
-          class="shrink-0 rounded-full border border-[#ddd] px-3 py-1.5 text-xs font-medium text-[#3898ec] transition hover:border-[#3898ec] hover:bg-[#3898ec] hover:text-white disabled:opacity-40">Copiar</button>
+          class="shrink-0 rounded-full border border-[#ddd] px-3 py-1.5 text-xs font-medium text-[#3898ec] transition hover:border-[#3898ec] hover:bg-[#3898ec] hover:text-white disabled:opacity-40">${esc(tr("btn_copiar"))}</button>
       </div>`;
     const btn = art.querySelector("button");
     btn.disabled = fallo;
     btn.addEventListener("click", async () => {
       const ok = await copiarTexto(respuestasActuales[i] || "");
-      btn.textContent = ok ? "Copiado" : "Error";
-      setTimeout(() => { btn.textContent = "Copiar"; }, 1400);
+      btn.textContent = ok ? tr("btn_copiado") : tr("btn_error");
+      setTimeout(() => { btn.textContent = tr("btn_copiar"); }, 1400);
     });
     caja.appendChild(art);
   });
@@ -1651,14 +1628,14 @@ async function preguntar() {
   const bruto = $("preguntas-texto").value;
   const preguntas = bruto.split("\n").map((s) => s.trim()).filter(Boolean);
   if (!preguntas.length) {
-    avisoPreguntar("Escribe al menos una pregunta (una por línea).", "error");
+    avisoPreguntar(tr("preguntas_vacio"), "error");
     return;
   }
   const btn = $("btn-preguntar");
   btn.disabled = true;
   const etiqueta = btn.textContent;
-  btn.textContent = "Pensando…";
-  $("preguntar-estado").textContent = preguntas.length + (preguntas.length === 1 ? " pregunta" : " preguntas") + " · puede tardar";
+  btn.textContent = tr("pensando");
+  $("preguntar-estado").textContent = tr("preguntando_estado").replace("{n}", String(preguntas.length));
   $("preguntar-aviso").classList.add("hidden");
 
   try {
@@ -1679,8 +1656,8 @@ async function preguntar() {
     const respuestas = Array.isArray(datos.respuestas) ? datos.respuestas : [];
     const errores = Array.isArray(datos.errores) ? datos.errores : [];
     pintarRespuestas(Array.isArray(datos.preguntas) && datos.preguntas.length ? datos.preguntas : preguntas, respuestas, errores);
-    if (errores.length) avisoPreguntar("Algunas preguntas fallaron: " + errores.join("; "), "info");
-    else avisoPreguntar("Listo. Revisa y copia cada respuesta.", "ok");
+    if (errores.length) avisoPreguntar(tr("algunas_fallaron") + errores.join("; "), "info");
+    else avisoPreguntar(tr("listo_revisa"), "ok");
   } catch (err) {
     avisoPreguntar("Error: " + (err && err.message ? err.message : err), "error");
   } finally {
@@ -1795,14 +1772,14 @@ async function cargarLinkedin() {
     if (Object.prototype.hasOwnProperty.call(cfg, "FUENTES_LINKEDIN")) {
       pintarLinkedin(!!cfg.FUENTES_LINKEDIN);
     }
-  } catch (e) { /* silent: el panel sigue funcionando sin el toggle */ }
+  } catch (e) { /* silent: the panel keeps working without the toggle */ }
 }
 
 function sincronizarCheckboxLinkedin(valor) {
   const chk = $("cfg-fuentes-linkedin");
   if (chk) chk.checked = !!valor;
   // If the settings form was already loaded, keep its baseline in sync so
-  // "Guardar" does not send this key again (nor undo the change).
+  // "Save" does not send this key again (nor undo the change).
   if (stateConfig.original && Object.prototype.hasOwnProperty.call(stateConfig.original, "FUENTES_LINKEDIN")) {
     stateConfig.original.FUENTES_LINKEDIN = !!valor;
   }
@@ -2045,15 +2022,15 @@ function pintarSalud(datos) {
 
   chips.push(chipSalud("DeepSeek · " + (d.ok ? "ok" : "error"), d.ok ? "ok" : "error", d.detalle));
 
-  if (t.omitido) chips.push(chipSalud("Telegram · omitido", "gris", t.detalle));
+  if (t.omitido) chips.push(chipSalud(tr("salud_omitido"), "gris", t.detalle));
   else chips.push(chipSalud("Telegram · " + (t.ok ? "ok" : "error"), t.ok ? "ok" : "error", t.detalle));
 
-  let textoSesion = "LinkedIn · " + (l.presente ? "sesión" : "sin sesión");
-  if (l.caducada) textoSesion = "LinkedIn · caducada";
+  let textoSesion = "LinkedIn · " + (l.presente ? tr("salud_sesion") : tr("salud_sin_sesion"));
+  if (l.caducada) textoSesion = tr("salud_caducada");
   if (l.antiguedad_dias != null) textoSesion += " (" + l.antiguedad_dias + " d)";
   chips.push(chipSalud(textoSesion, l.caducada ? "error" : (l.ok ? "ok" : "error"), l.detalle));
 
-  chips.push(chipSalud("data/ · " + (e.ok ? "escribible" : "no escribible"), e.ok ? "ok" : "error", e.detalle));
+  chips.push(chipSalud("data/ · " + (e.ok ? tr("salud_escribible") : tr("salud_no_escribible")), e.ok ? "ok" : "error", e.detalle));
   chips.push(chipSalud("Chromium · " + (c.ok ? "ok" : "error"), c.ok ? "ok" : "error", c.detalle));
 
   $("salud-contenedor").innerHTML = chips.join("");
@@ -2211,8 +2188,8 @@ async function probarFuente(nombre, btn) {
     const ok = res.ok && datos.ok !== false;
     if (!ok) throw new Error(datos.error || datos.detalle || ("HTTP " + res.status));
     let extra = datos.detalle || datos.mensaje || "";
-    if (!extra && Array.isArray(datos.ofertas)) extra = datos.ofertas.length + " ofertas";
-    if (!extra && datos.total != null) extra = datos.total + " ofertas";
+    if (!extra && Array.isArray(datos.ofertas)) extra = datos.ofertas.length + " " + tr("ofertas_varias");
+    if (!extra && datos.total != null) extra = datos.total + " " + tr("ofertas_varias");
     if (destino) {
       destino.textContent = "ok" + (extra ? " · " + extra : "");
       destino.className = "text-[0.68rem] text-[#0d927d]";
@@ -2331,6 +2308,120 @@ const I18N = {
     ayuda_legal2: "Este panel no auto-aplica: no envía candidaturas ni mensajes por ti. Apruebas y copias a mano.",
     ayuda_legal3: "Mantén un ritmo conservador: pocas visitas, cooldown alto y sin paralelismo agresivo.",
     ayuda_legal4: "Las respuestas del modelo pueden contener errores. Revísalas antes de enviarlas.",
+    // --- Offers / detail / materials ---
+    app_titulo: "jobautomat · panel de ofertas",
+    btn_recargar: "Recargar", btn_recargar_metricas: "Recargar métricas",
+    btn_cerrar: "Cerrar", idioma_btn: "Idioma",
+    cargando: "Cargando…", cargando_ofertas: "Cargando ofertas…",
+    sin_ofertas: "No hay ofertas con este filtro.",
+    panel_vacio: "Selecciona una oferta para ver el detalle y su justificación.",
+    err_cargar: "Error al cargar: ", err_detalle: "No se pudo cargar el detalle: ",
+    sin_titulo: "(sin título)", ofertas_uno: "oferta", ofertas_varias: "ofertas",
+    materiales_listos: "materiales listos",
+    btn_aprobar_pack: "Aprobar y generar pack", btn_regenerar_pack: "Regenerar / ver pack",
+    btn_descartar: "Descartar", abrir_oferta: "Abrir oferta ↗",
+    desc_y_req: "Descripción y requisitos", requisitos: "Requisitos",
+    porque_score: "Por qué este score",
+    sin_descripcion: "Sin descripción guardada.",
+    carta_titulo: "Carta de presentación", mensaje_titulo: "Mensaje de contacto",
+    btn_copiar: "Copiar", btn_copiado: "Copiado", btn_error: "Error",
+    descargas: "Descargas", respuestas_form: "Respuestas del formulario",
+    respuestas_hint: "Pégalas tú: este panel nunca envía la candidatura.",
+    sin_pdfs: "Aún no hay PDFs generados.", sin_carta: "(sin carta generada)",
+    sin_respuesta: "(sin respuesta)",
+    pack_cv_pdf: "CV (PDF)", pack_cover_pdf: "Carta (PDF)", pack_cover_txt: "Carta (texto)",
+    selecciona_oferta: "Selecciona una oferta antes de actuar.",
+    accion_en_curso: "Ya hay una acción en curso. Espera a que termine.",
+    generando_pack_btn: "Generando pack… (puede tardar 1-2 min)",
+    descartando_btn: "Descartando…",
+    generando_pack_aviso: "Generando carta, CV y mensaje. No cierres la pestaña.",
+    marcando_descartada: "Marcando como descartada…",
+    err_pintar_pack: "no se pudo pintar el pack: ",
+    ok_aprobada: "Aprobada. Materiales listos",
+    ok_respuestas: " y {n} respuesta(s) de formulario.",
+    avisos: " Avisos: ", ok_descartada: "Oferta descartada.",
+    copiado_portapapeles: "Copiado al portapapeles.", copiado_ok: "Copiado.",
+    sin_actividad: "(sin actividad todavía)",
+    estado_corriendo: "corriendo", estado_espera: "en espera",
+    // --- Profile ---
+    titulo_perfil: "Mi perfil", btn_anadir_dato: "Añadir dato",
+    btn_eliminar: "Eliminar", btn_editar_json: "Editar JSON",
+    cargando_perfil: "Cargando perfil…",
+    err_cargar_perfil: "No se pudo cargar el perfil: ",
+    p_perfil: "Perfil", p_posicionamiento: "Posicionamiento",
+    p_experiencia: "Experiencia", p_proyectos: "Proyectos",
+    p_educacion: "Educación", p_idiomas: "Idiomas",
+    p_certificaciones: "Certificaciones", p_compensacion: "Compensación",
+    p_criterios: "Criterios de búsqueda",
+    p_liderazgo: "Liderazgo:", p_sin_certs: "Sin certificaciones registradas.",
+    p_minimo: "Mínimo", p_objetivo: "Objetivo",
+    // --- Profile editor ---
+    modal_anadir_titulo: "Añadir o actualizar un dato",
+    modal_anadir_desc: "Escríbelo en lenguaje natural. DeepSeek lo analiza y lo integra en tu perfil <strong class=\"font-semibold text-[#2d325b]/80\">sin inventar nada</strong>, marcado como declarado por ti (evidencia <code class=\"rounded bg-[#fafafa] px-1 py-0.5 text-[#2d325b]\">USR</code>). Ej: «ahora lidero 4 personas en [empresa]» o «mi inglés es C1 certificado».",
+    modal_texto_ph: "Ej: mi inglés es C1 certificado\nEj: ahora lidero 4 personas en [empresa]",
+    btn_analizar: "Analizar y añadir", btn_cancelar: "Cancelar",
+    modal_borrar_titulo: "Eliminar datos",
+    modal_borrar_desc: "Marca los apartados o líneas que quieras borrar. Se guarda copia en <code class=\"rounded bg-[#fafafa] px-1 py-0.5\">perfil.json.bak</code>.",
+    btn_eliminar_sel: "Eliminar seleccionados",
+    modal_json_desc: "El JSON completo de <code class=\"rounded bg-[#fafafa] px-1 py-0.5\">data/perfil.json</code>. Se valida la estructura antes de escribir y se guarda copia en <code class=\"rounded bg-[#fafafa] px-1 py-0.5\">perfil.json.bak</code>.",
+    btn_validar_guardar: "Validar y guardar",
+    editor_titular: "Titular (headline)", editor_pendientes: "Pendientes",
+    editor_otros: "Otros apartados",
+    editor_vacio: "No hay nada borrable en el perfil.",
+    err_marca: "Marca al menos una línea.", borrando: "Borrando…",
+    borrados_n: "Borrados {n}/{t}.",
+    borrados_ok: "Borrados {n} dato(s). Copia anterior en perfil.json.bak.",
+    json_invalido: "JSON no válido: ",
+    json_objeto: "El perfil debe ser un objeto JSON ({...}).",
+    validando: "Validando y guardando…",
+    perfil_guardado: "Perfil guardado. Copia anterior en perfil.json.bak.",
+    err_guardar: "No se pudo guardar: ", analizando: "Analizando…",
+    perfil_texto_vacio: "Escribe primero el dato o el cambio que quieres añadir.",
+    deepseek_leyendo: "DeepSeek está leyendo el texto…",
+    cambios_aplicados: "Cambios aplicados ({n}):",
+    sin_dato: "El texto no aporta ningún dato concreto; no se cambió nada.",
+    err_actualizar_perfil: "No se pudo actualizar el perfil: ",
+    // --- Ask ---
+    preg_titulo: "Asistente de candidatura",
+    preg_desc: "Responde con lo que hay en <code class=\"rounded bg-[#fafafa] px-1 py-0.5 text-[#2d325b]\">data/perfil.json</code> (sin inventar: marca PEND lo que falta) y, si le pasas el contexto de la oferta, también contesta preguntas sobre la empresa y el puesto.",
+    lbl_empresa: "Empresa (opcional)",
+    lbl_contexto: "Contexto de la oferta / empresa (opcional)",
+    contexto_ph: "Pega la descripción del puesto o qué hace la empresa. Necesario para preguntas tipo «what makes X special?» o «what interests you about this role?».",
+    lbl_preguntas: "Preguntas (una por línea)",
+    preguntas_ph: "¿Cuántos años de experiencia tienes con Figma?\nDo you need visa sponsorship?\n¿Cuál es tu expectativa salarial?",
+    como_responde: "Cómo responde",
+    como_1: "Una llamada al modelo por pregunta (temperatura 0.6).",
+    como_2: "Sin inventar empresas, fechas, métricas ni idiomas.",
+    como_3: "Contesta en el idioma de cada pregunta.",
+    como_4: "Si pasas el contexto de la oferta, responde sobre la empresa y el puesto; si no, te lo pide en vez de inventar.",
+    como_5: "Puedes pegar hasta 12 preguntas de golpe.",
+    respuestas_titulo: "Respuestas",
+    respuestas_contador: "{n} de {m} respondidas",
+    preguntas_vacio: "Escribe al menos una pregunta (una por línea).",
+    modelo_sin_texto: "El modelo no devolvió texto para esta pregunta.",
+    pensando: "Pensando…",
+    preguntando_estado: "{n} pregunta(s) · puede tardar",
+    algunas_fallaron: "Algunas preguntas fallaron: ",
+    listo_revisa: "Listo. Revisa y copia cada respuesta.",
+    // --- Settings extras / health ---
+    modalidad_remoto: "remoto", modalidad_hibrido: "híbrido",
+    modalidad_presencial: "presencial", modalidad_indiferente: "indiferente",
+    ph_nuevo_valor: "nuevo valor (vacío = no cambiar)",
+    ph_slug_opcional: "slug (opcional)",
+    ph_dias: "lunes, martes (vacío = todos)",
+    salud_sesion: "sesión", salud_sin_sesion: "sin sesión",
+    salud_caducada: "LinkedIn · caducada", salud_omitido: "Telegram · omitido",
+    salud_escribible: "escribible", salud_no_escribible: "no escribible",
+    // --- Profile vocabulary (language-neutral keys in the data) ---
+    lang_espanol: "Español", lang_ingles: "Inglés", lang_catalan: "Catalán",
+    lang_frances: "Francés", lang_aleman: "Alemán", lang_chino_mandarin: "Chino mandarín",
+    sk_producto_diseno: "Producto y diseño", sk_ia_llm: "IA y LLM",
+    sk_frontend: "Frontend", sk_backend_datos: "Backend y datos",
+    sk_monetizacion: "Monetización", sk_transferibles: "Transferibles",
+    crit_rol_prioritario: "Rol prioritario", crit_modalidad: "Modalidad",
+    crit_salario_minimo: "Salario mínimo", crit_salario_objetivo: "Salario objetivo",
+    crit_geografia: "Geografía", crit_zona_horaria: "Zona horaria",
+    crit_tipo_contrato: "Tipo de contrato",
   },
   en: {
     subtitulo: "job board panel",
@@ -2431,6 +2522,120 @@ const I18N = {
     ayuda_legal2: "This panel does not auto-apply: it never sends applications or messages for you. You approve and copy by hand.",
     ayuda_legal3: "Keep a conservative pace: few visits, high cooldown, no aggressive parallelism.",
     ayuda_legal4: "Model answers can be wrong. Review them before sending.",
+    // --- Offers / detail / materials ---
+    app_titulo: "jobautomat · job board panel",
+    btn_recargar: "Refresh", btn_recargar_metricas: "Refresh metrics",
+    btn_cerrar: "Close", idioma_btn: "Language",
+    cargando: "Loading…", cargando_ofertas: "Loading jobs…",
+    sin_ofertas: "No jobs match this filter.",
+    panel_vacio: "Select a job to see its details and rationale.",
+    err_cargar: "Could not load: ", err_detalle: "Could not load the details: ",
+    sin_titulo: "(untitled)", ofertas_uno: "offer", ofertas_varias: "offers",
+    materiales_listos: "materials ready",
+    btn_aprobar_pack: "Approve and generate pack", btn_regenerar_pack: "Regenerate / view pack",
+    btn_descartar: "Discard", abrir_oferta: "Open job ↗",
+    desc_y_req: "Description and requirements", requisitos: "Requirements",
+    porque_score: "Why this score",
+    sin_descripcion: "No saved description.",
+    carta_titulo: "Cover letter", mensaje_titulo: "Contact message",
+    btn_copiar: "Copy", btn_copiado: "Copied", btn_error: "Error",
+    descargas: "Downloads", respuestas_form: "Form answers",
+    respuestas_hint: "Paste them yourself: this panel never sends the application.",
+    sin_pdfs: "No PDFs generated yet.", sin_carta: "(no cover letter yet)",
+    sin_respuesta: "(no answer)",
+    pack_cv_pdf: "CV (PDF)", pack_cover_pdf: "Cover letter (PDF)", pack_cover_txt: "Cover letter (text)",
+    selecciona_oferta: "Select an offer before acting.",
+    accion_en_curso: "An action is already running. Wait for it to finish.",
+    generando_pack_btn: "Generating pack… (can take 1-2 min)",
+    descartando_btn: "Discarding…",
+    generando_pack_aviso: "Generating cover letter, CV and message. Do not close the tab.",
+    marcando_descartada: "Marking as discarded…",
+    err_pintar_pack: "could not render the pack: ",
+    ok_aprobada: "Approved. Materials ready",
+    ok_respuestas: " and {n} form answer(s).",
+    avisos: " Warnings: ", ok_descartada: "Offer discarded.",
+    copiado_portapapeles: "Copied to clipboard.", copiado_ok: "Copied.",
+    sin_actividad: "(no activity yet)",
+    estado_corriendo: "running", estado_espera: "idle",
+    // --- Profile ---
+    titulo_perfil: "My profile", btn_anadir_dato: "Add data",
+    btn_eliminar: "Delete", btn_editar_json: "Edit JSON",
+    cargando_perfil: "Loading profile…",
+    err_cargar_perfil: "Could not load the profile: ",
+    p_perfil: "Profile", p_posicionamiento: "Positioning",
+    p_experiencia: "Experience", p_proyectos: "Projects",
+    p_educacion: "Education", p_idiomas: "Languages",
+    p_certificaciones: "Certifications", p_compensacion: "Compensation",
+    p_criterios: "Search criteria",
+    p_liderazgo: "Leadership:", p_sin_certs: "No certifications on file.",
+    p_minimo: "Minimum", p_objetivo: "Target",
+    // --- Profile editor ---
+    modal_anadir_titulo: "Add or update a data point",
+    modal_anadir_desc: "Write it in plain language. DeepSeek analyzes it and folds it into your profile <strong class=\"font-semibold text-[#2d325b]/80\">without inventing anything</strong>, marked as declared by you (evidence <code class=\"rounded bg-[#fafafa] px-1 py-0.5 text-[#2d325b]\">USR</code>). E.g. “I now lead 4 people at [company]” or “my English is certified C1”.",
+    modal_texto_ph: "e.g. my English is certified C1\ne.g. I now lead 4 people at [company]",
+    btn_analizar: "Analyze and add", btn_cancelar: "Cancel",
+    modal_borrar_titulo: "Delete data",
+    modal_borrar_desc: "Tick the sections or lines you want to delete. A backup is saved to <code class=\"rounded bg-[#fafafa] px-1 py-0.5\">perfil.json.bak</code>.",
+    btn_eliminar_sel: "Delete selected",
+    modal_json_desc: "The full JSON of <code class=\"rounded bg-[#fafafa] px-1 py-0.5\">data/perfil.json</code>. The structure is validated before writing and a backup is saved to <code class=\"rounded bg-[#fafafa] px-1 py-0.5\">perfil.json.bak</code>.",
+    btn_validar_guardar: "Validate and save",
+    editor_titular: "Headline", editor_pendientes: "Pending items",
+    editor_otros: "Other sections",
+    editor_vacio: "Nothing to delete in the profile.",
+    err_marca: "Tick at least one line.", borrando: "Deleting…",
+    borrados_n: "Deleted {n}/{t}.",
+    borrados_ok: "Deleted {n} item(s). Previous copy in perfil.json.bak.",
+    json_invalido: "Invalid JSON: ",
+    json_objeto: "The profile must be a JSON object ({...}).",
+    validando: "Validating and saving…",
+    perfil_guardado: "Profile saved. Previous copy in perfil.json.bak.",
+    err_guardar: "Could not save: ", analizando: "Analyzing…",
+    perfil_texto_vacio: "Write the data or change you want to add first.",
+    deepseek_leyendo: "DeepSeek is reading the text…",
+    cambios_aplicados: "Changes applied ({n}):",
+    sin_dato: "The text has no concrete data; nothing was changed.",
+    err_actualizar_perfil: "Could not update the profile: ",
+    // --- Ask ---
+    preg_titulo: "Application assistant",
+    preg_desc: "Answers using what is in <code class=\"rounded bg-[#fafafa] px-1 py-0.5 text-[#2d325b]\">data/perfil.json</code> (no inventing: missing data is marked PEND) and, if you pass the job context, it also answers questions about the company and the role.",
+    lbl_empresa: "Company (optional)",
+    lbl_contexto: "Job / company context (optional)",
+    contexto_ph: "Paste the job description or what the company does. Needed for questions like “what makes X special?” or “what interests you about this role?”.",
+    lbl_preguntas: "Questions (one per line)",
+    preguntas_ph: "How many years of experience do you have with Figma?\nDo you need visa sponsorship?\nWhat is your salary expectation?",
+    como_responde: "How it answers",
+    como_1: "One model call per question (temperature 0.6).",
+    como_2: "Never invents companies, dates, metrics or languages.",
+    como_3: "Answers in the language of each question.",
+    como_4: "If you pass the job context, it answers about the company and the role; otherwise it asks you instead of inventing.",
+    como_5: "You can paste up to 12 questions at once.",
+    respuestas_titulo: "Answers",
+    respuestas_contador: "{n} of {m} answered",
+    preguntas_vacio: "Write at least one question (one per line).",
+    modelo_sin_texto: "The model returned no text for this question.",
+    pensando: "Thinking…",
+    preguntando_estado: "{n} question(s) · may take a while",
+    algunas_fallaron: "Some questions failed: ",
+    listo_revisa: "Done. Review and copy each answer.",
+    // --- Settings extras / health ---
+    modalidad_remoto: "remote", modalidad_hibrido: "hybrid",
+    modalidad_presencial: "on-site", modalidad_indiferente: "no preference",
+    ph_nuevo_valor: "new value (empty = do not change)",
+    ph_slug_opcional: "slug (optional)",
+    ph_dias: "monday, tuesday (empty = every day)",
+    salud_sesion: "session", salud_sin_sesion: "no session",
+    salud_caducada: "LinkedIn · expired", salud_omitido: "Telegram · omitted",
+    salud_escribible: "writable", salud_no_escribible: "not writable",
+    // --- Profile vocabulary (language-neutral keys in the data) ---
+    lang_espanol: "Spanish", lang_ingles: "English", lang_catalan: "Catalan",
+    lang_frances: "French", lang_aleman: "German", lang_chino_mandarin: "Mandarin Chinese",
+    sk_producto_diseno: "Product & design", sk_ia_llm: "AI & LLM",
+    sk_frontend: "Frontend", sk_backend_datos: "Backend & data",
+    sk_monetizacion: "Monetization", sk_transferibles: "Transferable",
+    crit_rol_prioritario: "Priority role", crit_modalidad: "Work mode",
+    crit_salario_minimo: "Minimum salary", crit_salario_objetivo: "Target salary",
+    crit_geografia: "Geography", crit_zona_horaria: "Time zone",
+    crit_tipo_contrato: "Contract type",
   },
 };
 
@@ -2454,6 +2659,16 @@ function aplicarIdioma(idioma, persistir = true) {
     const texto = (I18N[idiomaActual] || {})[el.dataset.i18nHtml];
     if (texto != null) el.innerHTML = texto;
   });
+  document.title = tr("app_titulo");
+  document.querySelectorAll("[data-i18n-title]").forEach((el) => {
+    el.title = tr(el.dataset.i18nTitle);
+  });
+  document.querySelectorAll("[data-i18n-aria]").forEach((el) => {
+    el.setAttribute("aria-label", tr(el.dataset.i18nAria));
+  });
+  document.querySelectorAll("[data-i18n-ph]").forEach((el) => {
+    el.placeholder = tr(el.dataset.i18nPh);
+  });
   const lbl = $("idioma-label");
   if (lbl) lbl.textContent = idiomaActual.toUpperCase();
   // The search button has two labels depending on its state: if it is
@@ -2470,6 +2685,10 @@ function aplicarIdioma(idioma, persistir = true) {
   pintarBadgesSecretos();
   if (stateLinkedin !== null) pintarLinkedin(stateLinkedin);
   if (stateMetricas) pintarMetricas(stateMetricas);
+  // Repaint the parts that are built in JS so they follow the new language.
+  if (typeof pintarLista === "function") pintarLista();
+  if (state.actual && state.actual.estado) pintarBotones(state.actual.estado);
+  if (statePerfil.datos) pintarPerfil(statePerfil.datos);
 }
 
 $("btn-idioma").addEventListener("click", () =>
@@ -2571,12 +2790,12 @@ async function pollLog() {
     const texto = (datos.lineas || []).join("\n");
     const el = $("log");
     if (texto !== logAnterior) {
-      el.textContent = texto || "(sin actividad todavía)";
+      el.textContent = texto || tr("sin_actividad");
       el.scrollTop = el.scrollHeight;
       logAnterior = texto;
     }
     $("estado-run").className = "h-2.5 w-2.5 rounded-full " + (datos.activo ? "bg-[#0d927d]" : "bg-[#999]");
-    $("estado-run-texto").textContent = datos.activo ? "corriendo" : "en espera";
+    $("estado-run-texto").textContent = datos.activo ? tr("estado_corriendo") : tr("estado_espera");
   } catch (e) { /* silent */ }
 }
 
