@@ -26,6 +26,7 @@ GET  /api/salud                     self-host diagnostics (LLM, Telegram,
 GET  /api/export                    profile + settings (secrets masked).
 POST /api/import                    restore profile and/or settings from an export.
 POST /api/fuente/probar             probe a board with one real request.
+POST /api/busquedas/limpiar         delete search results, keep approved ones.
 GET  /candidaturas/<path>           serve cv.pdf, cover.pdf, cover.txt.
 
 Authentication: HTTP Basic, user ``casa`` and the ``WEB_PASSWORD`` password
@@ -189,6 +190,8 @@ _LIMITES_POR_ENDPOINT = {
     # A manual search starts a full run (LinkedIn, LLM, Telegram): same ceiling
     # as the other actions.
     "api_buscar": (RATE_LIMIT_ACCIONES, RATE_LIMIT_VENTANA),
+    # Destructive: wipes the search results (only the approved ones survive).
+    "api_limpiar_busquedas": (RATE_LIMIT_ACCIONES, RATE_LIMIT_VENTANA),
     # NOTE: ``api_buscar_estado`` (GET) is deliberately absent: the panel polls
     # it every ~10 s to render the button, just like /api/log every 3 s; at
     # 120/h per IP the button would lock within minutes. It is a side-effect
@@ -2165,6 +2168,38 @@ def api_buscar():
         )
     )
     return jsonify({"ok": True, "detalle": "búsqueda lanzada"}), 202
+
+
+@app.post("/api/busquedas/limpiar")
+def api_limpiar_busquedas():
+    """Delete the search results so the next run starts from zero.
+
+    Discards every offer in the search flow (``para_confirmar`` and
+    ``descartada``) and empties the score cache. Approved offers and their
+    generated materials are kept.
+
+    Returns:
+        ``{"borradas": n}`` with the number of deleted ``oportunidades`` rows,
+        or 500 with ``{"error": ...}`` when the database cannot be cleaned.
+    """
+    try:
+        borradas = db.limpiar_busquedas()
+    except Exception as err:  # noqa: BLE001 — surface a readable DB error.
+        print(
+            t(
+                f"[web] no se pudieron borrar las búsquedas: {err}",
+                f"[web] could not clear the search results: {err}",
+            ),
+        )
+        return jsonify({"error": f"no se pudieron borrar las búsquedas: {err}"}), 500
+
+    print(
+        t(
+            f"[web] búsquedas borradas: {borradas} ofertas",
+            f"[web] search results cleared: {borradas} offers",
+        ),
+    )
+    return jsonify({"borradas": borradas})
 
 
 if __name__ == "__main__":

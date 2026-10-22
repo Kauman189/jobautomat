@@ -254,6 +254,37 @@ def guardar_materiales(id_, cover_letter, cv_adaptado, mensaje, path=None):
         conn.close()
 
 
+def limpiar_busquedas(path=None):
+    """Delete every search result, keeping the approved offers.
+
+    Removes the ``oportunidades`` rows still in the search flow
+    (``para_confirmar`` and ``descartada``) and empties the whole
+    ``score_cache`` table, so the next run scores every offer again.
+    ``aprobada`` rows are left untouched, materials included.
+
+    Args:
+        path: Optional database path (defaults to ``DB_PATH``).
+
+    Returns:
+        The number of ``oportunidades`` rows deleted.
+
+    Raises:
+        sqlite3.Error: If the database cannot be opened or written.
+    """
+    path = _resolver_path(path)
+    conn = _conectar(path)
+    try:
+        cur = conn.execute(
+            "DELETE FROM oportunidades WHERE estado IN ('para_confirmar', 'descartada')"
+        )
+        borradas = cur.rowcount
+        conn.execute("DELETE FROM score_cache")
+        conn.commit()
+        return borradas
+    finally:
+        conn.close()
+
+
 # ---------------------------------------------------------------------------
 # Score cache (``score_cache`` table)
 # ---------------------------------------------------------------------------
