@@ -46,6 +46,11 @@
     </nav>
 
     <div class="ml-auto flex shrink-0 items-center gap-2 text-sm text-[#999]">
+      <button id="btn-linkedin" type="button" title="LinkedIn" aria-label="LinkedIn"
+        class="flex items-center gap-1.5 rounded-full border border-[#ddd] bg-white px-3 py-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-[#999] transition hover:border-[#3898ec] hover:text-[#3898ec] disabled:cursor-not-allowed disabled:opacity-60">
+        <span id="btn-linkedin-dot" class="h-2 w-2 shrink-0 rounded-full bg-[#999]"></span>
+        <span>LinkedIn</span>
+      </button>
       <button id="btn-buscar" type="button" title="Buscar ahora" aria-label="Buscar ahora"
         class="flex items-center gap-1.5 rounded-full border border-[#0d927d]/50 bg-[#0d927d]/5 px-3 py-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-[#0d927d] transition hover:border-[#0d927d] hover:bg-[#0d927d]/10 disabled:cursor-not-allowed disabled:opacity-60">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 4 20 12 6 20 6 4"/></svg>
@@ -1746,6 +1751,82 @@ async function cargarMetricas() {
 const SECRETOS_CONFIG = ["DEEPSEEK_API_KEY", "TELEGRAM_BOT_TOKEN", "WEB_PASSWORD"];
 const stateConfig = { original: null, secretos: {}, cargando: false };
 
+/* --- LinkedIn toggle (header, always visible) --- */
+
+// null = still unknown (nothing fetched yet)
+let stateLinkedin = null;
+
+function pintarLinkedin(activo) {
+  stateLinkedin = !!activo;
+  const btn = $("btn-linkedin");
+  if (!btn) return;
+  const on = !!activo;
+  btn.dataset.activo = on ? "1" : "0";
+  btn.className = "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.12em] transition disabled:cursor-not-allowed disabled:opacity-60 " + (on
+    ? "border-[#0d927d]/50 bg-[#0d927d]/5 text-[#0d927d] hover:border-[#0d927d] hover:bg-[#0d927d]/10"
+    : "border-[#ddd] bg-white text-[#999] hover:border-[#f66d6d] hover:text-[#c94f4f]");
+  const dot = $("btn-linkedin-dot");
+  if (dot) dot.className = "h-2 w-2 shrink-0 rounded-full " + (on ? "bg-[#0d927d]" : "bg-[#c94f4f]");
+  const titulo = on ? tr("ln_titulo_on") : tr("ln_titulo_off");
+  btn.title = titulo;
+  btn.setAttribute("aria-label", titulo);
+}
+
+async function cargarLinkedin() {
+  try {
+    const res = await fetch("/api/config");
+    if (!res.ok) return;
+    const datos = await res.json();
+    const cfg = (datos && datos.config) || {};
+    if (Object.prototype.hasOwnProperty.call(cfg, "FUENTES_LINKEDIN")) {
+      pintarLinkedin(!!cfg.FUENTES_LINKEDIN);
+    }
+  } catch (e) { /* silent: el panel sigue funcionando sin el toggle */ }
+}
+
+function sincronizarCheckboxLinkedin(valor) {
+  const chk = $("cfg-fuentes-linkedin");
+  if (chk) chk.checked = !!valor;
+  // If the settings form was already loaded, keep its baseline in sync so
+  // "Guardar" does not send this key again (nor undo the change).
+  if (stateConfig.original && Object.prototype.hasOwnProperty.call(stateConfig.original, "FUENTES_LINKEDIN")) {
+    stateConfig.original.FUENTES_LINKEDIN = !!valor;
+  }
+}
+
+const btnLinkedin = $("btn-linkedin");
+if (btnLinkedin) {
+  btnLinkedin.addEventListener("click", async () => {
+    if (btnLinkedin.disabled) return;
+    const actual = !!stateLinkedin;
+    const nuevo = !actual;
+    btnLinkedin.disabled = true;
+    try {
+      const res = await fetch("/api/config", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ FUENTES_LINKEDIN: nuevo }),
+      });
+      let datos = {};
+      try { datos = await res.json(); } catch (e) { datos = {}; }
+      if (!res.ok) throw new Error(datos.error || datos.detalle || ("HTTP " + res.status));
+      const servidor = datos && datos.config && Object.prototype.hasOwnProperty.call(datos.config, "FUENTES_LINKEDIN")
+        ? !!datos.config.FUENTES_LINKEDIN
+        : nuevo;
+      pintarLinkedin(servidor);
+      sincronizarCheckboxLinkedin(servidor);
+      aviso(servidor ? tr("ln_on") : tr("ln_off"), "ok");
+    } catch (err) {
+      pintarLinkedin(actual);
+      aviso(tr("buscar_error") + " " + (err && err.message ? err.message : err), "error");
+    } finally {
+      btnLinkedin.disabled = false;
+    }
+  });
+  cargarLinkedin();
+}
+
+
 function avisoConfig(texto, tipo = "info") {
   const el = $("cfg-aviso");
   const tonos = {
@@ -1836,6 +1917,11 @@ function pintarConfig(config, secretos) {
   // Secrets are never prefilled: the input is only for a new value.
   document.querySelectorAll("#cfg-form [data-secreto]").forEach((el) => { el.value = ""; });
   pintarBadgesSecretos();
+
+  // Keep the header pill in sync with whatever the form now shows.
+  if (Object.prototype.hasOwnProperty.call(config, "FUENTES_LINKEDIN")) {
+    pintarLinkedin(!!config.FUENTES_LINKEDIN);
+  }
 }
 
 async function cargarConfig() {
@@ -2119,6 +2205,9 @@ const I18N = {
     titulo_ofertas: "Ofertas", titulo_actividad: "Actividad en vivo",
     auto_actualiza: "se actualiza solo",
     btn_buscar: "Buscar ahora", btn_buscando: "buscando…",
+    ln_on: "LinkedIn activado", ln_off: "LinkedIn desactivado",
+    ln_titulo_on: "Desactivar LinkedIn (fuente menos segura)",
+    ln_titulo_off: "Activar LinkedIn",
     buscar_lanzada: "búsqueda lanzada — sigue la actividad en vivo",
     buscar_en_curso: "ya hay una búsqueda en curso",
     buscar_error: "No se pudo lanzar la búsqueda:",
@@ -2209,6 +2298,9 @@ const I18N = {
     titulo_ofertas: "Jobs", titulo_actividad: "Live activity",
     auto_actualiza: "auto-refreshing",
     btn_buscar: "Search now", btn_buscando: "searching…",
+    ln_on: "LinkedIn enabled", ln_off: "LinkedIn disabled",
+    ln_titulo_on: "Disable LinkedIn (less safe source)",
+    ln_titulo_off: "Enable LinkedIn",
     buscar_lanzada: "search launched — follow the live activity",
     buscar_en_curso: "a search is already running",
     buscar_error: "Could not start the search:",
@@ -2326,6 +2418,7 @@ function aplicarIdioma(idioma, persistir = true) {
     try { localStorage.setItem("jobautomat_idioma", idiomaActual); } catch (e) { /* private mode */ }
   }
   pintarBadgesSecretos();
+  if (stateLinkedin !== null) pintarLinkedin(stateLinkedin);
   if (stateMetricas) pintarMetricas(stateMetricas);
 }
 
