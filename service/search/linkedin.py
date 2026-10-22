@@ -33,6 +33,10 @@ Design
    ``~/.linkedin-mcp/cookies.json``).
 5. **No secrets in logs.** Cookie values, headers and the session JSON are
    never written to logs: at most, how many cookies were loaded.
+6. **Budget before cooldown.** Every page navigation increments a persistent
+   daily counter (``data/linkedin_usage.json``); once it reaches
+   ``MAX_PETICIONES_LINKEDIN_DIA`` the source is skipped for the rest of the
+   day, so the block is never reached instead of being handled afterwards.
 
 A posting description is third-party text: here it is only extracted and
 trimmed, never interpreted or executed.
@@ -91,11 +95,14 @@ TIMEOUT_DESCARGA_DETALLE = 25_000
 MAX_SCROLLS = 12
 
 # Pauses (seconds). Wide random ranges: less fingerprint than a fixed pattern.
-PAUSA_ENTRE_QUERIES = (3.0, 6.5)
-PAUSA_ENTRE_PAGINAS = (2.5, 5.0)
-PAUSA_ENTRE_OFERTAS = (2.0, 5.0)
-PAUSA_SCROLL = (0.5, 1.4)
-PAUSA_TRAS_NAVEGAR = (1.2, 2.6)
+# Kept deliberately slow: LinkedIn rate-limits by page views per hour (a safe
+# ceiling is roughly 80-100 per hour), so consecutive navigations must be
+# ~15-30 s apart (PAUSA_TRAS_NAVEGAR + PAUSA_ENTRE_OFERTAS / PAUSA_ENTRE_PAGINAS).
+PAUSA_ENTRE_QUERIES = (20.0, 40.0)
+PAUSA_ENTRE_PAGINAS = (10.0, 18.0)
+PAUSA_ENTRE_OFERTAS = (9.0, 18.0)
+PAUSA_SCROLL = (1.5, 3.5)
+PAUSA_TRAS_NAVEGAR = (6.0, 12.0)
 
 # --------------------------------------------------------------------------- #
 # Selectors and LinkedIn DOM
@@ -373,6 +380,102 @@ def _formato_duracion(segundos: int) -> str:
 
 
 # --------------------------------------------------------------------------- #
+# Daily request budget
+# --------------------------------------------------------------------------- #
+# The cooldown only reacts *after* LinkedIn blocks. To avoid getting there, every
+# page navigation (search, pagination, posting detail) increments a persistent
+# daily counter; once it reaches ``MAX_PETICIONES_LINKEDIN_DIA`` the source is
+# skipped for the rest of the day. The counter lives in a small JSON file, same
+# idea as the cooldown, so several runs in one day add up.
+
+RUTA_USO_DEFECTO = "../data/linkedin_usage.json"
+MAX_PETICIONES_DEFECTO = 60
+VARIABLE_MAX_PETICIONES = "MAX_PETICIONES_LINKEDIN_DIA"
+
+
+def _entero_entorno(variable: str, defecto: int) -> int:
+    """Read a positive integer from the environment, falling back to ``defecto``."""
+    crudo = (os.environ.get(variable) or "").strip()
+    if not crudo:
+        return defecto
+    try:
+        valor = int(crudo)
+    except ValueError:
+        log.warning("%s=%r no es un entero; se usa %s.", variable, crudo, defecto)
+        return defecto
+    if valor <= 0:
+        log.warning("%s=%r no es positivo; se usa %s.", variable, crudo, defecto)
+        return defecto
+    return valor
+
+
+def _max_peticiones_dia() -> int:
+    """Daily request ceiling (``MAX_PETICIONES_LINKEDIN_DIA``, default 60)."""
+    return _entero_entorno(VARIABLE_MAX_PETICIONES, MAX_PETICIONES_DEFECTO)
+
+
+def _ruta_uso() -> Path:
+    """Resolve the usage counter path (env override allowed)."""
+    crudo = os.environ.get("LINKEDIN_USAGE_PATH") or RUTA_USO_DEFECTO
+    ruta = Path(os.path.expanduser(crudo.strip()))
+    if not ruta.is_absolute():
+        ruta = (RAIZ_SERVICIO / ruta).resolve()
+    return ruta
+
+
+def _hoy() -> str:
+    """Local date in ``YYYY-MM-DD`` (the counter's day boundary)."""
+    return time.strftime("%Y-%m-%d")
+
+
+def _leer_uso() -> dict[str, Any]:
+    """Read today's counter; any other date (or a broken file) counts as 0."""
+    try:
+        with _ruta_uso().open("r", encoding="utf-8") as fh:
+            datos = json.load(fh)
+    except (OSError, ValueError, TypeError):
+        return {"fecha": _hoy(), "peticiones": 0}
+    if not isinstance(datos, dict) or datos.get("fecha") != _hoy():
+        return {"fecha": _hoy(), "peticiones": 0}
+    try:
+        peticiones = max(0, int(datos.get("peticiones") or 0))
+    except (TypeError, ValueError):
+        peticiones = 0
+    return {"fecha": _hoy(), "peticiones": peticiones}
+
+
+def _registrar_peticion() -> int:
+    """Add one request to today's counter and return the new total.
+
+    A new day resets the counter. A write failure only warns: the budget must
+    never take a run down.
+    """
+    datos = _leer_uso()
+    datos["peticiones"] = int(datos["peticiones"]) + 1
+    ruta = _ruta_uso()
+    try:
+        ruta.parent.mkdir(parents=True, exist_ok=True)
+        tmp = ruta.with_name(ruta.name + ".tmp")
+        with tmp.open("w", encoding="utf-8") as fh:
+            json.dump(datos, fh)
+        os.replace(tmp, ruta)
+    except OSError as exc:
+        log.warning("No se pudo escribir el contador de uso de LinkedIn: %s", exc)
+    log.debug(
+        "Petición LinkedIn %s/%s (%s).",
+        datos["peticiones"],
+        _max_peticiones_dia(),
+        datos["fecha"],
+    )
+    return int(datos["peticiones"])
+
+
+def _presupuesto_agotado() -> bool:
+    """True if today's requests already reached ``MAX_PETICIONES_LINKEDIN_DIA``."""
+    return _leer_uso()["peticiones"] >= _max_peticiones_dia()
+
+
+# --------------------------------------------------------------------------- #
 # Utilities
 # --------------------------------------------------------------------------- #
 
@@ -638,9 +741,14 @@ class ClienteLinkedIn:
     # -- navigation -------------------------------------------------------- #
 
     def _ir(self, url: str) -> None:
-        """Navigate with one retry and check that no login wall appeared."""
+        """Navigate with one retry and check that no login wall appeared.
+
+        Every page load (search, pagination or detail) counts against the
+        daily budget: it is the exact unit LinkedIn rate-limits.
+        """
         self._arrancar()
         assert self._pagina is not None
+        _registrar_peticion()
         for intento in (1, 2):
             try:
                 self._pagina.goto(url, wait_until="domcontentloaded", timeout=TIMEOUT_NAVEGACION)
@@ -775,6 +883,16 @@ class ClienteLinkedIn:
         assert self._pagina is not None
         for pagina in range(MAX_PAGINAS):
             if len(encontradas) >= maximo:
+                break
+            # Pagination costs a request too: stop as soon as the day's budget
+            # is gone instead of finishing the list.
+            if _presupuesto_agotado():
+                log.warning(
+                    "Presupuesto diario de LinkedIn agotado (%s peticiones); "
+                    "se corta la paginación de %r.",
+                    _max_peticiones_dia(),
+                    query,
+                )
                 break
             url = URL_BUSQUEDA.format(query=quote_plus(query), inicio=inicio)
             log.info("Buscando %r (página %s)...", query, pagina + 1)
@@ -1078,6 +1196,17 @@ def search_jobs(queries: Iterable[str] | str, limit: int = 20) -> list[dict[str,
             "este run."
         )
 
+    # Daily request budget: never even start if today's pages are spent. The
+    # counter file is shared across runs, so several runs cannot add up to a
+    # block.
+    if _presupuesto_agotado():
+        log.warning(
+            "Presupuesto diario de LinkedIn agotado (%s peticiones hoy); "
+            "se omite LinkedIn en este run.",
+            _max_peticiones_dia(),
+        )
+        return []
+
     cliente = _obtener_cliente()
 
     encontradas: dict[str, dict[str, Any]] = {}
@@ -1086,6 +1215,14 @@ def search_jobs(queries: Iterable[str] | str, limit: int = 20) -> list[dict[str,
 
     for indice, query in enumerate(lista_queries):
         if len(encontradas) >= limit:
+            break
+        if _presupuesto_agotado():
+            log.warning(
+                "Presupuesto diario de LinkedIn agotado (%s peticiones); "
+                "se dejan %s consultas sin buscar.",
+                _max_peticiones_dia(),
+                len(lista_queries) - indice,
+            )
             break
         try:
             tarjetas = cliente.buscar(query, maximo=limit)
@@ -1135,15 +1272,27 @@ def search_jobs(queries: Iterable[str] | str, limit: int = 20) -> list[dict[str,
     return list(encontradas.values())[:limit]
 
 
-def get_job_details(job_id: str) -> dict[str, Any]:
-    """Return the normalized detail of a posting.
+def get_job_details(job_id: str) -> dict[str, Any] | None:
+    """Return the normalized detail of a posting, or ``None`` when skipped.
 
     Reuses the same browser as ``search_jobs`` (does not open a new one). The
     resulting dict always contains ``job_id``, ``titulo``, ``empresa``,
     ``url``, ``ubicacion``, ``descripcion``, ``requisitos``, ``salario``,
     ``remoto`` and ``contrato``; missing fields are ``None``.
+
+    ``None`` means LinkedIn was not touched: the daily budget
+    (``MAX_PETICIONES_LINKEDIN_DIA``) is spent, so callers keep the card data.
+    The cap of details per run (``MAX_DETALLES_LINKEDIN_RUN``) is applied by
+    ``main.py`` before calling this function.
     """
     job_id = _extraer_job_id(job_id)
+    if _presupuesto_agotado():
+        log.warning(
+            "Presupuesto diario de LinkedIn agotado (%s peticiones); sin detalle para %s.",
+            _max_peticiones_dia(),
+            job_id,
+        )
+        return None
     cliente = _obtener_cliente()
     crudo = cliente.abrir_oferta(job_id)
     detalle = normalizar_detalle(crudo, job_id)

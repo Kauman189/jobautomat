@@ -27,5 +27,9 @@
 
   "_nota_sesion": "Warn when the LinkedIn session (cookies) is about to expire; SESION_LINKEDIN_MAX_DIAS accepts 1-365.",
   "ALERTAR_SESION_LINKEDIN": true,
-  "SESION_LINKEDIN_MAX_DIAS": 14
+  "SESION_LINKEDIN_MAX_DIAS": 14,
+
+  "_nota_presupuesto_linkedin": "LinkedIn blocks the account after too many requests. MAX_PETICIONES_LINKEDIN_DIA is the daily page-view budget (counted in data/linkedin_usage.json, resets at midnight; the source is skipped for the rest of the day when spent, 1-1000). MAX_DETALLES_LINKEDIN_RUN caps the posting details opened per run (1-500).",
+  "MAX_PETICIONES_LINKEDIN_DIA": 60,
+  "MAX_DETALLES_LINKEDIN_RUN": 25
 }

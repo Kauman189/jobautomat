@@ -55,6 +55,13 @@ _CONFIG_DEFS = {
     "RANGO_DUDOSO_MAX": ("int", 79),
     "MAX_ANTIGUEDAD_DIAS": ("int", 30),
     "LINKEDIN_COOLDOWN_SEGUNDOS": ("int", 21600),
+    # Daily request budget for LinkedIn (search pages, pagination and details).
+    # When the counter in data/linkedin_usage.json reaches this value the
+    # source is skipped for the rest of the day: LinkedIn blocks the account
+    # after a few dozen page views in one hour.
+    "MAX_PETICIONES_LINKEDIN_DIA": ("int", 60),
+    # Maximum posting details opened per run (the expensive navigation).
+    "MAX_DETALLES_LINKEDIN_RUN": ("int", 25),
     # --- notifications and self-hosting ---
     # Telegram can be disabled entirely (webhook / panel only).
     "TELEGRAM_HABILITADO": ("bool", True),
@@ -82,6 +89,8 @@ _RANGOS = {
     "TEMPERATURA": (0.0, 2.0),
     "MAX_ANTIGUEDAD_DIAS": (1, 365),
     "LINKEDIN_COOLDOWN_SEGUNDOS": (0, 604800),
+    "MAX_PETICIONES_LINKEDIN_DIA": (1, 1000),
+    "MAX_DETALLES_LINKEDIN_RUN": (1, 500),
     "SESION_LINKEDIN_MAX_DIAS": (1, 365),
 }
 

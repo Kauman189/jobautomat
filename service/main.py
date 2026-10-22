@@ -101,6 +101,15 @@ COOLDOWN_SEGUNDOS_DEFECTO = 6 * 3600
 VARIABLE_COOLDOWN = "LINKEDIN_COOLDOWN_SEGUNDOS"
 CLAVES_CONFIG_COOLDOWN = ("LINKEDIN_COOLDOWN_SEGUNDOS", "LINKEDIN_COOLDOWN")
 
+# Maximum number of LinkedIn detail requests (``get_job_details``) per run.
+# Each one opens the browser, so a run with many LinkedIn offers without a cap
+# ends up blocked; once the budget is spent the offer is scored with whatever
+# data it already has. Same resolution as age/cooldown: editable config >
+# environment variable > default.
+MAX_DETALLES_LINKEDIN_RUN = 25
+VARIABLE_DETALLES_LINKEDIN = "MAX_DETALLES_LINKEDIN_RUN"
+CLAVES_CONFIG_DETALLES = ("MAX_DETALLES_LINKEDIN_RUN",)
+
 # Origin of the offers (``source`` field of ``search.boards``).
 ORIGEN_LINKEDIN = "linkedin"
 
@@ -116,6 +125,14 @@ HILOS_SCORING = 1
 # The LinkedIn browser (patchright) is not safe to use from several threads at
 # once; this lock serializes detail requests.
 _LOCK_DETALLE_LINKEDIN = threading.Lock()
+
+# Per-run budget of LinkedIn detail requests (reset at the start of each run).
+_DETALLES_FETCHED = 0
+_TOPE_DETALLES_LINKEDIN = MAX_DETALLES_LINKEDIN_RUN
+# True once the "budget exhausted" warning has been logged in this run, so it
+# is written only once however many offers reach the limit.
+_AVISO_LIMITE_DETALLES = False
+_LOCK_CONTADOR_DETALLES = threading.Lock()
 
 log = logging.getLogger("jobautomat")
 
@@ -508,6 +525,43 @@ def _cooldown_segundos(config=None):
     )
 
 
+def _tope_detalles_linkedin(config=None):
+    """Max LinkedIn detail requests per run: editable config > env > 25."""
+    return _entero_config(
+        config,
+        CLAVES_CONFIG_DETALLES,
+        VARIABLE_DETALLES_LINKEDIN,
+        MAX_DETALLES_LINKEDIN_RUN,
+    )
+
+
+def _reservar_detalle_linkedin():
+    """Take one slot of the per-run LinkedIn detail budget (thread-safe).
+
+    Returns ``True`` while fewer than ``_TOPE_DETALLES_LINKEDIN`` requests have
+    been made, ``False`` once the budget is exhausted. The counter is raised
+    before the request, so a failing call still counts; the exhaustion warning
+    is logged only once per run (offers past the limit are scored with the data
+    they already carry).
+    """
+    global _DETALLES_FETCHED, _AVISO_LIMITE_DETALLES
+    with _LOCK_CONTADOR_DETALLES:
+        permitido = _DETALLES_FETCHED < _TOPE_DETALLES_LINKEDIN
+        if permitido:
+            _DETALLES_FETCHED += 1
+        avisar = False
+        if not permitido and not _AVISO_LIMITE_DETALLES:
+            _AVISO_LIMITE_DETALLES = True
+            avisar = True
+    if avisar:
+        log.warning(
+            "límite de detalles LinkedIn por run alcanzado (%s); "
+            "se evalúa con los datos disponibles",
+            _TOPE_DETALLES_LINKEDIN,
+        )
+    return permitido
+
+
 def _terminos_config(config):
     """Search terms from ``ROLES`` + ``TOPICS`` (deduplicated).
 
@@ -636,7 +690,7 @@ def _procesar_oferta(bruto, perfil, umbral, idioma="en"):
     # carry the full description (and launching Chromium for each would be
     # slow and pointless).
     origen = str(bruto.get("source") or ORIGEN_LINKEDIN).lower()
-    if origen == ORIGEN_LINKEDIN:
+    if origen == ORIGEN_LINKEDIN and _reservar_detalle_linkedin():
         job_id = bruto.get("id") or bruto.get("job_id") or op["id"]
         try:
             from search.linkedin import get_job_details
@@ -847,6 +901,12 @@ def _ejecutar_run(config, args):
     """
     _configurar_log_fichero(config)
     db.init_db()
+    # Fresh per-run budget of LinkedIn detail requests (browser calls); the cap
+    # is re-read here so a change in settings.json applies to this run.
+    global _DETALLES_FETCHED, _AVISO_LIMITE_DETALLES, _TOPE_DETALLES_LINKEDIN
+    _DETALLES_FETCHED = 0
+    _AVISO_LIMITE_DETALLES = False
+    _TOPE_DETALLES_LINKEDIN = _tope_detalles_linkedin(config)
     perfil = cargar_perfil(config)
     umbral = int(config.get("SCORE_THRESHOLD") or 80)
     # Language of the scoring descriptive texts (English by default). The config
