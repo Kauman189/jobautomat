@@ -423,6 +423,20 @@
     <div id="salud-aviso" class="mt-3 hidden rounded-lg border px-3 py-2 text-xs"></div>
   </section>
 
+  <!-- Data: start from zero -->
+  <section id="cfg-datos" class="mb-5 rounded-xl border border-[#ddd] bg-white p-5">
+    <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+      <h2 class="font-['Oswald'] text-sm uppercase tracking-[0.18em] text-[#999]" data-i18n="cfg_sec_datos">Datos</h2>
+      <p class="max-w-2xl text-xs leading-relaxed text-[#999]" data-i18n="cfg_hint_borrar_busquedas">
+        Borra las ofertas pendientes y descartadas y la caché de scores. Las aprobadas se conservan con sus materiales.
+      </p>
+      <div class="ml-auto flex flex-wrap items-center gap-2">
+        <button id="btn-borrar-busquedas" type="button" data-i18n="btn_borrar_busquedas"
+          class="rounded-full border border-[#f66d6d]/50 px-3 py-1.5 text-xs text-[#c94f4f] transition hover:bg-[#f66d6d]/10 disabled:opacity-50">Borrar búsquedas</button>
+      </div>
+    </div>
+  </section>
+
   <div id="cfg-aviso" class="mb-5 hidden rounded-lg border px-4 py-3 text-xs"></div>
   <div id="cfg-carga" class="rounded-xl border border-[#ddd] bg-white px-5 py-4 text-sm text-[#999]" data-i18n="cfg_cargando">Cargando configuración…</div>
 
@@ -2143,6 +2157,28 @@ async function importarDatos() {
   }
 }
 
+async function borrarBusquedas() {
+  const btn = $("btn-borrar-busquedas");
+  if (!btn) return;
+  if (!window.confirm(tr("cfg_borrar_confirmar"))) return;
+  btn.disabled = true;
+  avisoConfig(tr("cfg_borrando"), "info");
+  try {
+    const res = await fetch("/api/busquedas/limpiar", { method: "POST" });
+    let datos = {};
+    try { datos = await res.json(); } catch (e) { datos = {}; }
+    if (!res.ok) throw new Error(datos.error || ("HTTP " + res.status));
+    const n = datos.borradas != null ? datos.borradas : 0;
+    avisoConfig(tr("cfg_borrar_ok").replace("{n}", String(n)), "ok");
+    await cargar();
+    cargarMetricas();
+  } catch (err) {
+    avisoConfig(tr("cfg_borrar_error") + " " + (err && err.message ? err.message : err), "error");
+  } finally {
+    btn.disabled = false;
+  }
+}
+
 async function probarFuente(nombre, btn) {
   if (!nombre) return;
   const destino = document.querySelector(`[data-resultado="${nombre}"]`);
@@ -2266,6 +2302,13 @@ const I18N = {
     cfg_importando: "Importando…",
     cfg_import_ok: "Copia importada. Configuración y perfil recargados.",
     cfg_import_error: "No se pudo importar:",
+    cfg_sec_datos: "Datos",
+    cfg_hint_borrar_busquedas: "Borra las ofertas pendientes y descartadas y la caché de scores. Las aprobadas se conservan con sus materiales.",
+    btn_borrar_busquedas: "Borrar búsquedas",
+    cfg_borrar_confirmar: "Se borrarán todas las ofertas pendientes y descartadas y la caché de scores. Las aprobadas se conservan. ¿Continuar?",
+    cfg_borrando: "Borrando búsquedas…",
+    cfg_borrar_ok: "Búsquedas borradas: {n} ofertas.",
+    cfg_borrar_error: "No se pudieron borrar las búsquedas:",
     ayuda_titulo: "Ayuda",
     ayuda_intro: "jobautomat busca ofertas que encajan con tu perfil, las puntúa con un modelo y te prepara la candidatura. Tú decides: nada se envía solo.",
     ayuda_que_es_titulo: "Qué es",
@@ -2359,6 +2402,13 @@ const I18N = {
     cfg_importando: "Importing…",
     cfg_import_ok: "Backup imported. Settings and profile reloaded.",
     cfg_import_error: "Import failed:",
+    cfg_sec_datos: "Data",
+    cfg_hint_borrar_busquedas: "Deletes pending and discarded offers and the score cache. Approved ones are kept with their materials.",
+    btn_borrar_busquedas: "Clear searches",
+    cfg_borrar_confirmar: "All pending and discarded offers and the score cache will be deleted. Approved offers are kept. Continue?",
+    cfg_borrando: "Clearing searches…",
+    cfg_borrar_ok: "Searches cleared: {n} offers.",
+    cfg_borrar_error: "Could not clear the searches:",
     ayuda_titulo: "Help",
     ayuda_intro: "jobautomat finds jobs that fit your profile, scores them with a model and prepares your application. You decide: nothing is sent on its own.",
     ayuda_que_es_titulo: "What it is",
@@ -2384,7 +2434,7 @@ const I18N = {
   },
 };
 
-let idiomaActual = "es";
+let idiomaActual = "en";
 
 function tr(clave, porDefecto) {
   const dic = I18N[idiomaActual] || I18N.es;
@@ -2425,8 +2475,8 @@ function aplicarIdioma(idioma, persistir = true) {
 $("btn-idioma").addEventListener("click", () =>
   aplicarIdioma(idiomaActual === "es" ? "en" : "es"));
 
-let idiomaGuardado = "es";
-try { idiomaGuardado = localStorage.getItem("jobautomat_idioma") || "es"; } catch (e) { idiomaGuardado = "es"; }
+let idiomaGuardado = "en";
+try { idiomaGuardado = localStorage.getItem("jobautomat_idioma") || "en"; } catch (e) { idiomaGuardado = "en"; }
 aplicarIdioma(idiomaGuardado, false);
 
 /* ------------------------- Settings: events ------------------------- */
@@ -2436,6 +2486,7 @@ $("cfg-restablecer").addEventListener("click", () => cargarConfig(true));
 $("btn-salud-refrescar").addEventListener("click", cargarSalud);
 $("btn-exportar").addEventListener("click", exportarDatos);
 $("btn-importar").addEventListener("click", importarDatos);
+$("btn-borrar-busquedas").addEventListener("click", borrarBusquedas);
 document.querySelectorAll("[data-fuente]").forEach((b) => {
   b.addEventListener("click", () => probarFuente(b.dataset.fuente, b));
 });
