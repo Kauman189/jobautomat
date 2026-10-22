@@ -57,6 +57,8 @@ import time
 from collections.abc import Iterable
 from typing import Any
 
+from i18n import t
+
 log = logging.getLogger("jobautomat.search.jobspy")
 
 # This module's directory (to detect `jobspy` shadowing).
@@ -302,7 +304,10 @@ def _cargar_scrape_jobs():
             sys.path[:] = original
 
     log.error(
-        "jobspy no disponible (%s: %s); la fuente JobSpy queda desactivada.",
+        t(
+            "jobspy no disponible (%s: %s); la fuente JobSpy queda desactivada.",
+            "jobspy is not available (%s: %s); the JobSpy source stays disabled.",
+        ),
         type(primero).__name__,
         primero,
     )
@@ -485,7 +490,10 @@ def buscar_ofertas_jobspy(
             except Exception as err:  # noqa: BLE001 — isolate site/query.
                 fallos[nombre] = fallos.get(nombre, 0) + 1
                 log.warning(
-                    "JobSpy: '%s' falló en %s (%s): %s",
+                    t(
+                        "JobSpy: '%s' falló en %s (%s): %s",
+                        "JobSpy: '%s' failed on %s (%s): %s",
+                    ),
                     query,
                     nombre,
                     type(err).__name__,
@@ -497,7 +505,14 @@ def buscar_ofertas_jobspy(
                     time.sleep(_PAUSA_GLASSDOOR)
 
             if marco is None or getattr(marco, "empty", True):
-                log.info("JobSpy: 0 resultados para '%s' en %s.", query, nombre)
+                log.info(
+                    t(
+                        "JobSpy: 0 resultados para '%s' en %s.",
+                        "JobSpy: 0 results for '%s' on %s.",
+                    ),
+                    query,
+                    nombre,
+                )
                 continue
 
             try:
@@ -505,7 +520,10 @@ def buscar_ofertas_jobspy(
             except Exception as err:  # noqa: BLE001 — unexpected format.
                 fallos[nombre] = fallos.get(nombre, 0) + 1
                 log.warning(
-                    "JobSpy: DataFrame ilegible de %s (%s): %s",
+                    t(
+                        "JobSpy: DataFrame ilegible de %s (%s): %s",
+                        "JobSpy: unreadable DataFrame from %s (%s): %s",
+                    ),
                     nombre,
                     type(err).__name__,
                     err,
@@ -519,7 +537,14 @@ def buscar_ofertas_jobspy(
                 try:
                     oferta = _normalizar_fila(fila)
                 except Exception as err:  # noqa: BLE001 — corrupt row.
-                    log.debug("JobSpy: fila descartada (%s): %s", type(err).__name__, err)
+                    log.debug(
+                        t(
+                            "JobSpy: fila descartada (%s): %s",
+                            "JobSpy: row discarded (%s): %s",
+                        ),
+                        type(err).__name__,
+                        err,
+                    )
                     continue
                 if not oferta:
                     continue
@@ -532,7 +557,10 @@ def buscar_ofertas_jobspy(
 
             por_site[nombre] = por_site.get(nombre, 0) + nuevas
             log.info(
-                "JobSpy: '%s' en %s -> %s filas, %s nuevas.",
+                t(
+                    "JobSpy: '%s' en %s -> %s filas, %s nuevas.",
+                    "JobSpy: '%s' on %s -> %s rows, %s new.",
+                ),
                 query,
                 nombre,
                 len(filas),
@@ -543,9 +571,16 @@ def buscar_ofertas_jobspy(
         "{}: {}{}".format(
             site,
             por_site.get(site, 0),
-            f" ({fallos[site]} fallos)" if fallos.get(site) else "",
+            f" ({fallos[site]} {t('fallos', 'failures')})" if fallos.get(site) else "",
         )
         for site in por_site
     )
-    log.info("JobSpy terminado: %s ofertas únicas (%s).", len(ofertas), resumen)
+    log.info(
+        t(
+            "JobSpy terminado: %s ofertas únicas (%s).",
+            "JobSpy finished: %s unique postings (%s).",
+        ),
+        len(ofertas),
+        resumen,
+    )
     return ofertas

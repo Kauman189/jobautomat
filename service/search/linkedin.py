@@ -57,6 +57,8 @@ from pathlib import Path
 from typing import Any, cast
 from urllib.parse import quote_plus
 
+from i18n import t
+
 log = logging.getLogger(__name__)
 
 # --------------------------------------------------------------------------- #
@@ -281,7 +283,10 @@ def _cooldown_desde_entorno() -> int:
         valor = int(crudo)
     except ValueError:
         log.warning(
-            "%s=%r no es un entero; se usan %s s.",
+            t(
+                "%s=%r no es un entero; se usan %s s.",
+                "%s=%r is not an integer; using %s s.",
+            ),
             VARIABLE_COOLDOWN,
             crudo,
             COOLDOWN_SEGUNDOS_DEFECTO,
@@ -289,7 +294,10 @@ def _cooldown_desde_entorno() -> int:
         return COOLDOWN_SEGUNDOS_DEFECTO
     if valor <= 0:
         log.warning(
-            "%s=%r no es positivo; se usan %s s.",
+            t(
+                "%s=%r no es positivo; se usan %s s.",
+                "%s=%r is not positive; using %s s.",
+            ),
             VARIABLE_COOLDOWN,
             crudo,
             COOLDOWN_SEGUNDOS_DEFECTO,
@@ -315,12 +323,22 @@ def configurar_cooldown(segundos: int | None) -> int:
         valor = int(str(segundos).strip())
     except (TypeError, ValueError):
         log.warning(
-            "Cooldown de LinkedIn inválido (%r); se conserva %s s.", segundos, COOLDOWN_SEGUNDOS
+            t(
+                "Cooldown de LinkedIn inválido (%r); se conserva %s s.",
+                "Invalid LinkedIn cooldown (%r); keeping %s s.",
+            ),
+            segundos,
+            COOLDOWN_SEGUNDOS,
         )
         return COOLDOWN_SEGUNDOS
     if valor <= 0:
         log.warning(
-            "Cooldown de LinkedIn no positivo (%r); se conserva %s s.", segundos, COOLDOWN_SEGUNDOS
+            t(
+                "Cooldown de LinkedIn no positivo (%r); se conserva %s s.",
+                "Non-positive LinkedIn cooldown (%r); keeping %s s.",
+            ),
+            segundos,
+            COOLDOWN_SEGUNDOS,
         )
         return COOLDOWN_SEGUNDOS
     COOLDOWN_SEGUNDOS = valor
@@ -367,7 +385,13 @@ def _marcar_cooldown(segundos: int | None = None) -> None:
             json.dump({"hasta": hasta}, fh)
         os.replace(tmp, ruta)
     except OSError as exc:
-        log.warning("No se pudo escribir el cooldown de LinkedIn: %s", exc)
+        log.warning(
+            t(
+                "No se pudo escribir el cooldown de LinkedIn: %s",
+                "Could not write the LinkedIn cooldown: %s",
+            ),
+            exc,
+        )
 
 
 def _formato_duracion(segundos: int) -> str:
@@ -401,10 +425,26 @@ def _entero_entorno(variable: str, defecto: int) -> int:
     try:
         valor = int(crudo)
     except ValueError:
-        log.warning("%s=%r no es un entero; se usa %s.", variable, crudo, defecto)
+        log.warning(
+            t(
+                "%s=%r no es un entero; se usa %s.",
+                "%s=%r is not an integer; using %s.",
+            ),
+            variable,
+            crudo,
+            defecto,
+        )
         return defecto
     if valor <= 0:
-        log.warning("%s=%r no es positivo; se usa %s.", variable, crudo, defecto)
+        log.warning(
+            t(
+                "%s=%r no es positivo; se usa %s.",
+                "%s=%r is not positive; using %s.",
+            ),
+            variable,
+            crudo,
+            defecto,
+        )
         return defecto
     return valor
 
@@ -460,9 +500,18 @@ def _registrar_peticion() -> int:
             json.dump(datos, fh)
         os.replace(tmp, ruta)
     except OSError as exc:
-        log.warning("No se pudo escribir el contador de uso de LinkedIn: %s", exc)
+        log.warning(
+            t(
+                "No se pudo escribir el contador de uso de LinkedIn: %s",
+                "Could not write the LinkedIn usage counter: %s",
+            ),
+            exc,
+        )
     log.debug(
-        "Petición LinkedIn %s/%s (%s).",
+        t(
+            "Petición LinkedIn %s/%s (%s).",
+            "LinkedIn request %s/%s (%s).",
+        ),
         datos["peticiones"],
         _max_peticiones_dia(),
         datos["fecha"],
@@ -527,7 +576,14 @@ def sesion_estado() -> dict[str, Any]:
             segundos = max(0.0, time.time() - ruta.stat().st_mtime)
             antiguedad = int(segundos // 86400)
         except OSError as exc:
-            log.warning("No se pudo leer la fecha de la sesión %s: %s", ruta, exc)
+            log.warning(
+                t(
+                    "No se pudo leer la fecha de la sesión %s: %s",
+                    "Could not read the session date of %s: %s",
+                ),
+                ruta,
+                exc,
+            )
             antiguedad = None
 
     caducada = (not presente) or antiguedad is None or antiguedad > DIAS_CADUCIDAD_SESION
@@ -613,11 +669,22 @@ def _cargar_sesion(ruta: Path) -> dict[str, Any]:
     nombres = {str(c.get("name") or "") for c in cookies if isinstance(c, dict)}
     if "li_at" not in nombres:
         log.warning(
-            "La sesión de %s no incluye la cookie de sesión 'li_at'; "
-            "es probable que LinkedIn pida iniciar sesión.",
+            t(
+                "La sesión de %s no incluye la cookie de sesión 'li_at'; "
+                "es probable que LinkedIn pida iniciar sesión.",
+                "The session at %s does not include the 'li_at' session cookie; "
+                "LinkedIn will probably ask to sign in.",
+            ),
             ruta,
         )
-    log.info("Sesión de LinkedIn cargada desde %s (%s cookies).", ruta, len(cookies))
+    log.info(
+        t(
+            "Sesión de LinkedIn cargada desde %s (%s cookies).",
+            "LinkedIn session loaded from %s (%s cookies).",
+        ),
+        ruta,
+        len(cookies),
+    )
 
     estado.setdefault("origins", [])
     return estado
@@ -682,7 +749,13 @@ class ClienteLinkedIn:
                     "`pip install patchright` y luego `patchright install chromium`."
                 ) from exc
 
-            log.info("Abriendo Chromium (patchright, headless=%s)...", self.headless)
+            log.info(
+                t(
+                    "Abriendo Chromium (patchright, headless=%s)...",
+                    "Opening Chromium (patchright, headless=%s)...",
+                ),
+                self.headless,
+            )
             try:
                 self._playwright = sync_playwright().start()
                 self._navegador = self._playwright.chromium.launch(
@@ -756,7 +829,13 @@ class ClienteLinkedIn:
             except Exception as exc:  # noqa: BLE001
                 if intento == 2:
                     raise LinkedInError(f"No se pudo cargar {url}: {exc}") from exc
-                log.warning("Navegación fallida (%s); reintentando...", type(exc).__name__)
+                log.warning(
+                    t(
+                        "Navegación fallida (%s); reintentando...",
+                        "Navigation failed (%s); retrying...",
+                    ),
+                    type(exc).__name__,
+                )
                 time.sleep(random.uniform(2.0, 4.0))
         _pausa(PAUSA_TRAS_NAVEGAR)
         self._comprobar_bloqueo()
@@ -888,14 +967,25 @@ class ClienteLinkedIn:
             # is gone instead of finishing the list.
             if _presupuesto_agotado():
                 log.warning(
-                    "Presupuesto diario de LinkedIn agotado (%s peticiones); "
-                    "se corta la paginación de %r.",
+                    t(
+                        "Presupuesto diario de LinkedIn agotado (%s peticiones); "
+                        "se corta la paginación de %r.",
+                        "LinkedIn daily budget exhausted (%s requests); "
+                        "stopping pagination for %r.",
+                    ),
                     _max_peticiones_dia(),
                     query,
                 )
                 break
             url = URL_BUSQUEDA.format(query=quote_plus(query), inicio=inicio)
-            log.info("Buscando %r (página %s)...", query, pagina + 1)
+            log.info(
+                t(
+                    "Buscando %r (página %s)...",
+                    "Searching %r (page %s)...",
+                ),
+                query,
+                pagina + 1,
+            )
             self._ir(url)
 
             # Close overlays that may cover the list (cookie notice, modal).
@@ -906,7 +996,14 @@ class ClienteLinkedIn:
             try:
                 self._pagina.wait_for_selector(SELECTOR_TARJETA, timeout=8_000)
             except Exception:  # noqa: BLE001
-                log.info("Sin tarjetas para %r en la página %s.", query, pagina + 1)
+                log.info(
+                    t(
+                        "Sin tarjetas para %r en la página %s.",
+                        "No cards for %r on page %s.",
+                    ),
+                    query,
+                    pagina + 1,
+                )
                 break
 
             anterior = -1
@@ -926,7 +1023,10 @@ class ClienteLinkedIn:
                     nuevas += 1
 
             log.info(
-                "%r: %s tarjetas en la página, %s nuevas, %s acumuladas.",
+                t(
+                    "%r: %s tarjetas en la página, %s nuevas, %s acumuladas.",
+                    "%r: %s cards on the page, %s new, %s total.",
+                ),
                 query,
                 len(tarjetas),
                 nuevas,
@@ -989,7 +1089,13 @@ class ClienteLinkedIn:
                 ", ".join(SELECTORES_DESCRIPCION), timeout=TIMEOUT_DESCARGA_DETALLE
             )
         except Exception:  # noqa: BLE001
-            log.warning("Oferta %s sin selector de descripción; se extrae lo disponible.", job_id)
+            log.warning(
+                t(
+                    "Oferta %s sin selector de descripción; se extrae lo disponible.",
+                    "Posting %s has no description selector; extracting what is available.",
+                ),
+                job_id,
+            )
 
         # Expand "ver más" and do a short scroll so everything renders.
         self._click_si_existe(SELECTORES_VER_MAS)
@@ -1201,8 +1307,12 @@ def search_jobs(queries: Iterable[str] | str, limit: int = 20) -> list[dict[str,
     # block.
     if _presupuesto_agotado():
         log.warning(
-            "Presupuesto diario de LinkedIn agotado (%s peticiones hoy); "
-            "se omite LinkedIn en este run.",
+            t(
+                "Presupuesto diario de LinkedIn agotado (%s peticiones hoy); "
+                "se omite LinkedIn en este run.",
+                "LinkedIn daily budget exhausted (%s requests today); "
+                "skipping LinkedIn in this run.",
+            ),
             _max_peticiones_dia(),
         )
         return []
@@ -1218,8 +1328,11 @@ def search_jobs(queries: Iterable[str] | str, limit: int = 20) -> list[dict[str,
             break
         if _presupuesto_agotado():
             log.warning(
-                "Presupuesto diario de LinkedIn agotado (%s peticiones); "
-                "se dejan %s consultas sin buscar.",
+                t(
+                    "Presupuesto diario de LinkedIn agotado (%s peticiones); "
+                    "se dejan %s consultas sin buscar.",
+                    "LinkedIn daily budget exhausted (%s requests); leaving %s queries unsearched.",
+                ),
                 _max_peticiones_dia(),
                 len(lista_queries) - indice,
             )
@@ -1231,7 +1344,14 @@ def search_jobs(queries: Iterable[str] | str, limit: int = 20) -> list[dict[str,
             if "sesión" in str(exc).lower() or "anti-bot" in str(exc).lower():
                 raise
             errores.append(f"{query}: {exc}")
-            log.warning("Búsqueda %r fallida: %s", query, exc)
+            log.warning(
+                t(
+                    "Búsqueda %r fallida: %s",
+                    "Search %r failed: %s",
+                ),
+                query,
+                exc,
+            )
             continue
 
         # Circuit breaker: several consecutive queries with no results reveal
@@ -1288,7 +1408,10 @@ def get_job_details(job_id: str) -> dict[str, Any] | None:
     job_id = _extraer_job_id(job_id)
     if _presupuesto_agotado():
         log.warning(
-            "Presupuesto diario de LinkedIn agotado (%s peticiones); sin detalle para %s.",
+            t(
+                "Presupuesto diario de LinkedIn agotado (%s peticiones); sin detalle para %s.",
+                "LinkedIn daily budget exhausted (%s requests); no details for %s.",
+            ),
             _max_peticiones_dia(),
             job_id,
         )

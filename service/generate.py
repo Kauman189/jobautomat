@@ -30,6 +30,7 @@ import os
 import re
 
 import llm
+from i18n import t
 
 _log = logging.getLogger(__name__)
 
@@ -178,9 +179,24 @@ def _adjuntar_pdf(job, texto, nombre_archivo, clave, generador):
         if os.path.isfile(ruta):
             job[clave] = ruta
             return ruta
-        _log.warning("PDF no escrito para %s: %s", job.get("id"), nombre_archivo)
+        _log.warning(
+            t(
+                "PDF no escrito para %s: %s",
+                "PDF not written for %s: %s",
+            ),
+            job.get("id"),
+            nombre_archivo,
+        )
     except Exception as err:  # noqa: BLE001 — el PDF es un extra, no el pipeline.
-        _log.warning("PDF %s no generado para %s: %s", nombre_archivo, (job or {}).get("id"), err)
+        _log.warning(
+            t(
+                "PDF %s no generado para %s: %s",
+                "PDF %s not generated for %s: %s",
+            ),
+            nombre_archivo,
+            (job or {}).get("id"),
+            err,
+        )
     return None
 
 
@@ -212,23 +228,43 @@ def _verificar_pdf_cv(job, texto_cv, perfil, ruta_pdf):
         faltantes = resultado.get("faltantes") or []
         if faltantes:
             _log.warning(
-                "Gate PDF del CV (%s): faltan %d datos duros en el PDF: %s",
+                t(
+                    "Gate PDF del CV (%s): faltan %d datos duros en el PDF: %s",
+                    "CV PDF gate (%s): %d hard facts missing from the PDF: %s",
+                ),
                 job.get("id"),
                 len(faltantes),
                 "; ".join(str(f) for f in faltantes),
             )
         elif resultado.get("ok") is False:
-            _log.warning("Gate PDF del CV (%s): %s", job.get("id"), resultado.get("motivo"))
+            _log.warning(
+                t(
+                    "Gate PDF del CV (%s): %s",
+                    "CV PDF gate (%s): %s",
+                ),
+                job.get("id"),
+                resultado.get("motivo"),
+            )
         else:
             _log.info(
-                "Gate PDF del CV (%s): OK (%s páginas, %s)",
+                t(
+                    "Gate PDF del CV (%s): OK (%s páginas, %s)",
+                    "CV PDF gate (%s): OK (%s pages, %s)",
+                ),
                 job.get("id"),
                 resultado.get("paginas"),
-                resultado.get("motivo") or "sin incidencias",
+                resultado.get("motivo") or t("sin incidencias", "no issues"),
             )
         return resultado
     except Exception as err:  # noqa: BLE001 — el gate jamás tumba la candidatura.
-        _log.warning("Gate PDF del CV (%s) falló y se ignora: %s", (job or {}).get("id"), err)
+        _log.warning(
+            t(
+                "Gate PDF del CV (%s) falló y se ignora: %s",
+                "CV PDF gate (%s) failed and is ignored: %s",
+            ),
+            (job or {}).get("id"),
+            err,
+        )
         return None
 
 
@@ -840,7 +876,10 @@ más relevantes. No inventes nada. Devuelve el CV completo en markdown."""
     # sections, fall back to the full base CV: whole and honest beats cut.
     if _cv_truncado(cv, cv_base):
         _log.warning(
-            "CV adaptado truncado (%d chars frente a %d del base): se usa el CV base completo.",
+            t(
+                "CV adaptado truncado (%d chars frente a %d del base): se usa el CV base completo.",
+                "Adapted CV truncated (%d chars vs %d in the base): using the full base CV.",
+            ),
             len(cv or ""),
             len(cv_base or ""),
         )

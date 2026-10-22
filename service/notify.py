@@ -32,6 +32,7 @@ import urllib.error
 import urllib.request
 
 import db
+from i18n import t
 
 _API_BASE = "https://api.telegram.org/bot{token}/{metodo}"
 
@@ -87,7 +88,13 @@ def _cargar_config_estricta():
     try:
         return config_mod.load_config(estricto=True)
     except RuntimeError as err:
-        print(f"[notify] Error de configuración: {err}", file=sys.stderr)
+        print(
+            t(
+                f"[notify] Error de configuración: {err}",
+                f"[notify] Configuration error: {err}",
+            ),
+            file=sys.stderr,
+        )
         sys.exit(1)
 
 
@@ -135,7 +142,13 @@ def enviar_webhook(cfg, texto):
     if not url or not texto:
         return False
     if not url.lower().startswith(("http://", "https://")):
-        print("[notify] WEBHOOK_URL ignorada: no es http(s)", file=sys.stderr)
+        print(
+            t(
+                "[notify] WEBHOOK_URL ignorada: no es http(s)",
+                "[notify] WEBHOOK_URL ignored: not http(s)",
+            ),
+            file=sys.stderr,
+        )
         return False
 
     texto = texto[:_WEBHOOK_MAX_TEXTO]
@@ -161,7 +174,10 @@ def enviar_webhook(cfg, texto):
     except Exception as err:  # noqa: BLE001 — a webhook failure never aborts the flow.
         # Only the error type: the URL itself may carry a token.
         print(
-            f"[notify] webhook fallido ({type(err).__name__}): {err}",
+            t(
+                f"[notify] webhook fallido ({type(err).__name__}): {err}",
+                f"[notify] webhook failed ({type(err).__name__}): {err}",
+            ),
             file=sys.stderr,
         )
         return False
@@ -502,12 +518,24 @@ def enviar_aviso(texto):
     if not telegram_habilitado(cfg):
         return None
     if not cfg.get("TELEGRAM_CHAT_ID"):
-        print("[notify] aviso no enviado: falta TELEGRAM_CHAT_ID", file=sys.stderr)
+        print(
+            t(
+                "[notify] aviso no enviado: falta TELEGRAM_CHAT_ID",
+                "[notify] notice not sent: TELEGRAM_CHAT_ID missing",
+            ),
+            file=sys.stderr,
+        )
         return None
     try:
         _api("sendMessage", {"chat_id": cfg["TELEGRAM_CHAT_ID"], "text": texto})
     except TelegramError as err:
-        print(f"[notify] aviso no enviado: {err}", file=sys.stderr)
+        print(
+            t(
+                f"[notify] aviso no enviado: {err}",
+                f"[notify] notice not sent: {err}",
+            ),
+            file=sys.stderr,
+        )
     return None
 
 
@@ -633,13 +661,23 @@ def _procesar_callback(callback):
                     )
                 except TelegramError:
                     pass
-                print(f"[notify] pack fallido para {op_id}: {err}")
+                print(
+                    t(
+                        f"[notify] pack fallido para {op_id}: {err}",
+                        f"[notify] pack failed for {op_id}: {err}",
+                    ),
+                )
 
             # Answers to the form questions (paste-ready), separately.
             try:
                 _enviar_respuestas_formulario(op, chat_id)
             except Exception as err:  # noqa: BLE001
-                print(f"[notify] respuestas de formulario fallidas para {op_id}: {err}")
+                print(
+                    t(
+                        f"[notify] respuestas de formulario fallidas para {op_id}: {err}",
+                        f"[notify] form answers failed for {op_id}: {err}",
+                    ),
+                )
 
     print(
         "[notify] {} {} ({})".format(
@@ -780,7 +818,12 @@ def _enviar_pack(op, chat_id):
         try:
             return func(op, perfil)
         except Exception as err:  # noqa: BLE001 — one document does not sink the rest.
-            print(f"[notify] generación fallida ({func.__name__}): {err}")
+            print(
+                t(
+                    f"[notify] generación fallida ({func.__name__}): {err}",
+                    f"[notify] generation failed ({func.__name__}): {err}",
+                ),
+            )
             return ""
 
     cover = op.get("cover_letter") or _gen(generate_mod.generar_cover_letter)
@@ -790,7 +833,12 @@ def _enviar_pack(op, chat_id):
     try:
         db.guardar_materiales(op["id"], cover, cv, mensaje)
     except Exception as err:  # noqa: BLE001 — persistence is secondary.
-        print("[notify] no se guardaron los materiales de {}: {}".format(op["id"], err))
+        print(
+            t(
+                "[notify] no se guardaron los materiales de {}: {}".format(op["id"], err),
+                "[notify] materials for {} were not saved: {}".format(op["id"], err),
+            )
+        )
 
     lineas = [
         "✅ <b>Aprobada: {}</b>".format(_escapar(op.get("titulo"))),
@@ -828,7 +876,12 @@ def _enviar_pack(op, chat_id):
             with open(cover_txt, "w", encoding="utf-8") as fh:
                 fh.write(cover)
         except Exception as err:  # noqa: BLE001 — the .txt file is a bonus.
-            print(f"[notify] no se escribió cover.txt: {err}")
+            print(
+                t(
+                    f"[notify] no se escribió cover.txt: {err}",
+                    f"[notify] cover.txt was not written: {err}",
+                ),
+            )
             cover_txt = None
 
     for ruta, nombre in (
@@ -874,13 +927,23 @@ def _enviar_respuestas_formulario(op, chat_id):
     try:
         import apply_form as af
     except Exception as err:  # noqa: BLE001
-        print(f"[notify] apply_form no disponible: {err}")
+        print(
+            t(
+                f"[notify] apply_form no disponible: {err}",
+                f"[notify] apply_form not available: {err}",
+            ),
+        )
         return
 
     try:
         formulario = af.analizar_formulario(url)
     except Exception as err:  # noqa: BLE001
-        print("[notify] análisis de formulario fallido para {}: {}".format(op["id"], err))
+        print(
+            t(
+                "[notify] análisis de formulario fallido para {}: {}".format(op["id"], err),
+                "[notify] form analysis failed for {}: {}".format(op["id"], err),
+            )
+        )
         return
 
     if not formulario:
@@ -890,7 +953,12 @@ def _enviar_respuestas_formulario(op, chat_id):
     try:
         respuestas = af.redactar_respuestas(formulario, perfil, op)
     except Exception as err:  # noqa: BLE001
-        print(f"[notify] redacción de respuestas fallida: {err}")
+        print(
+            t(
+                f"[notify] redacción de respuestas fallida: {err}",
+                f"[notify] answer drafting failed: {err}",
+            ),
+        )
         return
 
     if not respuestas:
@@ -930,7 +998,12 @@ def _enviar_respuestas_formulario(op, chat_id):
             },
         )
     except TelegramError as err:
-        print(f"[notify] no se enviaron las respuestas: {err}")
+        print(
+            t(
+                f"[notify] no se enviaron las respuestas: {err}",
+                f"[notify] the answers were not sent: {err}",
+            ),
+        )
 
 
 def run_bot(poll_timeout=25):
@@ -952,7 +1025,12 @@ def run_bot(poll_timeout=25):
     """
     _cargar_config_estricta()
     offset = _leer_offset()
-    print(f"[notify] bot a la escucha (offset={offset})")
+    print(
+        t(
+            f"[notify] bot a la escucha (offset={offset})",
+            f"[notify] bot listening (offset={offset})",
+        ),
+    )
 
     while True:
         try:
@@ -965,7 +1043,12 @@ def run_bot(poll_timeout=25):
                 },
             )
         except TelegramError as err:
-            print(f"[notify] error de polling: {err} (reintento en 5s)")
+            print(
+                t(
+                    f"[notify] error de polling: {err} (reintento en 5s)",
+                    f"[notify] polling error: {err} (retrying in 5s)",
+                ),
+            )
             time.sleep(5)
             continue
 
@@ -981,7 +1064,12 @@ def run_bot(poll_timeout=25):
             try:
                 _procesar_callback(callback)
             except TelegramError as err:
-                print(f"[notify] callback fallido: {err}")
+                print(
+                    t(
+                        f"[notify] callback fallido: {err}",
+                        f"[notify] callback failed: {err}",
+                    ),
+                )
 
 
 if __name__ == "__main__":

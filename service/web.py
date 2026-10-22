@@ -71,6 +71,7 @@ import health
 import llm
 import notify as notify_mod
 from flask import Flask, Response, jsonify, request, send_from_directory
+from i18n import t
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 WEB_DIR = os.path.join(BASE_DIR, "web")
@@ -255,7 +256,12 @@ def _aplicar_limites():
     espera = _consumir_limite(f"{request.endpoint}|{_ip_cliente()}", maximo, ventana)
     if not espera:
         return None
-    print(f"[web] límite alcanzado en {request.endpoint} desde {_ip_cliente()} ({espera}s)")
+    print(
+        t(
+            f"[web] límite alcanzado en {request.endpoint} desde {_ip_cliente()} ({espera}s)",
+            f"[web] rate limit reached on {request.endpoint} from {_ip_cliente()} ({espera}s)",
+        ),
+    )
     respuesta = jsonify(
         {
             "error": f"demasiadas solicitudes; espera {espera}s",
@@ -328,7 +334,12 @@ def _exigir_same_origin():
     ok, origen = _origen_permitido()
     if ok:
         return None
-    print(f"[web] origen rechazado: {origen} (host {request.host})")
+    print(
+        t(
+            f"[web] origen rechazado: {origen} (host {request.host})",
+            f"[web] origin rejected: {origen} (host {request.host})",
+        ),
+    )
     return jsonify(
         {
             "error": f"origen no permitido (se esperaba {request.host})",
@@ -424,7 +435,12 @@ def _respuestas_formulario(op):
             for k, v in respuestas.items()
         ]
     except Exception as err:  # noqa: BLE001 — best-effort.
-        print("[web] formulario fallido para {}: {}".format(op.get("id"), err))
+        print(
+            t(
+                "[web] formulario fallido para {}: {}".format(op.get("id"), err),
+                "[web] form failed for {}: {}".format(op.get("id"), err),
+            )
+        )
         return {}, str(err)
 
     with _LOCK_RESPUESTAS:
@@ -451,7 +467,12 @@ def _generar_pack(op):
         try:
             return func(op, perfil)
         except Exception as err:  # noqa: BLE001 — one material does not sink the rest.
-            print(f"[web] generación fallida ({etiqueta}): {err}")
+            print(
+                t(
+                    f"[web] generación fallida ({etiqueta}): {err}",
+                    f"[web] generation failed ({etiqueta}): {err}",
+                ),
+            )
             errores.append(f"{etiqueta}: {err}")
             return ""
 
@@ -462,7 +483,12 @@ def _generar_pack(op):
     try:
         db.guardar_materiales(op["id"], cover, cv, mensaje)
     except Exception as err:  # noqa: BLE001 — persisting is secondary.
-        print("[web] no se guardaron los materiales de {}: {}".format(op["id"], err))
+        print(
+            t(
+                "[web] no se guardaron los materiales de {}: {}".format(op["id"], err),
+                "[web] materials for {} were not saved: {}".format(op["id"], err),
+            )
+        )
         errores.append(f"guardar_materiales: {err}")
 
     # cover.txt next to the PDFs (the Telegram flow attaches it).
@@ -475,7 +501,12 @@ def _generar_pack(op):
             with open(cover_txt, "w", encoding="utf-8") as fh:
                 fh.write(cover)
         except Exception as err:  # noqa: BLE001 — the .txt is a nice-to-have.
-            print(f"[web] no se escribió cover.txt: {err}")
+            print(
+                t(
+                    f"[web] no se escribió cover.txt: {err}",
+                    f"[web] cover.txt was not written: {err}",
+                ),
+            )
             errores.append(f"cover.txt: {err}")
             cover_txt = None
 
@@ -1281,11 +1312,21 @@ def api_perfil_agregar():
         try:
             _guardar_perfil(ruta, copia)
         except Exception as err:  # noqa: BLE001
-            print(f"[web] no se pudo escribir el perfil: {err}")
+            print(
+                t(
+                    f"[web] no se pudo escribir el perfil: {err}",
+                    f"[web] could not write the profile: {err}",
+                ),
+            )
             return jsonify({"error": f"no se pudo guardar el perfil: {err}"}), 500
 
     cambios_txt = ", ".join("{} {}".format(c["tipo"], c["ruta"]) for c in aplicados)
-    print(f"[web] perfil actualizado ({len(aplicados)} cambio(s)): {cambios_txt}")
+    print(
+        t(
+            f"[web] perfil actualizado ({len(aplicados)} cambio(s)): {cambios_txt}",
+            f"[web] profile updated ({len(aplicados)} change(s)): {cambios_txt}",
+        ),
+    )
     return jsonify({"ok": True, "cambios": aplicados, "nota": nota})
 
 
@@ -1322,10 +1363,20 @@ def api_perfil_borrar():
         try:
             _guardar_perfil(ruta_fichero, copia)
         except Exception as err:  # noqa: BLE001
-            print(f"[web] no se pudo escribir el perfil: {err}")
+            print(
+                t(
+                    f"[web] no se pudo escribir el perfil: {err}",
+                    f"[web] could not write the profile: {err}",
+                ),
+            )
             return jsonify({"error": f"no se pudo guardar el perfil: {err}"}), 500
 
-    print("[web] perfil: borrado {}".format(borrado["ruta"]))
+    print(
+        t(
+            "[web] perfil: borrado {}".format(borrado["ruta"]),
+            "[web] profile: deleted {}".format(borrado["ruta"]),
+        )
+    )
     return jsonify({"ok": True, "ruta": borrado["ruta"]})
 
 
@@ -1363,10 +1414,20 @@ def api_perfil_put():
         try:
             _guardar_perfil(ruta, nuevo)
         except Exception as err:  # noqa: BLE001
-            print(f"[web] no se pudo escribir el perfil (PUT): {err}")
+            print(
+                t(
+                    f"[web] no se pudo escribir el perfil (PUT): {err}",
+                    f"[web] could not write the profile (PUT): {err}",
+                ),
+            )
             return jsonify({"error": f"no se pudo guardar el perfil: {err}"}), 500
 
-    print("[web] perfil reemplazado vía JSON (modo técnico)")
+    print(
+        t(
+            "[web] perfil reemplazado vía JSON (modo técnico)",
+            "[web] profile replaced via JSON (technical mode)",
+        )
+    )
     return jsonify({"ok": True})
 
 
@@ -1418,7 +1479,12 @@ def api_preguntar():
         try:
             respuestas.append(_responder_pregunta(pregunta, contexto))
         except Exception as err:  # noqa: BLE001 — one question does not sink the rest.
-            print(f"[web] pregunta fallida: {err}")
+            print(
+                t(
+                    f"[web] pregunta fallida: {err}",
+                    f"[web] question failed: {err}",
+                ),
+            )
             respuestas.append("")
             errores.append(str(err))
 
@@ -1449,7 +1515,12 @@ def _config_efectiva():
     try:
         return config.load_config(estricto=False)
     except Exception as err:  # noqa: BLE001 — the panel must still answer.
-        print(f"[web] no se pudo cargar la config: {err}")
+        print(
+            t(
+                f"[web] no se pudo cargar la config: {err}",
+                f"[web] could not load the config: {err}",
+            ),
+        )
         return config.config_por_defecto()
 
 
@@ -1722,7 +1793,12 @@ def api_salud():
         cfg = config.load_config(estricto=False)
         return jsonify(health.diagnostico(cfg))
     except Exception as err:  # noqa: BLE001 — surface a readable error.
-        print(f"[web] diagnóstico de salud fallido: {err}")
+        print(
+            t(
+                f"[web] diagnóstico de salud fallido: {err}",
+                f"[web] health diagnosis failed: {err}",
+            ),
+        )
         return jsonify({"error": f"no se pudo ejecutar el diagnóstico: {err}"}), 500
 
 
@@ -1826,7 +1902,12 @@ def api_import():
                 os.makedirs(os.path.dirname(ruta_perfil) or ".", exist_ok=True)
                 _guardar_perfil(ruta_perfil, nuevo_perfil)
             except Exception as err:  # noqa: BLE001
-                print(f"[web] no se pudo importar el perfil: {err}")
+                print(
+                    t(
+                        f"[web] no se pudo importar el perfil: {err}",
+                        f"[web] could not import the profile: {err}",
+                    ),
+                )
                 return jsonify({"error": f"no se pudo guardar el perfil: {err}"}), 500
         importado.append("perfil")
 
@@ -1835,7 +1916,12 @@ def api_import():
         try:
             config.guardar_settings(cambios, ruta=config.ruta_settings(base))
         except Exception as err:  # noqa: BLE001
-            print(f"[web] no se pudo importar la configuración: {err}")
+            print(
+                t(
+                    f"[web] no se pudo importar la configuración: {err}",
+                    f"[web] could not import the configuration: {err}",
+                ),
+            )
             return jsonify(
                 {
                     "error": f"no se pudo guardar la configuración: {err}",
@@ -1844,7 +1930,10 @@ def api_import():
             ), 500
         importado.append("settings")
 
-    print("[web] importado: %s" % (", ".join(importado) or "nada"))
+    print(
+        t("[web] importado: %s", "[web] imported: %s")
+        % (", ".join(importado) or t("nada", "nothing"))
+    )
     return jsonify({"ok": True, "importado": importado})
 
 
@@ -1882,7 +1971,12 @@ def api_fuente_probar():
     try:
         resultado = probar_fuente(nombre, parametros or {})
     except Exception as err:  # noqa: BLE001 — probar_fuente should not raise.
-        print(f"[web] prueba de fuente fallida ({nombre}): {err}")
+        print(
+            t(
+                f"[web] prueba de fuente fallida ({nombre}): {err}",
+                f"[web] source test failed ({nombre}): {err}",
+            ),
+        )
         return jsonify({"ok": False, "detalle": f"error en la prueba: {err}"})
 
     if not isinstance(resultado, dict):
@@ -1931,7 +2025,9 @@ def api_log():
             with open(ruta, encoding="utf-8", errors="replace") as fh:
                 lineas = [linea.rstrip("\n") for linea in fh.readlines()[-n:]]
         except Exception as err:  # noqa: BLE001
-            lineas = [f"[web] no se pudo leer el log: {err}"]
+            lineas = [
+                t(f"[web] no se pudo leer el log: {err}", f"[web] could not read the log: {err}")
+            ]
     return jsonify({"lineas": lineas, "mtime": mtime, "activo": activo, "ruta": ruta})
 
 
@@ -1956,7 +2052,12 @@ def _ruta_db():
     try:
         return _ruta_base_lectura()
     except Exception as err:  # noqa: BLE001 — the lock must not break the panel.
-        print(f"[web] no se pudo resolver la base para el lock: {err}")
+        print(
+            t(
+                f"[web] no se pudo resolver la base para el lock: {err}",
+                f"[web] could not resolve the database for the lock: {err}",
+            ),
+        )
         return os.path.join(BASE_DIR, "state.db")
 
 
@@ -1986,7 +2087,12 @@ def _busqueda_activa():
         os.makedirs(os.path.dirname(ruta) or ".", exist_ok=True)
         descriptor = os.open(ruta, os.O_CREAT | os.O_RDWR, 0o644)
     except OSError as err:
-        print(f"[web] no se pudo abrir el lock {ruta}: {err}")
+        print(
+            t(
+                f"[web] no se pudo abrir el lock {ruta}: {err}",
+                f"[web] could not open the lock {ruta}: {err}",
+            ),
+        )
         return False
     try:
         try:
@@ -2044,10 +2150,20 @@ def api_buscar():
             stderr=subprocess.DEVNULL,
         )
     except Exception as err:  # noqa: BLE001 — surface a readable error.
-        print(f"[web] no se pudo lanzar la búsqueda manual: {err}")
+        print(
+            t(
+                f"[web] no se pudo lanzar la búsqueda manual: {err}",
+                f"[web] could not launch the manual search: {err}",
+            ),
+        )
         return jsonify({"ok": False, "detalle": f"no se pudo lanzar la búsqueda: {err}"}), 500
 
-    print("[web] búsqueda manual lanzada ({})".format(" ".join(comando)))
+    print(
+        t(
+            "[web] búsqueda manual lanzada ({})".format(" ".join(comando)),
+            "[web] manual search launched ({})".format(" ".join(comando)),
+        )
+    )
     return jsonify({"ok": True, "detalle": "búsqueda lanzada"}), 202
 
 
@@ -2059,6 +2175,11 @@ if __name__ == "__main__":
 
     puerto = int(os.environ.get("WEB_PORT") or 8085)
     print(
-        f"[web] panel en http://0.0.0.0:{puerto} (auth: {'sí' if _password() else 'NO — sólo LAN'})"
+        t(
+            f"[web] panel en http://0.0.0.0:{puerto} "
+            f"(auth: {'sí' if _password() else 'NO — sólo LAN'})",
+            f"[web] panel on http://0.0.0.0:{puerto} "
+            f"(auth: {'yes' if _password() else 'NO — LAN only'})",
+        ),
     )
     app.run(host="0.0.0.0", port=puerto, threaded=True)
