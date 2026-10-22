@@ -46,6 +46,25 @@ services return today):
     authenticates with Basic. Without ``INFOJOBS_CLIENT_ID`` /
     ``INFOJOBS_CLIENT_SECRET`` in the environment the source returns ``[]``
     without issuing any request (see ``buscar_infojobs``).
+  * **RemoteOK** — ``https://remoteok.com/api``: flat JSON array whose first
+    element is the API's legal notice. Carries ``position``, ``company``,
+    ``date``, ``tags`` and ``salary_min``/``salary_max`` (0 when unknown).
+  * **Himalayas** — ``https://himalayas.app/jobs/api``: ``{"jobs": […]}`` with
+    ``title``, ``companyName``, ``applicationLink``, ``locationRestrictions``,
+    ``pubDate`` (epoch) and HTML description.
+  * **Working Nomads** — ``https://www.workingnomads.com/api/exposed_jobs/``:
+    flat array with ``title``, ``company_name``, ``url``, ``pub_date`` and the
+    HTML description.
+  * **Teamtailor** — ``https://{company}.teamtailor.com/jobs.json``: the public
+    board is a JSON Feed (``{"items": […]}``), not the authenticated API v1;
+    the schema.org block carries the company and the location.
+  * **SmartRecruiters** — ``https://api.smartrecruiters.com/v1/companies/{slug}/postings``:
+    ``{"content": […]}``. The list carries no description, so the detail
+    (``jobAd.sections``) is requested only for postings passing the title
+    filter. The slug is case-sensitive (``BoschGroup``, not ``Bosch``).
+  * **Personio** — ``https://{company}.jobs.personio.de/search.json``: flat
+    array with ``name``, ``office``/``offices``, ``employment_type`` and
+    ``schedule``; it publishes no date (``fecha_publicacion`` stays ``None``).
 
 Workable needs no key: it uses the company's public widget endpoint
 (``apply.workable.com/api/v1/widget/accounts/{company}``), not the
@@ -76,8 +95,10 @@ old. Anything unknown stays ``None``: no data is invented.
 ``Freelance`` / ``Indefinido``.
 
 ``job_id`` values are prefixed by source (``remotive-…``, ``gh-…``,
-``lever-…``, ``ashby-…``, ``wwr-…``) to avoid clashing with LinkedIn's numeric
-ids in the SQLite table.
+``lever-…``, ``ashby-…``, ``wwr-…``, ``remoteok-…``, ``himalayas-…``,
+``workingnomads-…``, ``teamtailor-…``, ``smartrecruiters-…``,
+``personio-…``) to avoid clashing with LinkedIn's numeric ids in the SQLite
+table.
 
 Design
 ------
@@ -108,6 +129,8 @@ import xml.etree.ElementTree as ET
 from collections.abc import Iterable, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
+
+from i18n import t
 
 log = logging.getLogger(__name__)
 
@@ -148,6 +171,33 @@ URL_INFOJOBS = "https://api.infojobs.net/api/9/offer"
 VARIABLE_INFOJOBS_ID = "INFOJOBS_CLIENT_ID"
 VARIABLE_INFOJOBS_SECRET = "INFOJOBS_CLIENT_SECRET"
 
+# --- Remote portals with a public JSON feed (no key) ------------------------ #
+# RemoteOK: the feed's first element is its legal notice (no 'position'), the
+# rest are postings. RemoteOK asks to link back to its URL; every offer carries
+# source = "remoteok" and RemoteOK's URL (which forwards to the original).
+URL_REMOTEOK = "https://remoteok.com/api"
+# Himalayas: {"jobs": [...], "totalCount", "nextCursor"}; no pagination needed.
+URL_HIMALAYAS = "https://himalayas.app/jobs/api"
+# Working Nomads: flat JSON array (no envelope).
+URL_WORKINGNOMADS = "https://www.workingnomads.com/api/exposed_jobs/"
+
+# --- ATS with a public board per company ------------------------------------ #
+# Teamtailor: the public board is a JSON Feed ({"items": [...]}), not the
+# authenticated API v1. The slug is the *.teamtailor.com subdomain.
+URL_TEAMTAILOR = "https://{slug}.teamtailor.com/jobs.json"
+# SmartRecruiters: {"content": [...]}; the list carries no description, so the
+# detail (jobAd.sections) is requested only for postings passing the filter.
+URL_SMARTRECRUITERS = "https://api.smartrecruiters.com/v1/companies/{slug}/postings?limit={limite}"
+URL_SMARTRECRUITERS_DETALLE = (
+    "https://api.smartrecruiters.com/v1/companies/{slug}/postings/{job_id}"
+)
+# Public posting page (the list's 'ref' points at the API, not at this page).
+URL_SMARTRECRUITERS_OFERTA = "https://jobs.smartrecruiters.com/{slug}/{job_id}"
+# Personio: the public search returns a flat JSON array (no envelope).
+URL_PERSONIO = "https://{slug}.jobs.personio.de/search.json"
+URL_PERSONIO_OFERTA = "https://{slug}.jobs.personio.de/job/{job_id}"
+
+
 # Companies with a Recruitee board. The slug is the subdomain: just add the
 # ones of interest; missing ones are dropped silently (404).
 RECRUITEE_EMPRESAS: tuple[str, ...] = (
@@ -179,6 +229,29 @@ BAMBOOHR_EMPRESAS: tuple[str, ...] = (
     "nprc",  # verified: board with postings
 )
 
+# Companies with a Teamtailor board. The slug is the *.teamtailor.com
+# subdomain and its public JSON Feed lists the postings.
+TEAMTAILOR_EMPRESAS: tuple[str, ...] = (
+    "bokio",  # verified: JSON Feed responds
+)
+
+# Companies with a SmartRecruiters board. The slug is the identifier used in
+# the API and in the public page (case-sensitive: ``BoschGroup``, not
+# ``Bosch``); a wrong one returns an empty board instead of an error.
+SMARTRECRUITERS_EMPRESAS: tuple[str, ...] = (
+    "BoschGroup",  # verified: 5,096 postings
+    "SGS",  # verified: 4,624 postings
+    "Ubisoft2",  # verified: 327 postings
+)
+
+# Companies with a Personio board. The slug is the *.jobs.personio.de
+# subdomain (Personio speaks German-market companies mostly).
+PERSONIO_EMPRESAS: tuple[str, ...] = (
+    "1komma5grad",  # verified: 295 postings
+    "senec",  # verified: board responds (empty today)
+)
+
+
 # Queries issued against the EURES public search. Empty by default: with no
 # configured terms there is nothing to search for and the source returns [].
 BUSQUEDAS_EURES: tuple[str, ...] = ()
@@ -209,11 +282,23 @@ def configurar_antiguedad(dias: int | None) -> int | None:
     try:
         valor = int(str(dias).strip())
     except (TypeError, ValueError):
-        log.warning("Antigüedad de boards inválida (%r); se usa el respaldo.", dias)
+        log.warning(
+            t(
+                "Antigüedad de boards inválida (%r); se usa el respaldo.",
+                "Invalid board age (%r); using the fallback.",
+            ),
+            dias,
+        )
         _DIAS_ANTIGUEDAD_CONFIGURADOS = None
         return None
     if valor <= 0:
-        log.warning("Antigüedad de boards no positiva (%r); se usa el respaldo.", dias)
+        log.warning(
+            t(
+                "Antigüedad de boards no positiva (%r); se usa el respaldo.",
+                "Non-positive board age (%r); using the fallback.",
+            ),
+            dias,
+        )
         _DIAS_ANTIGUEDAD_CONFIGURADOS = None
         return None
     _DIAS_ANTIGUEDAD_CONFIGURADOS = valor
@@ -744,7 +829,12 @@ def buscar_remotive(
     """
     buscados = [str(t).strip() for t in (terminos or BUSQUEDAS_REMOTIVE) if str(t).strip()][:3]
     if not buscados:
-        log.info("Remotive omitido: sin términos de búsqueda configurados (ROLES/TOPICS).")
+        log.info(
+            t(
+                "Remotive omitido: sin términos de búsqueda configurados (ROLES/TOPICS).",
+                "Remotive skipped: no search terms configured (ROLES/TOPICS).",
+            )
+        )
         return []
     consultas: list[dict[str, Any]] = [{"category": "design"}]
     consultas.extend({"search": termino} for termino in buscados)
@@ -755,10 +845,10 @@ def buscar_remotive(
             for oferta in _remotive_una_llamada(parametros, limite):
                 encontradas.setdefault(oferta["job_id"], oferta)
         except Exception as err:  # noqa: BLE001 — one query must not kill the source
-            log.warning("Remotive %s falló: %s", parametros, err)
+            log.warning(t("Remotive %s falló: %s", "Remotive %s failed: %s"), parametros, err)
 
     ofertas = list(encontradas.values())[:limite]
-    log.info("Remotive: %s ofertas de diseño.", len(ofertas))
+    log.info(t("Remotive: %s ofertas de diseño.", "Remotive: %s design postings."), len(ofertas))
     return ofertas
 
 
@@ -795,7 +885,7 @@ def buscar_wwr(limite: int = 100) -> list[dict[str, Any]]:
         crudo = _descargar(URL_WWR_DESIGN)
         raiz = ET.fromstring(crudo)
     except Exception as err:  # noqa: BLE001
-        log.warning("WWR RSS falló: %s", err)
+        log.warning(t("WWR RSS falló: %s", "WWR RSS failed: %s"), err)
         return []
 
     ofertas: list[dict[str, Any]] = []
@@ -829,7 +919,7 @@ def buscar_wwr(limite: int = 100) -> list[dict[str, Any]]:
         if len(ofertas) >= limite:
             break
 
-    log.info("WWR: %s ofertas de diseño.", len(ofertas))
+    log.info(t("WWR: %s ofertas de diseño.", "WWR: %s design postings."), len(ofertas))
     return ofertas
 
 
@@ -938,7 +1028,10 @@ def _formatear_rango(valor: dict[str, Any]) -> str | None:
     if minimo is None and maximo is None:
         return None
     if minimo is not None and minimo < 10000:
-        log.debug("Rango salarial no anual ignorado: %s", valor)
+        log.debug(
+            t("Rango salarial no anual ignorado: %s", "Non-yearly salary range ignored: %s"),
+            valor,
+        )
         return None
 
     def _fmt(cifra: float | None) -> str:
@@ -1044,7 +1137,12 @@ def buscar_greenhouse(slug: str, limite: int = 100) -> list[dict[str, Any]]:
                 detalle = {}
             descripcion = detalle.get("content")
         except Exception as err:  # noqa: BLE001 — carry on without the detail
-            log.debug("Greenhouse %s/%s sin detalle: %s", slug, trabajo.get("id"), err)
+            log.debug(
+                t("Greenhouse %s/%s sin detalle: %s", "Greenhouse %s/%s without detail: %s"),
+                slug,
+                trabajo.get("id"),
+                err,
+            )
 
         if not empresa:
             empresa = _limpio(detalle.get("company_name")) or _empresa_desde_slug(slug)
@@ -1155,7 +1253,10 @@ def _dias_maximos_antiguedad() -> int:
         dias = int(crudo)
     except ValueError:
         log.warning(
-            "%s=%r no es un entero; se usan %s días.",
+            t(
+                "%s=%r no es un entero; se usan %s días.",
+                "%s=%r is not an integer; using %s days.",
+            ),
             VARIABLE_MAX_ANTIGUEDAD,
             crudo,
             MAX_ANTIGUEDAD_DIAS,
@@ -1329,9 +1430,20 @@ def buscar_recruitee_empresas(
             try:
                 ofertas.extend(futuro.result())
             except Exception as err:  # noqa: BLE001 — one board must not kill the source
-                log.debug("Recruitee %s no disponible: %s", slug, err)
+                log.debug(
+                    t("Recruitee %s no disponible: %s", "Recruitee %s unavailable: %s"),
+                    slug,
+                    err,
+                )
 
-    log.info("Recruitee: %s ofertas de diseño (%s boards).", len(ofertas), len(lista))
+    log.info(
+        t(
+            "Recruitee: %s ofertas de diseño (%s boards).",
+            "Recruitee: %s design postings (%s boards).",
+        ),
+        len(ofertas),
+        len(lista),
+    )
     return ofertas[:limite]
 
 
@@ -1433,9 +1545,20 @@ def buscar_workable_empresas(
             try:
                 ofertas.extend(futuro.result())
             except Exception as err:  # noqa: BLE001
-                log.debug("Workable %s no disponible: %s", slug, err)
+                log.debug(
+                    t("Workable %s no disponible: %s", "Workable %s unavailable: %s"),
+                    slug,
+                    err,
+                )
 
-    log.info("Workable: %s ofertas de diseño (%s boards).", len(ofertas), len(lista))
+    log.info(
+        t(
+            "Workable: %s ofertas de diseño (%s boards).",
+            "Workable: %s design postings (%s boards).",
+        ),
+        len(ofertas),
+        len(lista),
+    )
     return ofertas[:limite]
 
 
@@ -1508,7 +1631,12 @@ def buscar_bamboohr(slug: str, limite: int = 100) -> list[dict[str, Any]]:
                 if isinstance(resultado, dict) and isinstance(resultado.get("jobOpening"), dict):
                     detalle = resultado["jobOpening"]
         except Exception as err:  # noqa: BLE001 — carry on without the detail
-            log.debug("BambooHR %s/%s sin detalle: %s", slug, trabajo.get("id"), err)
+            log.debug(
+                t("BambooHR %s/%s sin detalle: %s", "BambooHR %s/%s without detail: %s"),
+                slug,
+                trabajo.get("id"),
+                err,
+            )
 
         ubicacion = _ubicacion_bamboohr(
             detalle.get("location"),
@@ -1572,9 +1700,20 @@ def buscar_bamboohr_empresas(
             try:
                 ofertas.extend(futuro.result())
             except Exception as err:  # noqa: BLE001
-                log.debug("BambooHR %s no disponible: %s", slug, err)
+                log.debug(
+                    t("BambooHR %s no disponible: %s", "BambooHR %s unavailable: %s"),
+                    slug,
+                    err,
+                )
 
-    log.info("BambooHR: %s ofertas de diseño (%s boards).", len(ofertas), len(lista))
+    log.info(
+        t(
+            "BambooHR: %s ofertas de diseño (%s boards).",
+            "BambooHR: %s design postings (%s boards).",
+        ),
+        len(ofertas),
+        len(lista),
+    )
     return ofertas[:limite]
 
 
@@ -1668,7 +1807,7 @@ def buscar_eures(
         try:
             datos = _json_post(URL_EURES_BUSQUEDA, _cuerpo_eures(termino, por_pagina))
         except Exception as err:  # noqa: BLE001 — one query must not kill the source
-            log.warning("EURES «%s» falló: %s", termino, err)
+            log.warning(t("EURES «%s» falló: %s", "EURES '%s' failed: %s"), termino, err)
             continue
         vacantes = datos.get("jvs") if isinstance(datos, dict) else None
         if not isinstance(vacantes, list):
@@ -1709,7 +1848,7 @@ def buscar_eures(
                 encontradas[identificador] = oferta
 
     ofertas = list(encontradas.values())[:limite]
-    log.info("EURES: %s ofertas de diseño.", len(ofertas))
+    log.info(t("EURES: %s ofertas de diseño.", "EURES: %s design postings."), len(ofertas))
     return ofertas
 
 
@@ -1748,11 +1887,19 @@ def buscar_infojobs(
     secreto = (os.environ.get(VARIABLE_INFOJOBS_SECRET) or "").strip()
     consulta = (consulta or "").strip()
     if not consulta:
-        log.info("InfoJobs omitido: sin término de búsqueda configurado (ROLES/TOPICS).")
+        log.info(
+            t(
+                "InfoJobs omitido: sin término de búsqueda configurado (ROLES/TOPICS).",
+                "InfoJobs skipped: no search term configured (ROLES/TOPICS).",
+            )
+        )
         return []
     if not cliente or not secreto:
         log.info(
-            "InfoJobs omitido: faltan %s/%s (su API exige key).",
+            t(
+                "InfoJobs omitido: faltan %s/%s (su API exige key).",
+                "InfoJobs skipped: missing %s/%s (its API requires a key).",
+            ),
             VARIABLE_INFOJOBS_ID,
             VARIABLE_INFOJOBS_SECRET,
         )
@@ -1769,7 +1916,7 @@ def buscar_infojobs(
         with urllib.request.urlopen(peticion, timeout=TIMEOUT_HTTP) as respuesta:
             datos = json.loads(respuesta.read().decode("utf-8", errors="replace"))
     except Exception as err:  # noqa: BLE001 — no valid key means no postings
-        log.warning("InfoJobs falló: %s", err)
+        log.warning(t("InfoJobs falló: %s", "InfoJobs failed: %s"), err)
         return []
 
     elementos = datos.get("items") if isinstance(datos, dict) else None
@@ -1819,6 +1966,647 @@ def buscar_infojobs(
 
 
 # --------------------------------------------------------------------------- #
+# Source: RemoteOK (public JSON feed)
+# --------------------------------------------------------------------------- #
+
+
+def _rango_salario(minimo: Any, maximo: Any, moneda: str = "USD") -> str | None:
+    """Format a min/max salary pair, treating zero as "not published".
+
+    Args:
+        minimo: Lower bound (RemoteOK sends 0 when it knows nothing).
+        maximo: Upper bound.
+        moneda: Currency prefix; the source publishes these figures in USD.
+
+    Returns:
+        A text such as ``"USD 60.000 – 90.000"``, or ``None``.
+    """
+    bajo = _importe(minimo)
+    alto = _importe(maximo)
+    if bajo is not None and bajo <= 0:
+        bajo = None
+    if alto is not None and alto <= 0:
+        alto = None
+    if bajo is None and alto is None:
+        return None
+
+    def _fmt(cifra: float) -> str:
+        return f"{cifra:,.0f}".replace(",", ".")
+
+    if bajo is not None and alto is not None:
+        texto = f"{_fmt(bajo)} – {_fmt(alto)}"
+    elif bajo is not None:
+        texto = _fmt(bajo)
+    else:  # only `alto` left: the early return above excludes both being None
+        texto = _fmt(alto or 0.0)
+    return f"{moneda} {texto}".strip()
+
+
+def buscar_remoteok(limite: int = 100) -> list[dict[str, Any]]:
+    """Design postings from RemoteOK's public JSON feed.
+
+    ``GET https://remoteok.com/api`` returns a flat array whose **first**
+    element is the API's legal notice (no ``position``); the rest are postings
+    with ``position``, ``company``, ``location``, ``date``, ``tags``,
+    ``salary_min``/``salary_max`` and ``url``. RemoteOK links back to the
+    original posting from that URL, which is the one stored.
+
+    Args:
+        limite: Maximum postings to return.
+
+    Returns:
+        Recent normalized postings.
+
+    Raises:
+        ValueError: When the response is not a list.
+    """
+    datos = _json(URL_REMOTEOK)
+    if not isinstance(datos, list):
+        raise ValueError("respuesta inesperada (se esperaba una lista)")
+
+    ofertas: list[dict[str, Any]] = []
+    for trabajo in datos:
+        if not isinstance(trabajo, dict):
+            continue
+        titulo = trabajo.get("position")
+        if not _limpio(titulo):  # first element: the legal notice
+            continue
+        if not _titulo_relevante(titulo):
+            continue
+
+        oferta = _oferta(
+            job_id=_job_id("remoteok", trabajo.get("id"), str(trabajo.get("slug") or titulo)),
+            titulo=titulo,
+            empresa=trabajo.get("company"),
+            url=trabajo.get("url") or trabajo.get("apply_url"),
+            ubicacion=trabajo.get("location"),
+            remoto="Remoto",  # RemoteOK only lists remote postings
+            salario=_rango_salario(trabajo.get("salary_min"), trabajo.get("salary_max")),
+            contrato=None,
+            descripcion=trabajo.get("description"),
+            fecha=trabajo.get("date") or trabajo.get("epoch"),
+            source="remoteok",
+        )
+        if oferta and _reciente(oferta):
+            ofertas.append(oferta)
+        if len(ofertas) >= limite:
+            break
+    return ofertas
+
+
+# --------------------------------------------------------------------------- #
+# Source: Himalayas (public JSON feed)
+# --------------------------------------------------------------------------- #
+
+
+def buscar_himalayas(limite: int = 100) -> list[dict[str, Any]]:
+    """Design postings from Himalayas' public JSON feed.
+
+    ``GET https://himalayas.app/jobs/api`` returns
+    ``{"jobs": [...], "totalCount", "nextCursor", ...}``. Each posting carries
+    ``title``, ``companyName``, ``applicationLink``, ``guid``,
+    ``locationRestrictions`` (list), ``pubDate`` (epoch seconds),
+    ``minSalary``/``maxSalary``/``currency``, ``employmentType`` and the
+    description in HTML (``description``, with ``excerpt`` as a fallback).
+
+    Args:
+        limite: Maximum postings to return.
+
+    Returns:
+        Recent normalized postings.
+
+    Raises:
+        ValueError: When the response has no ``jobs`` list.
+    """
+    datos = _json(URL_HIMALAYAS)
+    trabajos = datos.get("jobs") if isinstance(datos, dict) else None
+    if not isinstance(trabajos, list):
+        raise ValueError("respuesta sin 'jobs'")
+
+    ofertas: list[dict[str, Any]] = []
+    for trabajo in trabajos:
+        if not isinstance(trabajo, dict):
+            continue
+        titulo = trabajo.get("title")
+        if not _titulo_relevante(titulo):
+            continue
+
+        restricciones = trabajo.get("locationRestrictions")
+        ubicacion = None
+        if isinstance(restricciones, list):
+            ubicacion = ", ".join(str(r) for r in restricciones if _limpio(r)) or None
+        elif restricciones:
+            ubicacion = _limpio(restricciones)
+
+        enlace = trabajo.get("applicationLink") or trabajo.get("guid")
+        oferta = _oferta(
+            job_id=_job_id("himalayas", "", respaldo=str(enlace or titulo)),
+            titulo=titulo,
+            empresa=trabajo.get("companyName"),
+            url=enlace,
+            ubicacion=ubicacion,
+            remoto="Remoto",  # Himalayas only lists remote postings
+            salario=_rango_salario(
+                trabajo.get("minSalary"),
+                trabajo.get("maxSalary"),
+                _limpio(trabajo.get("currency")) or "USD",
+            ),
+            contrato=_clasificar(trabajo.get("employmentType"), _CONTRATOS),
+            descripcion=trabajo.get("description") or trabajo.get("excerpt"),
+            fecha=trabajo.get("pubDate"),
+            source="himalayas",
+        )
+        if oferta and _reciente(oferta):
+            ofertas.append(oferta)
+        if len(ofertas) >= limite:
+            break
+    return ofertas
+
+
+# --------------------------------------------------------------------------- #
+# Source: Working Nomads (public JSON feed)
+# --------------------------------------------------------------------------- #
+
+
+def buscar_workingnomads(limite: int = 100) -> list[dict[str, Any]]:
+    """Design postings from Working Nomads' public JSON feed.
+
+    ``GET https://www.workingnomads.com/api/exposed_jobs/`` returns a flat array
+    with ``title``, ``company_name``, ``url``, ``location``, ``description``
+    (HTML), ``category_name``, ``tags`` and ``pub_date``.
+
+    Args:
+        limite: Maximum postings to return.
+
+    Returns:
+        Recent normalized postings.
+
+    Raises:
+        ValueError: When the response is not a list.
+    """
+    datos = _json(URL_WORKINGNOMADS)
+    if not isinstance(datos, list):
+        raise ValueError("respuesta inesperada (se esperaba una lista)")
+
+    ofertas: list[dict[str, Any]] = []
+    for trabajo in datos:
+        if not isinstance(trabajo, dict):
+            continue
+        titulo = trabajo.get("title")
+        if not _titulo_relevante(titulo):
+            continue
+
+        oferta = _oferta(
+            job_id=_job_id("workingnomads", "", respaldo=str(trabajo.get("url") or titulo)),
+            titulo=titulo,
+            empresa=trabajo.get("company_name"),
+            url=trabajo.get("url"),
+            ubicacion=trabajo.get("location"),
+            remoto="Remoto",  # Working Nomads only lists remote postings
+            salario=None,  # the feed publishes no salary
+            contrato=None,
+            descripcion=trabajo.get("description"),
+            fecha=trabajo.get("pub_date"),
+            source="workingnomads",
+        )
+        if oferta and _reciente(oferta):
+            ofertas.append(oferta)
+        if len(ofertas) >= limite:
+            break
+    return ofertas
+
+
+# --------------------------------------------------------------------------- #
+# Source: Teamtailor (public JSON Feed per company)
+# --------------------------------------------------------------------------- #
+
+
+def _atributos_teamtailor(elemento: dict[str, Any]) -> dict[str, Any]:
+    """Flatten a Teamtailor element from either response shape.
+
+    The public board is a JSON Feed (``{"items": [...]}``, flat fields); the
+    authenticated API v1 nests everything under ``attributes`` (``data``). Both
+    are read here so a board answering with either shape still works.
+
+    Args:
+        elemento: Raw posting.
+
+    Returns:
+        A dict with ``titulo``, ``url``, ``descripcion``, ``fecha``,
+        ``ubicacion`` and ``empresa`` (any of them may be ``None``).
+    """
+    atributos = elemento.get("attributes")
+    if isinstance(atributos, dict):  # API v1
+        enlace = atributos.get("url")
+        enlaces = elemento.get("links")
+        if not enlace and isinstance(enlaces, dict):
+            enlace = enlaces.get("careersite-job-url")
+        return {
+            "titulo": atributos.get("title"),
+            "url": enlace,
+            "descripcion": atributos.get("body") or atributos.get("contentHtml"),
+            "fecha": atributos.get("created-at") or atributos.get("createdAt"),
+            "ubicacion": atributos.get("location"),
+            "empresa": atributos.get("company-name"),
+        }
+
+    # JSON Feed (public /jobs.json)
+    organizacion = None
+    ubicacion = None
+    jobposting = elemento.get("_jobposting")
+    if isinstance(jobposting, dict):
+        organizacion = jobposting.get("hiringOrganization")
+        organizacion = organizacion.get("name") if isinstance(organizacion, dict) else None
+        lugar = jobposting.get("jobLocation")
+        if isinstance(lugar, dict):
+            direccion = lugar.get("address")
+            if isinstance(direccion, dict):
+                ubicacion = (
+                    ", ".join(
+                        str(direccion.get(clave))
+                        for clave in ("addressLocality", "addressRegion", "addressCountry")
+                        if _limpio(direccion.get(clave))
+                    )
+                    or None
+                )
+    return {
+        "titulo": elemento.get("title"),
+        "url": elemento.get("url"),
+        "descripcion": elemento.get("content_html"),
+        "fecha": elemento.get("date_published"),
+        "ubicacion": ubicacion,
+        "empresa": organizacion,
+    }
+
+
+def buscar_teamtailor(slug: str, limite: int = 100) -> list[dict[str, Any]]:
+    """Design postings from a Teamtailor public board.
+
+    ``GET https://{slug}.teamtailor.com/jobs.json`` returns a JSON Feed
+    (``{"items": [...]}``) with ``title``, ``url``, ``content_html``,
+    ``date_published`` and a schema.org block (``_jobposting``) carrying the
+    company and the location.
+
+    Args:
+        slug: Board slug (company subdomain).
+        limite: Maximum postings to return.
+
+    Returns:
+        Recent normalized postings.
+
+    Raises:
+        ValueError: When the response has neither ``items`` nor ``data``.
+    """
+    datos = _json(URL_TEAMTAILOR.format(slug=urllib.parse.quote(slug)))
+    elementos = None
+    if isinstance(datos, dict):
+        elementos = datos.get("items")
+        if not isinstance(elementos, list):
+            elementos = datos.get("data")
+    if not isinstance(elementos, list):
+        raise ValueError("respuesta sin 'items' ni 'data'")
+
+    empresa_board = _empresa_desde_slug(slug)
+    ofertas: list[dict[str, Any]] = []
+    for elemento in elementos:
+        if not isinstance(elemento, dict):
+            continue
+        campos = _atributos_teamtailor(elemento)
+        titulo = campos["titulo"]
+        if not _titulo_relevante(titulo):
+            continue
+
+        oferta = _oferta(
+            job_id=_job_id(
+                "teamtailor",
+                f"{slug}-{elemento.get('id')}" if elemento.get("id") else "",
+                str(campos["url"] or titulo),
+            ),
+            titulo=titulo,
+            empresa=campos["empresa"] or empresa_board,
+            url=campos["url"],
+            ubicacion=campos["ubicacion"],
+            remoto=_normalizar_remoto(campos["ubicacion"], titulo),
+            salario=None,
+            contrato=None,
+            descripcion=campos["descripcion"],
+            fecha=campos["fecha"],
+            source="teamtailor",
+        )
+        if oferta and _reciente(oferta):
+            ofertas.append(oferta)
+        if len(ofertas) >= limite:
+            break
+    return ofertas
+
+
+# --------------------------------------------------------------------------- #
+# Source: SmartRecruiters (public API per company)
+# --------------------------------------------------------------------------- #
+
+
+def _descripcion_smartrecruiters(detalle: Any) -> str | None:
+    """Join the text sections of a SmartRecruiters ``jobAd``."""
+    if not isinstance(detalle, dict):
+        return None
+    job_ad = detalle.get("jobAd")
+    secciones = job_ad.get("sections") if isinstance(job_ad, dict) else None
+    if not isinstance(secciones, dict):
+        return None
+    textos = [
+        str(seccion.get("text"))
+        for seccion in secciones.values()
+        if isinstance(seccion, dict) and _limpio(seccion.get("text"))
+    ]
+    return "\n\n".join(textos) or None
+
+
+def buscar_smartrecruiters(slug: str, limite: int = 100) -> list[dict[str, Any]]:
+    """Design postings from a SmartRecruiters public board.
+
+    ``GET .../v1/companies/{slug}/postings`` returns ``{"content": […]}`` with
+    ``name``, ``id``, ``company``, ``location``, ``typeOfEmployment`` and
+    ``releasedDate``; the ``ref`` field points at the API, so the public page
+    (``jobs.smartrecruiters.com``) is built from the id. The list carries no
+    description: the detail (``jobAd.sections``) is requested only for postings
+    passing the title filter, and a failing detail leaves the posting without
+    one instead of losing it.
+
+    Args:
+        slug: Board identifier (case-sensitive: ``BoschGroup``).
+        limite: Maximum postings to return.
+
+    Returns:
+        Recent normalized postings.
+
+    Raises:
+        ValueError: When the response has no ``content`` list.
+    """
+    # The API caps the page size at 100: the filter is applied locally after it.
+    pagina = max(1, min(limite, 100))
+    datos = _json(URL_SMARTRECRUITERS.format(slug=urllib.parse.quote(slug), limite=pagina))
+    trabajos = datos.get("content") if isinstance(datos, dict) else None
+    if not isinstance(trabajos, list):
+        raise ValueError("respuesta sin 'content'")
+
+    candidatas = [t for t in trabajos if isinstance(t, dict) and _titulo_relevante(t.get("name"))]
+    if not candidatas:
+        return []
+
+    empresa_board = _empresa_desde_slug(slug)
+    ofertas: list[dict[str, Any]] = []
+    for trabajo in candidatas[:limite]:
+        ubicacion_bloque = trabajo.get("location")
+        ubicacion = None
+        remoto = None
+        if isinstance(ubicacion_bloque, dict):
+            ubicacion = _limpio(ubicacion_bloque.get("fullLocation")) or (
+                ", ".join(
+                    str(ubicacion_bloque.get(clave))
+                    for clave in ("city", "region", "country")
+                    if _limpio(ubicacion_bloque.get(clave))
+                )
+                or None
+            )
+            if ubicacion_bloque.get("remote") is True:
+                remoto = "Remoto"
+            elif ubicacion_bloque.get("hybrid") is True:
+                remoto = "Híbrido"
+        if remoto is None:
+            remoto = _normalizar_remoto(ubicacion)
+
+        empresa_bloque = trabajo.get("company")
+        empresa = (
+            _limpio(empresa_bloque.get("name")) if isinstance(empresa_bloque, dict) else None
+        ) or empresa_board
+
+        identificador = _limpio(trabajo.get("id"))
+        descripcion = None
+        try:
+            detalle = _json(
+                URL_SMARTRECRUITERS_DETALLE.format(
+                    slug=urllib.parse.quote(slug), job_id=urllib.parse.quote(str(identificador))
+                )
+            )
+            descripcion = _descripcion_smartrecruiters(detalle)
+        except Exception as err:  # noqa: BLE001 — carry on without the detail
+            log.debug(
+                t("%s %s/%s sin detalle: %s", "%s %s/%s without detail: %s"),
+                "SmartRecruiters",
+                slug,
+                identificador,
+                err,
+            )
+
+        oferta = _oferta(
+            job_id=_job_id("smartrecruiters", f"{slug}-{identificador}", str(trabajo.get("name"))),
+            titulo=trabajo.get("name"),
+            empresa=empresa,
+            url=URL_SMARTRECRUITERS_OFERTA.format(
+                slug=urllib.parse.quote(slug), job_id=urllib.parse.quote(str(identificador))
+            ),
+            ubicacion=ubicacion,
+            remoto=remoto,
+            salario=None,  # the public list publishes no salary
+            contrato=_clasificar(
+                (trabajo.get("typeOfEmployment") or {}).get("label")
+                if isinstance(trabajo.get("typeOfEmployment"), dict)
+                else trabajo.get("typeOfEmployment"),
+                _CONTRATOS,
+            ),
+            descripcion=descripcion,
+            fecha=trabajo.get("releasedDate"),
+            source="smartrecruiters",
+        )
+        if oferta and _reciente(oferta):
+            ofertas.append(oferta)
+    return ofertas
+
+
+# --------------------------------------------------------------------------- #
+# Source: Personio (public search per company)
+# --------------------------------------------------------------------------- #
+
+
+def buscar_personio(slug: str, limite: int = 100) -> list[dict[str, Any]]:
+    """Design postings from a Personio public board.
+
+    ``GET https://{slug}.jobs.personio.de/search.json`` returns a flat array
+    (some deployments wrap it as ``{"data": […]}``) with ``name``, ``office``
+    (comma-separated) / ``offices``, ``employment_type``, ``schedule``,
+    ``department`` and, often, an empty ``description``. No date is published,
+    so ``fecha_publicacion`` stays ``None`` instead of being invented.
+
+    Args:
+        slug: Board slug (company subdomain).
+        limite: Maximum postings to return.
+
+    Returns:
+        Normalized postings.
+
+    Raises:
+        ValueError: When the response is neither a list nor has ``data``.
+    """
+    datos = _json(URL_PERSONIO.format(slug=urllib.parse.quote(slug)))
+    trabajos = datos.get("data") if isinstance(datos, dict) else datos
+    if not isinstance(trabajos, list):
+        raise ValueError("respuesta sin 'data'")
+
+    empresa = _empresa_desde_slug(slug)
+    ofertas: list[dict[str, Any]] = []
+    for trabajo in trabajos:
+        if not isinstance(trabajo, dict):
+            continue
+        titulo = trabajo.get("name")
+        if not _titulo_relevante(titulo):
+            continue
+
+        ubicacion = _limpio(trabajo.get("office"))
+        if ubicacion:
+            # Personio joins offices with a bare comma ("Berlin,Remote,Hamburg").
+            ubicacion = ", ".join(parte.strip() for parte in ubicacion.split(",") if parte.strip())
+        if not ubicacion:
+            oficinas = trabajo.get("offices")
+            if isinstance(oficinas, list):
+                ubicacion = ", ".join(str(o) for o in oficinas if _limpio(o)) or None
+
+        oferta = _oferta(
+            job_id=_job_id("personio", f"{slug}-{trabajo.get('id')}", str(titulo)),
+            titulo=titulo,
+            empresa=empresa,
+            url=URL_PERSONIO_OFERTA.format(
+                slug=urllib.parse.quote(slug), job_id=urllib.parse.quote(str(trabajo.get("id")))
+            ),
+            ubicacion=ubicacion,
+            remoto=_normalizar_remoto(ubicacion),
+            salario=None,
+            contrato=_clasificar(
+                " ".join(
+                    str(valor)
+                    for valor in (trabajo.get("employment_type"), trabajo.get("schedule"))
+                    if _limpio(valor)
+                ),
+                _CONTRATOS,
+            ),
+            descripcion=trabajo.get("description"),
+            fecha=None,  # Personio publishes no date in this feed
+            source="personio",
+        )
+        if oferta:
+            ofertas.append(oferta)
+        if len(ofertas) >= limite:
+            break
+    return ofertas
+
+
+# --------------------------------------------------------------------------- #
+# Per-company aggregation for the new ATS sources
+# --------------------------------------------------------------------------- #
+
+
+def _agregar_por_empresas(
+    buscador: Any,
+    empresas: Iterable[str],
+    limite: int,
+    nombre: str,
+) -> list[dict[str, Any]]:
+    """Walk the boards of ``empresas`` in parallel and aggregate their postings.
+
+    Args:
+        buscador: Function ``buscador(slug, limite)`` for one board.
+        empresas: Slugs to scan.
+        limite: Maximum postings to return.
+        nombre: Source name, for the log line.
+
+    Returns:
+        Aggregated postings; boards that fail are skipped.
+    """
+    lista = [e for e in empresas if e]
+    if not lista:
+        return []
+
+    ofertas: list[dict[str, Any]] = []
+    with ThreadPoolExecutor(max_workers=MAX_HILOS) as pool:
+        futuros = {slug: pool.submit(buscador, slug, limite) for slug in lista}
+        for slug, futuro in futuros.items():
+            try:
+                ofertas.extend(futuro.result())
+            except Exception as err:  # noqa: BLE001 — one board must not kill the source
+                log.debug(t("%s %s no disponible: %s", "%s %s unavailable: %s"), nombre, slug, err)
+
+    log.info(
+        t("%s: %s ofertas de diseño (%s boards).", "%s: %s design postings (%s boards)."),
+        nombre,
+        len(ofertas),
+        len(lista),
+    )
+    return ofertas[:limite]
+
+
+def buscar_teamtailor_empresas(
+    limite: int = 100,
+    empresas: Iterable[str] | None = None,
+) -> list[dict[str, Any]]:
+    """Walk the Teamtailor boards and aggregate their postings.
+
+    Args:
+        limite: Maximum postings to return.
+        empresas: Slugs to scan; defaults to ``TEAMTAILOR_EMPRESAS``.
+
+    Returns:
+        Aggregated postings; boards that fail are skipped.
+    """
+    return _agregar_por_empresas(
+        buscar_teamtailor,
+        empresas if empresas is not None else TEAMTAILOR_EMPRESAS,
+        limite,
+        "Teamtailor",
+    )
+
+
+def buscar_smartrecruiters_empresas(
+    limite: int = 100,
+    empresas: Iterable[str] | None = None,
+) -> list[dict[str, Any]]:
+    """Walk the SmartRecruiters boards and aggregate their postings.
+
+    Args:
+        limite: Maximum postings to return.
+        empresas: Slugs to scan; defaults to ``SMARTRECRUITERS_EMPRESAS``.
+
+    Returns:
+        Aggregated postings; boards that fail are skipped.
+    """
+    return _agregar_por_empresas(
+        buscar_smartrecruiters,
+        empresas if empresas is not None else SMARTRECRUITERS_EMPRESAS,
+        limite,
+        "SmartRecruiters",
+    )
+
+
+def buscar_personio_empresas(
+    limite: int = 100,
+    empresas: Iterable[str] | None = None,
+) -> list[dict[str, Any]]:
+    """Walk the Personio boards and aggregate their postings.
+
+    Args:
+        limite: Maximum postings to return.
+        empresas: Slugs to scan; defaults to ``PERSONIO_EMPRESAS``.
+
+    Returns:
+        Aggregated postings; boards that fail are skipped.
+    """
+    return _agregar_por_empresas(
+        buscar_personio,
+        empresas if empresas is not None else PERSONIO_EMPRESAS,
+        limite,
+        "Personio",
+    )
+
+
+# --------------------------------------------------------------------------- #
 # ATS auto-detection per company
 # --------------------------------------------------------------------------- #
 
@@ -1847,10 +2635,20 @@ def buscar_empresa(slug: str, limite: int = 100) -> tuple[str | None, list[dict[
         try:
             ofertas = buscador(slug, limite=limite)
         except Exception as err:  # noqa: BLE001 — try the next ATS
-            log.debug("ATS %s/%s no disponible: %s", nombre, slug, err)
+            log.debug(
+                t("ATS %s/%s no disponible: %s", "ATS %s/%s unavailable: %s"),
+                nombre,
+                slug,
+                err,
+            )
             continue
         if ofertas:
-            log.info("%s: board %s (%s ofertas de diseño).", nombre, slug, len(ofertas))
+            log.info(
+                t("%s: board %s (%s ofertas de diseño).", "%s: board %s (%s design postings)."),
+                nombre,
+                slug,
+                len(ofertas),
+            )
             return nombre, ofertas
     return None, []
 
@@ -1877,17 +2675,20 @@ def buscar_ats(limite: int = 100, slugs: Iterable[str] | None = None) -> list[di
             try:
                 ats, encontradas = futuro.result()
             except Exception as err:  # noqa: BLE001 — never propagates
-                log.warning("Empresa %s falló: %s", slug, err)
+                log.warning(t("Empresa %s falló: %s", "Company %s failed: %s"), slug, err)
                 continue
             if ats:
                 detectadas.append(f"{slug}:{ats}")
                 ofertas.extend(encontradas)
 
     log.info(
-        "ATS: %s/%s empresas con ofertas de diseño (%s).",
+        t(
+            "ATS: %s/%s empresas con ofertas de diseño (%s).",
+            "ATS: %s/%s companies with design postings (%s).",
+        ),
         len(detectadas),
         len(lista_slugs),
-        ", ".join(sorted(detectadas)) or "ninguna",
+        ", ".join(sorted(detectadas)) or t("ninguna", "none"),
     )
     return ofertas
 
@@ -1966,11 +2767,13 @@ def buscar_ofertas_boards(
         ``url``, ``ubicacion``, ``remoto``, ``salario``, ``contrato``,
         ``descripcion`` and ``source``. Fields that are not published stay
         ``None``. Sources: Remotive, We Work Remotely, auto-detected ATS
-        (Greenhouse/Lever/Ashby), Recruitee, Workable, BambooHR, EURES and
-        InfoJobs. The last four already drop at the origin the postings older
-        than ``MAX_ANTIGUEDAD_DIAS``; ``main`` applies the filter again on the
-        merged set. A failing source never raises: each one is isolated, and if
-        all fail the result is ``[]``.
+        (Greenhouse/Lever/Ashby), Recruitee, Workable, BambooHR, EURES,
+        InfoJobs, RemoteOK, Himalayas, Working Nomads, Teamtailor,
+        SmartRecruiters and Personio. Every source is isolated in its own
+        ``try/except`` and the ones that filter at the origin drop the postings
+        older than ``MAX_ANTIGUEDAD_DIAS``; ``main`` applies the filter again on
+        the merged set. A failing source never raises, and if all fail the
+        result is ``[]``.
     """
     if limite_por_fuente <= 0:
         return []
@@ -1986,43 +2789,43 @@ def buscar_ofertas_boards(
     try:
         ofertas.extend(buscar_remotive(limite=limite_por_fuente, terminos=terminos_fuente))
     except Exception as err:  # noqa: BLE001
-        log.warning("Remotive falló: %s", err)
+        log.warning(t("Remotive falló: %s", "Remotive failed: %s"), err)
 
     # We Work Remotely (RSS).
     try:
         ofertas.extend(buscar_wwr(limite=limite_por_fuente))
     except Exception as err:  # noqa: BLE001
-        log.warning("WWR falló: %s", err)
+        log.warning(t("WWR falló: %s", "WWR failed: %s"), err)
 
     # Public ATS boards (Greenhouse / Lever / Ashby), auto-detected per company.
     try:
         ofertas.extend(buscar_ats(limite=limite_por_fuente, slugs=slugs))
     except Exception as err:  # noqa: BLE001
-        log.warning("ATS fallaron: %s", err)
+        log.warning(t("ATS fallaron: %s", "ATS sources failed: %s"), err)
 
     # Recruitee: public boards per company subdomain.
     try:
         ofertas.extend(buscar_recruitee_empresas(limite=limite_por_fuente))
     except Exception as err:  # noqa: BLE001
-        log.warning("Recruitee falló: %s", err)
+        log.warning(t("Recruitee falló: %s", "Recruitee failed: %s"), err)
 
     # Workable: public widget endpoint (no key).
     try:
         ofertas.extend(buscar_workable_empresas(limite=limite_por_fuente))
     except Exception as err:  # noqa: BLE001
-        log.warning("Workable falló: %s", err)
+        log.warning(t("Workable falló: %s", "Workable failed: %s"), err)
 
     # BambooHR: index + detail for each relevant posting.
     try:
         ofertas.extend(buscar_bamboohr_empresas(limite=limite_por_fuente))
     except Exception as err:  # noqa: BLE001
-        log.warning("BambooHR falló: %s", err)
+        log.warning(t("BambooHR falló: %s", "BambooHR failed: %s"), err)
 
     # EURES: public search API (JSON POST, no key).
     try:
         ofertas.extend(buscar_eures(limite=limite_por_fuente, terminos=terminos_fuente))
     except Exception as err:  # noqa: BLE001
-        log.warning("EURES falló: %s", err)
+        log.warning(t("EURES falló: %s", "EURES failed: %s"), err)
 
     # InfoJobs: returns [] without INFOJOBS_CLIENT_ID/INFOJOBS_CLIENT_SECRET.
     # Its API accepts one term per call: the first one from the config is used.
@@ -2034,11 +2837,50 @@ def buscar_ofertas_boards(
             )
         )
     except Exception as err:  # noqa: BLE001
-        log.warning("InfoJobs falló: %s", err)
+        log.warning(t("InfoJobs falló: %s", "InfoJobs failed: %s"), err)
+
+    # RemoteOK: public JSON feed (the source is credited on every posting).
+    try:
+        ofertas.extend(buscar_remoteok(limite=limite_por_fuente))
+    except Exception as err:  # noqa: BLE001
+        log.warning(t("RemoteOK falló: %s", "RemoteOK failed: %s"), err)
+
+    # Himalayas: public JSON feed.
+    try:
+        ofertas.extend(buscar_himalayas(limite=limite_por_fuente))
+    except Exception as err:  # noqa: BLE001
+        log.warning(t("Himalayas falló: %s", "Himalayas failed: %s"), err)
+
+    # Working Nomads: public JSON feed.
+    try:
+        ofertas.extend(buscar_workingnomads(limite=limite_por_fuente))
+    except Exception as err:  # noqa: BLE001
+        log.warning(t("Working Nomads falló: %s", "Working Nomads failed: %s"), err)
+
+    # Teamtailor: public JSON Feed per company subdomain.
+    try:
+        ofertas.extend(buscar_teamtailor_empresas(limite=limite_por_fuente))
+    except Exception as err:  # noqa: BLE001
+        log.warning(t("Teamtailor falló: %s", "Teamtailor failed: %s"), err)
+
+    # SmartRecruiters: public API per company identifier (list + detail).
+    try:
+        ofertas.extend(buscar_smartrecruiters_empresas(limite=limite_por_fuente))
+    except Exception as err:  # noqa: BLE001
+        log.warning(t("SmartRecruiters falló: %s", "SmartRecruiters failed: %s"), err)
+
+    # Personio: public search per company subdomain.
+    try:
+        ofertas.extend(buscar_personio_empresas(limite=limite_por_fuente))
+    except Exception as err:  # noqa: BLE001
+        log.warning(t("Personio falló: %s", "Personio failed: %s"), err)
 
     resultado = _deduplicar(ofertas)
     log.info(
-        "Boards: %s ofertas de diseño tras deduplicar (%s antes).",
+        t(
+            "Boards: %s ofertas de diseño tras deduplicar (%s antes).",
+            "Boards: %s design postings after dedupe (%s before).",
+        ),
         len(resultado),
         len(ofertas),
     )
