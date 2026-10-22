@@ -502,6 +502,50 @@
       </div>
 
       <div class="mt-4 border-t border-[#ddd] pt-4">
+        <p class="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#999]" data-i18n="cfg_sec_empresas">Empresas por ATS</p>
+        <p class="mb-3 text-[0.68rem] leading-relaxed text-[#999]" data-i18n="cfg_hint_empresas">
+          Las listas se separan por comas. Vacío = ninguna empresa de ese ATS.
+        </p>
+        <div class="grid gap-3 md:grid-cols-2">
+          <div>
+            <label for="cfg-workable-empresas" class="mb-1 block text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#999]" data-i18n="cfg_lbl_workable_empresas">Workable · empresas</label>
+            <textarea id="cfg-workable-empresas" data-cfg="WORKABLE_EMPRESAS" data-tipo="lista" rows="2"
+              class="w-full resize-y rounded-lg border border-[#ddd] bg-[#fafafa]/60 px-3 py-2 text-sm leading-relaxed text-[#2d325b] focus:border-[#3898ec] focus:outline-none"></textarea>
+          </div>
+          <div>
+            <label for="cfg-bamboohr-empresas" class="mb-1 block text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#999]" data-i18n="cfg_lbl_bamboohr_empresas">BambooHR · empresas</label>
+            <textarea id="cfg-bamboohr-empresas" data-cfg="BAMBOOHR_EMPRESAS" data-tipo="lista" rows="2"
+              class="w-full resize-y rounded-lg border border-[#ddd] bg-[#fafafa]/60 px-3 py-2 text-sm leading-relaxed text-[#2d325b] focus:border-[#3898ec] focus:outline-none"></textarea>
+          </div>
+          <div>
+            <label for="cfg-recruitee-empresas" class="mb-1 block text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#999]" data-i18n="cfg_lbl_recruitee_empresas">Recruitee · empresas</label>
+            <textarea id="cfg-recruitee-empresas" data-cfg="RECRUITEE_EMPRESAS" data-tipo="lista" rows="2"
+              class="w-full resize-y rounded-lg border border-[#ddd] bg-[#fafafa]/60 px-3 py-2 text-sm leading-relaxed text-[#2d325b] focus:border-[#3898ec] focus:outline-none"></textarea>
+          </div>
+          <div>
+            <label for="cfg-teamtailor-empresas" class="mb-1 block text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#999]" data-i18n="cfg_lbl_teamtailor_empresas">Teamtailor · empresas</label>
+            <textarea id="cfg-teamtailor-empresas" data-cfg="TEAMTAILOR_EMPRESAS" data-tipo="lista" rows="2"
+              class="w-full resize-y rounded-lg border border-[#ddd] bg-[#fafafa]/60 px-3 py-2 text-sm leading-relaxed text-[#2d325b] focus:border-[#3898ec] focus:outline-none"></textarea>
+          </div>
+          <div>
+            <label for="cfg-smartrecruiters-empresas" class="mb-1 block text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#999]" data-i18n="cfg_lbl_smartrecruiters_empresas">SmartRecruiters · empresas</label>
+            <textarea id="cfg-smartrecruiters-empresas" data-cfg="SMARTRECRUITERS_EMPRESAS" data-tipo="lista" rows="2"
+              class="w-full resize-y rounded-lg border border-[#ddd] bg-[#fafafa]/60 px-3 py-2 text-sm leading-relaxed text-[#2d325b] focus:border-[#3898ec] focus:outline-none"></textarea>
+          </div>
+          <div>
+            <label for="cfg-personio-empresas" class="mb-1 block text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#999]" data-i18n="cfg_lbl_personio_empresas">Personio · empresas</label>
+            <textarea id="cfg-personio-empresas" data-cfg="PERSONIO_EMPRESAS" data-tipo="lista" rows="2"
+              class="w-full resize-y rounded-lg border border-[#ddd] bg-[#fafafa]/60 px-3 py-2 text-sm leading-relaxed text-[#2d325b] focus:border-[#3898ec] focus:outline-none"></textarea>
+          </div>
+          <div class="md:col-span-2">
+            <label for="cfg-empresas-slugs" class="mb-1 block text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#999]" data-i18n="cfg_lbl_empresas_slugs">Greenhouse / Lever / Ashby · empresas</label>
+            <textarea id="cfg-empresas-slugs" data-cfg="EMPRESAS_SLUGS" data-tipo="lista" rows="3"
+              class="w-full resize-y rounded-lg border border-[#ddd] bg-[#fafafa]/60 px-3 py-2 text-sm leading-relaxed text-[#2d325b] focus:border-[#3898ec] focus:outline-none"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-4 border-t border-[#ddd] pt-4">
         <p class="mb-2 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#999]" data-i18n="cfg_probar_fuente">Probar fuente</p>
         <div class="space-y-2">
           <div class="flex flex-wrap items-center gap-2">
@@ -568,9 +612,54 @@
               class="rounded-full border border-[#ddd] px-2.5 py-1 text-[0.68rem] text-[#2d325b] transition hover:border-[#3898ec] hover:text-[#3898ec] disabled:opacity-50">probar</button>
             <span data-resultado="weworkremotely" class="text-[0.68rem] text-[#999]"></span>
           </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="w-32 shrink-0 text-xs text-[#2d325b]">remoteok</span>
+            <button type="button" data-fuente="remoteok" data-i18n="btn_probar"
+              class="rounded-full border border-[#ddd] px-2.5 py-1 text-[0.68rem] text-[#2d325b] transition hover:border-[#3898ec] hover:text-[#3898ec] disabled:opacity-50">probar</button>
+            <span data-resultado="remoteok" class="text-[0.68rem] text-[#999]"></span>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="w-32 shrink-0 text-xs text-[#2d325b]">himalayas</span>
+            <button type="button" data-fuente="himalayas" data-i18n="btn_probar"
+              class="rounded-full border border-[#ddd] px-2.5 py-1 text-[0.68rem] text-[#2d325b] transition hover:border-[#3898ec] hover:text-[#3898ec] disabled:opacity-50">probar</button>
+            <span data-resultado="himalayas" class="text-[0.68rem] text-[#999]"></span>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="w-32 shrink-0 text-xs text-[#2d325b]">workingnomads</span>
+            <button type="button" data-fuente="workingnomads" data-i18n="btn_probar"
+              class="rounded-full border border-[#ddd] px-2.5 py-1 text-[0.68rem] text-[#2d325b] transition hover:border-[#3898ec] hover:text-[#3898ec] disabled:opacity-50">probar</button>
+            <span data-resultado="workingnomads" class="text-[0.68rem] text-[#999]"></span>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="w-32 shrink-0 text-xs text-[#2d325b]">teamtailor</span>
+            <input type="text" data-slug="teamtailor" placeholder="slug" aria-label="slug teamtailor"
+              class="w-28 rounded-lg border border-[#ddd] bg-[#fafafa]/60 px-2 py-1 text-xs text-[#2d325b] placeholder:text-[#bbb] focus:border-[#3898ec] focus:outline-none">
+            <button type="button" data-fuente="teamtailor" data-i18n="btn_probar"
+              class="rounded-full border border-[#ddd] px-2.5 py-1 text-[0.68rem] text-[#2d325b] transition hover:border-[#3898ec] hover:text-[#3898ec] disabled:opacity-50">probar</button>
+            <span data-resultado="teamtailor" class="text-[0.68rem] text-[#999]"></span>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="w-32 shrink-0 text-xs text-[#2d325b]">smartrecruiters</span>
+            <input type="text" data-slug="smartrecruiters" placeholder="slug" aria-label="slug smartrecruiters"
+              class="w-28 rounded-lg border border-[#ddd] bg-[#fafafa]/60 px-2 py-1 text-xs text-[#2d325b] placeholder:text-[#bbb] focus:border-[#3898ec] focus:outline-none">
+            <button type="button" data-fuente="smartrecruiters" data-i18n="btn_probar"
+              class="rounded-full border border-[#ddd] px-2.5 py-1 text-[0.68rem] text-[#2d325b] transition hover:border-[#3898ec] hover:text-[#3898ec] disabled:opacity-50">probar</button>
+            <span data-resultado="smartrecruiters" class="text-[0.68rem] text-[#999]"></span>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="w-32 shrink-0 text-xs text-[#2d325b]">personio</span>
+            <input type="text" data-slug="personio" placeholder="slug" aria-label="slug personio"
+              class="w-28 rounded-lg border border-[#ddd] bg-[#fafafa]/60 px-2 py-1 text-xs text-[#2d325b] placeholder:text-[#bbb] focus:border-[#3898ec] focus:outline-none">
+            <button type="button" data-fuente="personio" data-i18n="btn_probar"
+              class="rounded-full border border-[#ddd] px-2.5 py-1 text-[0.68rem] text-[#2d325b] transition hover:border-[#3898ec] hover:text-[#3898ec] disabled:opacity-50">probar</button>
+            <span data-resultado="personio" class="text-[0.68rem] text-[#999]"></span>
+          </div>
         </div>
         <p class="mt-3 text-[0.68rem] leading-relaxed text-[#999]" data-i18n-html="cfg_hint_probar_fuente">
           Prueba una fuente con su slug (el identificador de la empresa en su bolsa, p. ej. <code class="rounded bg-[#fafafa] px-1 py-0.5">acme</code>). No guarda nada.
+        </p>
+        <p class="mt-1 text-[0.68rem] leading-relaxed text-[#999]" data-i18n="cfg_hint_probar_globales">
+          Los tableros globales se rastrean solos: no necesitan slug. Los ATS sí necesitan el slug de la empresa; añádelo a la lista de empresas de arriba.
         </p>
       </div>
     </section>
@@ -1988,7 +2077,7 @@ async function guardarConfig() {
 
 /* ------------------- System status / export / import ------------------- */
 
-const FUENTES_PROBAR = ["workable", "bamboohr", "recruitee", "greenhouse", "ashby", "lever", "remotive", "weworkremotely"];
+const FUENTES_PROBAR = ["workable", "bamboohr", "recruitee", "greenhouse", "ashby", "lever", "remotive", "weworkremotely", "teamtailor", "smartrecruiters", "personio", "remoteok", "himalayas", "workingnomads"];
 
 function avisoSalud(texto, tipo = "info") {
   const el = $("salud-aviso");
@@ -2271,6 +2360,16 @@ const I18N = {
     cfg_probar_fuente: "Probar fuente",
     cfg_probando: "probando…",
     cfg_hint_probar_fuente: "Prueba una fuente con su slug (el identificador de la empresa en su bolsa, p. ej. <code class=\"rounded bg-[#fafafa] px-1 py-0.5\">acme</code>). No guarda nada.",
+    cfg_hint_probar_globales: "Los tableros globales se rastrean solos: no necesitan slug. Los ATS sí necesitan el slug de la empresa; añádelo a la lista de empresas de arriba.",
+    cfg_sec_empresas: "Empresas por ATS",
+    cfg_hint_empresas: "Las listas se separan por comas. Vacío = ninguna empresa de ese ATS.",
+    cfg_lbl_workable_empresas: "Workable · empresas",
+    cfg_lbl_bamboohr_empresas: "BambooHR · empresas",
+    cfg_lbl_recruitee_empresas: "Recruitee · empresas",
+    cfg_lbl_teamtailor_empresas: "Teamtailor · empresas",
+    cfg_lbl_smartrecruiters_empresas: "SmartRecruiters · empresas",
+    cfg_lbl_personio_empresas: "Personio · empresas",
+    cfg_lbl_empresas_slugs: "Greenhouse / Lever / Ashby · empresas",
     cfg_export_ok: "Copia exportada.",
     cfg_export_error: "No se pudo exportar:",
     cfg_import_sin_fichero: "Elige antes un fichero JSON.",
@@ -2485,6 +2584,16 @@ const I18N = {
     cfg_probar_fuente: "Test source",
     cfg_probando: "testing…",
     cfg_hint_probar_fuente: "Test a source with its slug (the company identifier in its job board, e.g. <code class=\"rounded bg-[#fafafa] px-1 py-0.5\">acme</code>). Nothing is saved.",
+    cfg_hint_probar_globales: "Global boards run automatically — no slug needed. ATS boards need a company slug; add it to the company list above.",
+    cfg_sec_empresas: "Companies per ATS",
+    cfg_hint_empresas: "Lists are comma-separated. Empty = no companies for that ATS.",
+    cfg_lbl_workable_empresas: "Workable · companies",
+    cfg_lbl_bamboohr_empresas: "BambooHR · companies",
+    cfg_lbl_recruitee_empresas: "Recruitee · companies",
+    cfg_lbl_teamtailor_empresas: "Teamtailor · companies",
+    cfg_lbl_smartrecruiters_empresas: "SmartRecruiters · companies",
+    cfg_lbl_personio_empresas: "Personio · companies",
+    cfg_lbl_empresas_slugs: "Greenhouse / Lever / Ashby · companies",
     cfg_export_ok: "Backup exported.",
     cfg_export_error: "Export failed:",
     cfg_import_sin_fichero: "Pick a JSON file first.",

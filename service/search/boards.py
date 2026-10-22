@@ -365,6 +365,64 @@ EMPRESAS_SLUGS: tuple[str, ...] = (
     "netflix",
 )
 
+
+# Editable company lists: setting key in ``settings.json`` -> hardcoded
+# default. The constants above stay as the fallback so every source keeps
+# working when the panel has not touched the list yet.
+EMPRESAS_EDITABLES: dict[str, Sequence[str]] = {
+    "WORKABLE_EMPRESAS": WORKABLE_EMPRESAS,
+    "BAMBOOHR_EMPRESAS": BAMBOOHR_EMPRESAS,
+    "RECRUITEE_EMPRESAS": RECRUITEE_EMPRESAS,
+    "TEAMTAILOR_EMPRESAS": TEAMTAILOR_EMPRESAS,
+    "SMARTRECRUITERS_EMPRESAS": SMARTRECRUITERS_EMPRESAS,
+    "PERSONIO_EMPRESAS": PERSONIO_EMPRESAS,
+    "EMPRESAS_SLUGS": EMPRESAS_SLUGS,
+}
+
+
+def _lista_empresas(clave: str, por_defecto: Iterable[str] | None = None) -> list[str]:
+    """Company slugs of ``clave``, read from the editable config.
+
+    The panel writes these lists to ``data/settings.json``; when the key is
+    absent (first run, tests) the hardcoded constant is used, so a fresh
+    install scrapes the same companies as before. ``config`` is imported
+    lazily to keep ``boards.py`` usable without the service on the path and to
+    avoid an import cycle (``config`` never imports this module).
+
+    Args:
+        clave: Setting name (``WORKABLE_EMPRESAS``, ``EMPRESAS_SLUGS``…).
+        por_defecto: Fallback list; defaults to ``EMPRESAS_EDITABLES[clave]``.
+
+    Returns:
+        Cleaned slugs (stripped, no blanks, no duplicates, order preserved).
+    """
+    defecto = por_defecto if por_defecto is not None else EMPRESAS_EDITABLES.get(clave, ())
+    valores: Any = defecto
+    try:
+        import config as config_modulo
+
+        crudo = config_modulo.leer_settings().get(clave)
+        if isinstance(crudo, list):
+            valores = crudo
+        elif isinstance(crudo, str) and crudo.strip():
+            # Tolerate a plain comma-separated string in settings.json.
+            valores = crudo.split(",")
+    except Exception as err:  # noqa: BLE001 — a broken config must not kill the source
+        log.debug(
+            t("No se pudo leer %s de la config: %s", "Could not read %s from the config: %s"),
+            clave,
+            err,
+        )
+
+    limpios: list[str] = []
+    for valor in valores or ():
+        texto = str(valor or "").strip()
+        if not texto or texto in limpios:
+            continue
+        limpios.append(texto)
+    return limpios
+
+
 # Title filter: default hints for design-like roles. 'ui'/'ux' are matched as
 # whole words (\b) to avoid catching "building", "guide", "quit"… The real
 # roles come from ROLES + TOPICS and are appended in _TERMINOS_TITULO_EXTRA.
@@ -1414,12 +1472,15 @@ def buscar_recruitee_empresas(
 
     Args:
         limite: Maximum postings to return.
-        empresas: Slugs to scan; defaults to ``RECRUITEE_EMPRESAS``.
+        empresas: Slugs to scan; defaults to ``RECRUITEE_EMPRESAS`` (as edited
+            from the panel, else the hardcoded list).
 
     Returns:
         Aggregated postings; boards that fail are skipped.
     """
-    lista = [e for e in (empresas if empresas is not None else RECRUITEE_EMPRESAS) if e]
+    lista = (
+        _lista_empresas("RECRUITEE_EMPRESAS") if empresas is None else [e for e in empresas if e]
+    )
     if not lista:
         return []
 
@@ -1529,12 +1590,13 @@ def buscar_workable_empresas(
 
     Args:
         limite: Maximum postings to return.
-        empresas: Slugs to scan; defaults to ``WORKABLE_EMPRESAS``.
+        empresas: Slugs to scan; defaults to ``WORKABLE_EMPRESAS`` (as edited
+            from the panel, else the hardcoded list).
 
     Returns:
         Aggregated postings; boards that fail are skipped.
     """
-    lista = [e for e in (empresas if empresas is not None else WORKABLE_EMPRESAS) if e]
+    lista = _lista_empresas("WORKABLE_EMPRESAS") if empresas is None else [e for e in empresas if e]
     if not lista:
         return []
 
@@ -1684,12 +1746,13 @@ def buscar_bamboohr_empresas(
 
     Args:
         limite: Maximum postings to return.
-        empresas: Slugs to scan; defaults to ``BAMBOOHR_EMPRESAS``.
+        empresas: Slugs to scan; defaults to ``BAMBOOHR_EMPRESAS`` (as edited
+            from the panel, else the hardcoded list).
 
     Returns:
         Aggregated postings; boards that fail are skipped.
     """
-    lista = [e for e in (empresas if empresas is not None else BAMBOOHR_EMPRESAS) if e]
+    lista = _lista_empresas("BAMBOOHR_EMPRESAS") if empresas is None else [e for e in empresas if e]
     if not lista:
         return []
 
@@ -2551,14 +2614,15 @@ def buscar_teamtailor_empresas(
 
     Args:
         limite: Maximum postings to return.
-        empresas: Slugs to scan; defaults to ``TEAMTAILOR_EMPRESAS``.
+        empresas: Slugs to scan; defaults to ``TEAMTAILOR_EMPRESAS`` (as edited
+            from the panel, else the hardcoded list).
 
     Returns:
         Aggregated postings; boards that fail are skipped.
     """
     return _agregar_por_empresas(
         buscar_teamtailor,
-        empresas if empresas is not None else TEAMTAILOR_EMPRESAS,
+        _lista_empresas("TEAMTAILOR_EMPRESAS") if empresas is None else empresas,
         limite,
         "Teamtailor",
     )
@@ -2572,14 +2636,15 @@ def buscar_smartrecruiters_empresas(
 
     Args:
         limite: Maximum postings to return.
-        empresas: Slugs to scan; defaults to ``SMARTRECRUITERS_EMPRESAS``.
+        empresas: Slugs to scan; defaults to ``SMARTRECRUITERS_EMPRESAS`` (as
+            edited from the panel, else the hardcoded list).
 
     Returns:
         Aggregated postings; boards that fail are skipped.
     """
     return _agregar_por_empresas(
         buscar_smartrecruiters,
-        empresas if empresas is not None else SMARTRECRUITERS_EMPRESAS,
+        _lista_empresas("SMARTRECRUITERS_EMPRESAS") if empresas is None else empresas,
         limite,
         "SmartRecruiters",
     )
@@ -2593,14 +2658,15 @@ def buscar_personio_empresas(
 
     Args:
         limite: Maximum postings to return.
-        empresas: Slugs to scan; defaults to ``PERSONIO_EMPRESAS``.
+        empresas: Slugs to scan; defaults to ``PERSONIO_EMPRESAS`` (as edited
+            from the panel, else the hardcoded list).
 
     Returns:
         Aggregated postings; boards that fail are skipped.
     """
     return _agregar_por_empresas(
         buscar_personio,
-        empresas if empresas is not None else PERSONIO_EMPRESAS,
+        _lista_empresas("PERSONIO_EMPRESAS") if empresas is None else empresas,
         limite,
         "Personio",
     )
@@ -2658,12 +2724,13 @@ def buscar_ats(limite: int = 100, slugs: Iterable[str] | None = None) -> list[di
 
     Args:
         limite: Maximum postings per company.
-        slugs: Slugs to scan; defaults to ``EMPRESAS_SLUGS``.
+        slugs: Slugs to scan; defaults to ``EMPRESAS_SLUGS`` (as edited from the
+            panel, else the hardcoded list).
 
     Returns:
         Aggregated postings from every detected ATS.
     """
-    lista_slugs = [s for s in (slugs if slugs is not None else EMPRESAS_SLUGS) if s]
+    lista_slugs = _lista_empresas("EMPRESAS_SLUGS") if slugs is None else [s for s in slugs if s]
     if not lista_slugs:
         return []
 
@@ -2932,12 +2999,15 @@ def probar_fuente(nombre: str, parametros: dict[str, Any] | None = None) -> dict
 
     Args:
         nombre: Lowercase source name: ``workable``, ``bamboohr``,
-            ``recruitee``, ``greenhouse``, ``ashby``, ``lever``, ``remotive`` or
-            ``weworkremotely`` (``wwr`` is also accepted).
+            ``recruitee``, ``greenhouse``, ``ashby``, ``lever``, ``teamtailor``,
+            ``smartrecruiters``, ``personio``, ``remotive``, ``weworkremotely``
+            (``wwr`` is also accepted), ``remoteok``, ``himalayas`` or
+            ``workingnomads``.
         parametros: Dict that may carry ``slug`` (Workable, BambooHR,
-            Recruitee, Greenhouse, Ashby and Lever need it; the other sources do
-            not). BambooHR and Recruitee use the slug as subdomain, as the
-            scraper does.
+            Recruitee, Greenhouse, Ashby, Lever, Teamtailor, SmartRecruiters
+            and Personio need it; the global boards and the remote portals do
+            not). BambooHR, Recruitee, Teamtailor and Personio use the slug as
+            subdomain, as the scraper does.
 
     Returns:
         Always a dict; never raises. ``ok=False`` with
@@ -2956,9 +3026,15 @@ def probar_fuente(nombre: str, parametros: dict[str, Any] | None = None) -> dict
         "greenhouse",
         "ashby",
         "lever",
+        "teamtailor",
+        "smartrecruiters",
+        "personio",
         "remotive",
         "weworkremotely",
         "wwr",
+        "remoteok",
+        "himalayas",
+        "workingnomads",
     )
     if clave not in conocidas:
         return {"ok": False, "detalle": "fuente desconocida"}
@@ -2970,6 +3046,9 @@ def probar_fuente(nombre: str, parametros: dict[str, Any] | None = None) -> dict
         "greenhouse",
         "ashby",
         "lever",
+        "teamtailor",
+        "smartrecruiters",
+        "personio",
     )
     if necesita_slug and not slug:
         return {"ok": False, "detalle": "falta 'slug' en parametros"}
@@ -3029,6 +3108,38 @@ def probar_fuente(nombre: str, parametros: dict[str, Any] | None = None) -> dict
                 return {"ok": False, "detalle": "respuesta inesperada (se esperaba una lista)"}
             return {"ok": True, "detalle": f"lever:{slug} -> {len(datos)} ofertas"}
 
+        if clave == "teamtailor":
+            url = URL_TEAMTAILOR.format(slug=urllib.parse.quote(slug))
+            datos = json.loads(_descargar(url, TIMEOUT_PROBAR_FUENTE).decode("utf-8", "replace"))
+            items = datos.get("items") if isinstance(datos, dict) else None
+            if not isinstance(items, list):
+                items = datos.get("data") if isinstance(datos, dict) else None
+            if not isinstance(items, list):
+                return {"ok": False, "detalle": "respuesta sin 'items' ni 'data'"}
+            return {"ok": True, "detalle": f"teamtailor:{slug} -> {len(items)} ofertas"}
+
+        if clave == "smartrecruiters":
+            url = URL_SMARTRECRUITERS.format(slug=urllib.parse.quote(slug), limite=100)
+            datos = json.loads(_descargar(url, TIMEOUT_PROBAR_FUENTE).decode("utf-8", "replace"))
+            ofertas = datos.get("content") if isinstance(datos, dict) else None
+            if not isinstance(ofertas, list):
+                return {"ok": False, "detalle": "respuesta sin 'content'"}
+            total = datos.get("totalFound") if isinstance(datos, dict) else None
+            return {
+                "ok": True,
+                "detalle": "smartrecruiters:{} -> {} ofertas{}".format(
+                    slug, len(ofertas), f" (total {total})" if total else ""
+                ),
+            }
+
+        if clave == "personio":
+            url = URL_PERSONIO.format(slug=urllib.parse.quote(slug))
+            datos = json.loads(_descargar(url, TIMEOUT_PROBAR_FUENTE).decode("utf-8", "replace"))
+            ofertas = datos.get("data") if isinstance(datos, dict) else datos
+            if not isinstance(ofertas, list):
+                return {"ok": False, "detalle": "respuesta sin 'data'"}
+            return {"ok": True, "detalle": f"personio:{slug} -> {len(ofertas)} ofertas"}
+
         if clave == "remotive":
             datos = json.loads(
                 _descargar(URL_REMOTIVE + "?limit=1", TIMEOUT_PROBAR_FUENTE).decode(
@@ -3045,6 +3156,39 @@ def probar_fuente(nombre: str, parametros: dict[str, Any] | None = None) -> dict
                     len(trabajos), f" (total {total})" if total else ""
                 ),
             }
+
+        if clave == "remoteok":
+            datos = json.loads(
+                _descargar(URL_REMOTEOK, TIMEOUT_PROBAR_FUENTE).decode("utf-8", "replace")
+            )
+            if not isinstance(datos, list):
+                return {"ok": False, "detalle": "respuesta inesperada (se esperaba una lista)"}
+            # The feed's first element is RemoteOK's legal notice (no 'position').
+            total = sum(1 for item in datos if isinstance(item, dict) and item.get("position"))
+            return {"ok": True, "detalle": f"remoteok -> {total} ofertas"}
+
+        if clave == "himalayas":
+            datos = json.loads(
+                _descargar(URL_HIMALAYAS, TIMEOUT_PROBAR_FUENTE).decode("utf-8", "replace")
+            )
+            trabajos = datos.get("jobs") if isinstance(datos, dict) else None
+            if not isinstance(trabajos, list):
+                return {"ok": False, "detalle": "respuesta sin 'jobs'"}
+            total = datos.get("totalCount") if isinstance(datos, dict) else None
+            return {
+                "ok": True,
+                "detalle": "himalayas -> {} ofertas{}".format(
+                    len(trabajos), f" (total {total})" if total else ""
+                ),
+            }
+
+        if clave == "workingnomads":
+            datos = json.loads(
+                _descargar(URL_WORKINGNOMADS, TIMEOUT_PROBAR_FUENTE).decode("utf-8", "replace")
+            )
+            if not isinstance(datos, list):
+                return {"ok": False, "detalle": "respuesta inesperada (se esperaba una lista)"}
+            return {"ok": True, "detalle": f"workingnomads -> {len(datos)} ofertas"}
 
         # weworkremotely (alias wwr): RSS, counted with ElementTree.
         crudo = _descargar(URL_WWR_DESIGN, TIMEOUT_PROBAR_FUENTE)

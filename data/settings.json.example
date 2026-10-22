@@ -33,5 +33,14 @@
 
   "_nota_presupuesto_linkedin": "LinkedIn blocks the account after too many requests. MAX_PETICIONES_LINKEDIN_DIA is the daily page-view budget (counted in data/linkedin_usage.json, resets at midnight; the source is skipped for the rest of the day when spent, 1-1000). MAX_DETALLES_LINKEDIN_RUN caps the posting details opened per run (1-500).",
   "MAX_PETICIONES_LINKEDIN_DIA": 60,
-  "MAX_DETALLES_LINKEDIN_RUN": 25
+  "MAX_DETALLES_LINKEDIN_RUN": 25,
+
+  "_nota_empresas_ats": "Company lists of the per-company ATS sources, editable from the panel (Configuración > Fuentes). Each entry is a board slug; deleting the key keeps the list baked into service/search/boards.py. SMARTRECRUITERS_EMPRESAS identifiers are case-sensitive (BoschGroup, not Bosch).",
+  "WORKABLE_EMPRESAS": ["qodea", "devsu", "ndax", "zealthy", "bakery-agency", "huggingface"],
+  "BAMBOOHR_EMPRESAS": ["konfio", "greenparkcontent", "studios", "nprc"],
+  "RECRUITEE_EMPRESAS": ["mayflower", "nacardesign", "snapp", "eleken", "mailerlite", "up42gmbh", "bunq"],
+  "TEAMTAILOR_EMPRESAS": ["bokio"],
+  "SMARTRECRUITERS_EMPRESAS": ["BoschGroup", "SGS", "Ubisoft2"],
+  "PERSONIO_EMPRESAS": ["1komma5grad", "senec"],
+  "EMPRESAS_SLUGS": ["stripe", "airbnb", "shopify", "spotify", "duolingo", "reddit", "cloudflare", "datadog", "dropbox", "block", "twilio", "zapier", "doordash", "instacart", "robinhood", "chime", "affirm", "plaid", "wise", "revolut", "klarna", "monzo", "n26", "glovo", "cabify", "wallapop", "jobandtalent", "travelperk", "factorial", "typeform", "deepl", "linear", "vercel", "ramp", "notion", "figma", "framer", "deel", "openai", "anthropic", "scale", "mercury", "brex", "rippling", "retool", "vanta", "posthog", "supabase", "gitlab", "netflix"]
 }
