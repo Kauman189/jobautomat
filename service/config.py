@@ -51,6 +51,8 @@ _CONFIG_DEFS = {
     # Language of descriptive scoring texts: "en" (default) or "es".
     # 'recomendacion' values are never translated (aplicar/dudoso/descartar).
     "IDIOMA_SCORING": ("str", "en"),
+    # Language of the framework log messages: "es" (default) or "en".
+    "IDIOMA_LOGS": ("str", "es"),
     "RANGO_DUDOSO_MIN": ("int", 55),
     "RANGO_DUDOSO_MAX": ("int", 79),
     "MAX_ANTIGUEDAD_DIAS": ("int", 30),
@@ -92,6 +94,11 @@ _RANGOS = {
     "MAX_PETICIONES_LINKEDIN_DIA": (1, 1000),
     "MAX_DETALLES_LINKEDIN_RUN": (1, 500),
     "SESION_LINKEDIN_MAX_DIAS": (1, 365),
+}
+
+# Allowed values for enumerated textual keys (compared case-insensitively).
+_VALORES_PERMITIDOS = {
+    "IDIOMA_LOGS": ("en", "es"),
 }
 
 # Public aliases for the web layer (validation and key listing).
@@ -417,6 +424,15 @@ def validar_rangos(valores):
         valor = valores[clave]
         if valor < minimo or valor > maximo:
             raise ValueError(f"{clave} debe estar entre {minimo} y {maximo} (recibido {valor})")
+
+    for clave, permitidos in _VALORES_PERMITIDOS.items():
+        valor = valores.get(clave)
+        if valor is None or valor == "":
+            continue
+        if str(valor).strip().lower() not in permitidos:
+            raise ValueError(
+                f"{clave} debe ser uno de {', '.join(permitidos)} (recibido {valor!r})"
+            )
 
     minimo = valores.get("RANGO_DUDOSO_MIN")
     maximo = valores.get("RANGO_DUDOSO_MAX")

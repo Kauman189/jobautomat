@@ -54,6 +54,7 @@ if _DIR_SERVICIO not in sys.path:
     sys.path.insert(0, _DIR_SERVICIO)
 
 import db  # noqa: E402
+import i18n  # noqa: E402
 import notify  # noqa: E402
 import scoring  # noqa: E402
 from config import load_config  # noqa: E402
@@ -431,15 +432,21 @@ def _filtrar_keywords_negativas(ofertas, keywords=None, config=None):
         if encontrada:
             descartadas += 1
             log.debug(
-                "Descartada por keyword negativa %r: %s",
+                i18n.t(
+                    "Descartada por keyword negativa %r: %s",
+                    "Dropped by negative keyword %r: %s",
+                ),
                 encontrada,
-                oferta.get("titulo") or oferta.get("url") or "(sin título)",
+                oferta.get("titulo") or oferta.get("url") or i18n.t("(sin título)", "(untitled)"),
             )
             continue
         conservadas.append(oferta)
 
     log.info(
-        "Filtro de keywords negativas (%s): %s descartadas, %s conservadas.",
+        i18n.t(
+            "Filtro de keywords negativas (%s): %s descartadas, %s conservadas.",
+            "Negative keyword filter (%s): %s dropped, %s kept.",
+        ),
         ", ".join(palabras),
         descartadas,
         len(conservadas),
@@ -464,7 +471,13 @@ def _settings_crudo():
 
             _SETTINGS_CRUDO = leer_settings() or {}
         except Exception as err:  # noqa: BLE001 — the JSON is optional
-            log.warning("No se pudo leer settings.json para antigüedad/cooldown: %s", err)
+            log.warning(
+                i18n.t(
+                    "No se pudo leer settings.json para antigüedad/cooldown: %s",
+                    "Could not read settings.json for age/cooldown: %s",
+                ),
+                err,
+            )
             _SETTINGS_CRUDO = {}
     return _SETTINGS_CRUDO
 
@@ -497,10 +510,26 @@ def _entero_config(config, claves, variable, defecto):
     try:
         numero = int(str(crudo).strip())
     except (TypeError, ValueError):
-        log.warning("%s=%r no es un entero; se usa %s.", variable, crudo, defecto)
+        log.warning(
+            i18n.t(
+                "%s=%r no es un entero; se usa %s.",
+                "%s=%r is not an integer; using %s.",
+            ),
+            variable,
+            crudo,
+            defecto,
+        )
         return defecto
     if numero <= 0:
-        log.warning("%s=%r no es positivo; se usa %s.", variable, crudo, defecto)
+        log.warning(
+            i18n.t(
+                "%s=%r no es positivo; se usa %s.",
+                "%s=%r is not positive; using %s.",
+            ),
+            variable,
+            crudo,
+            defecto,
+        )
         return defecto
     return numero
 
@@ -555,8 +584,11 @@ def _reservar_detalle_linkedin():
             avisar = True
     if avisar:
         log.warning(
-            "límite de detalles LinkedIn por run alcanzado (%s); "
-            "se evalúa con los datos disponibles",
+            i18n.t(
+                "límite de detalles LinkedIn por run alcanzado (%s); "
+                "se evalúa con los datos disponibles",
+                "LinkedIn detail budget per run reached (%s); scoring with the available data",
+            ),
             _TOPE_DETALLES_LINKEDIN,
         )
     return permitido
@@ -575,7 +607,13 @@ def _terminos_config(config):
         if isinstance(valor, str):
             valor = [valor]
         if not isinstance(valor, (list, tuple)):
-            log.warning("%s no es una lista; se ignora como término de búsqueda.", clave)
+            log.warning(
+                i18n.t(
+                    "%s no es una lista; se ignora como término de búsqueda.",
+                    "%s is not a list; ignored as a search term.",
+                ),
+                clave,
+            )
             continue
         for item in valor:
             limpio = " ".join(str(item or "").split())
@@ -649,17 +687,23 @@ def _filtrar_por_antiguedad(ofertas, dias=None, config=None):
         if fecha < limite:
             descartadas += 1
             log.debug(
-                "Descartada por antigüedad (%s < %s): %s",
+                i18n.t(
+                    "Descartada por antigüedad (%s < %s): %s",
+                    "Dropped by age (%s < %s): %s",
+                ),
                 fecha.isoformat(),
                 limite.isoformat(),
-                oferta.get("titulo") or oferta.get("url") or "(sin título)",
+                oferta.get("titulo") or oferta.get("url") or i18n.t("(sin título)", "(untitled)"),
             )
             continue
         conservadas.append(oferta)
 
     log.info(
-        "Filtro de antigüedad (máx. %s días, desde %s): %s descartadas, "
-        "%s conservadas (%s sin fecha, se conservan).",
+        i18n.t(
+            "Filtro de antigüedad (máx. %s días, desde %s): %s descartadas, "
+            "%s conservadas (%s sin fecha, se conservan).",
+            "Age filter (max %s days, since %s): %s dropped, %s kept (%s without a date, kept).",
+        ),
         dias,
         limite.isoformat(),
         descartadas,
@@ -683,7 +727,7 @@ def _procesar_oferta(bruto, perfil, umbral, idioma="en"):
     op = _normalizar(bruto)
 
     if not db.is_nueva(op):
-        log.debug("Ya vista, se omite: %s", op["id"])
+        log.debug(i18n.t("Ya vista, se omite: %s", "Already seen, skipping: %s"), op["id"])
         return None
 
     # The browser detail only makes sense for LinkedIn: board offers already
@@ -699,7 +743,14 @@ def _procesar_oferta(bruto, perfil, umbral, idioma="en"):
                 detalles = get_job_details(job_id)
             _fusionar_detalles(op, detalles)
         except Exception as err:  # noqa: BLE001
-            log.warning("Sin detalle para %s (%s); se evalúa con lo disponible.", op["id"], err)
+            log.warning(
+                i18n.t(
+                    "Sin detalle para %s (%s); se evalúa con lo disponible.",
+                    "No detail for %s (%s); scoring with what is available.",
+                ),
+                op["id"],
+                err,
+            )
 
     resultado = scoring.score(op, perfil, idioma=idioma)
     op["score"] = resultado["score"]
@@ -716,10 +767,10 @@ def _procesar_oferta(bruto, perfil, umbral, idioma="en"):
     )
 
     log.info(
-        "Score %s/100 — %s @ %s",
+        i18n.t("Score %s/100 — %s @ %s", "Score %s/100 — %s @ %s"),
         op["score"],
-        op.get("titulo") or "(sin título)",
-        op.get("empresa") or "(sin empresa)",
+        op.get("titulo") or i18n.t("(sin título)", "(untitled)"),
+        op.get("empresa") or i18n.t("(sin empresa)", "(no company)"),
     )
     for motivo in resultado["motivos"]:
         log.info("  + %s", motivo)
@@ -727,7 +778,11 @@ def _procesar_oferta(bruto, perfil, umbral, idioma="en"):
         log.info("  - %s", gap)
 
     if op["score"] < umbral:
-        log.info("Descartada por score (< %s): %s", umbral, op["id"])
+        log.info(
+            i18n.t("Descartada por score (< %s): %s", "Dropped by score (< %s): %s"),
+            umbral,
+            op["id"],
+        )
         # Still stored as rejected so the panel can show why and let the user
         # reconsider the decision.
         op["estado"] = "descartada"
@@ -746,9 +801,15 @@ def _procesar_oferta(bruto, perfil, umbral, idioma="en"):
     op["updated_at"] = op["created_at"]
 
     if db.insertar(op):
-        log.info("Insertada para confirmar: %s", op["id"])
+        log.info(
+            i18n.t("Insertada para confirmar: %s", "Inserted for confirmation: %s"),
+            op["id"],
+        )
     else:
-        log.warning("No se insertó (ya existía): %s", op["id"])
+        log.warning(
+            i18n.t("No se insertó (ya existía): %s", "Not inserted (it already existed): %s"),
+            op["id"],
+        )
         return None
 
     return op
@@ -773,7 +834,14 @@ def _configurar_log_fichero(config):
         manejador.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
         logging.getLogger().addHandler(manejador)
     except Exception as err:  # noqa: BLE001 — the file is an extra, not critical.
-        log.warning("No se pudo abrir el log de fichero %s: %s", ruta, err)
+        log.warning(
+            i18n.t(
+                "No se pudo abrir el log de fichero %s: %s",
+                "Could not open the log file %s: %s",
+            ),
+            ruta,
+            err,
+        )
 
 
 def _alertar_sesion_linkedin(config):
@@ -798,14 +866,23 @@ def _alertar_sesion_linkedin(config):
             linkedin_mod.DIAS_CADUCIDAD_SESION = dias
         estado = linkedin_mod.sesion_estado() or {}
     except Exception as err:  # noqa: BLE001 — optional diagnostics.
-        log.warning("No se pudo comprobar la sesión de LinkedIn: %s", err)
+        log.warning(
+            i18n.t(
+                "No se pudo comprobar la sesión de LinkedIn: %s",
+                "Could not check the LinkedIn session: %s",
+            ),
+            err,
+        )
         return
 
     if not estado.get("caducada"):
         return
 
     log.warning(
-        "Sesión de LinkedIn caducada o ausente (antigüedad: %s días, ruta: %s).",
+        i18n.t(
+            "Sesión de LinkedIn caducada o ausente (antigüedad: %s días, ruta: %s).",
+            "LinkedIn session expired or missing (age: %s days, path: %s).",
+        ),
         estado.get("antiguedad_dias"),
         estado.get("ruta"),
     )
@@ -814,7 +891,13 @@ def _alertar_sesion_linkedin(config):
             "La sesión de LinkedIn está caducada o ausente; exporta una nueva desde el Mac"
         )
     except Exception as err:  # noqa: BLE001 — the alert must not kill the run.
-        log.error("No se pudo enviar el aviso de sesión de LinkedIn: %s", err)
+        log.error(
+            i18n.t(
+                "No se pudo enviar el aviso de sesión de LinkedIn: %s",
+                "Could not send the LinkedIn session alert: %s",
+            ),
+            err,
+        )
 
 
 def _ruta_lock_busqueda():
@@ -827,7 +910,13 @@ def _ruta_lock_busqueda():
     try:
         ruta_db = db._resolver_path(None)
     except Exception as err:  # noqa: BLE001 — the lock must never kill the run.
-        log.warning("No se pudo resolver la ruta de la base para el lock: %s", err)
+        log.warning(
+            i18n.t(
+                "No se pudo resolver la ruta de la base para el lock: %s",
+                "Could not resolve the database path for the lock: %s",
+            ),
+            err,
+        )
         ruta_db = os.path.join(_DIR_SERVICIO, "state.db")
     return os.path.join(os.path.dirname(os.path.abspath(ruta_db)), NOMBRE_LOCK_BUSQUEDA)
 
@@ -850,7 +939,14 @@ def _adquirir_lock_busqueda():
         os.makedirs(os.path.dirname(ruta) or ".", exist_ok=True)
         fichero = open(ruta, "a+")
     except OSError as err:
-        log.warning("No se pudo abrir el lock %s (%s); se sigue sin lock.", ruta, err)
+        log.warning(
+            i18n.t(
+                "No se pudo abrir el lock %s (%s); se sigue sin lock.",
+                "Could not open the lock %s (%s); continuing without a lock.",
+            ),
+            ruta,
+            err,
+        )
         return None, True
 
     try:
@@ -868,7 +964,13 @@ def _liberar_lock_busqueda(fichero):
     try:
         fcntl.flock(fichero.fileno(), fcntl.LOCK_UN)
     except OSError as err:  # noqa: BLE001 — the process ends anyway.
-        log.warning("No se pudo liberar el lock de búsqueda: %s", err)
+        log.warning(
+            i18n.t(
+                "No se pudo liberar el lock de búsqueda: %s",
+                "Could not release the search lock: %s",
+            ),
+            err,
+        )
     finally:
         try:
             fichero.close()
@@ -883,9 +985,15 @@ def _ejecutar(config, args):
     "Buscar ahora" button), this run is skipped instead of duplicating the work
     against LinkedIn and Telegram.
     """
+    i18n.configurar_idioma((config or {}).get("IDIOMA_LOGS"))
     fichero_lock, disponible = _adquirir_lock_busqueda()
     if not disponible:
-        log.warning("ya hay una búsqueda en curso; se omite este run")
+        log.warning(
+            i18n.t(
+                "ya hay una búsqueda en curso; se omite este run",
+                "a search is already running; skipping this run",
+            )
+        )
         return 0
     try:
         return _ejecutar_run(config, args)
@@ -899,6 +1007,8 @@ def _ejecutar_run(config, args):
     Receives the already loaded (and strictly validated) configuration so the
     fail-fast can be isolated in ``main``.
     """
+    # Log language for the whole run (IDIOMA_LOGS: "es" by default, "en").
+    i18n.configurar_idioma((config or {}).get("IDIOMA_LOGS"))
     _configurar_log_fichero(config)
     db.init_db()
     # Fresh per-run budget of LinkedIn detail requests (browser calls); the cap
@@ -914,7 +1024,10 @@ def _ejecutar_run(config, args):
     # on the language, so changing it does not re-score evaluated offers.
     idioma_scoring = (config or {}).get("IDIOMA_SCORING") or "en"
 
-    log.info("Perfil cargado: %s", perfil.get("headline", "(sin headline)"))
+    log.info(
+        i18n.t("Perfil cargado: %s", "Profile loaded: %s"),
+        perfil.get("headline", i18n.t("(sin headline)", "(no headline)")),
+    )
 
     # Search terms: ROLES + TOPICS from the editable config (settings.json).
     # QUERIES is an empty-by-default fallback, so the configured roles decide
@@ -925,8 +1038,12 @@ def _ejecutar_run(config, args):
     # and the run ends with 0 offers (no hardcoded role is assumed).
     if not consultas:
         log.warning(
-            "Sin consultas: define ROLES o TOPICS en data/settings.json "
-            "(panel → Configuración). No se lanza ninguna búsqueda."
+            i18n.t(
+                "Sin consultas: define ROLES o TOPICS en data/settings.json "
+                "(panel → Configuración). No se lanza ninguna búsqueda.",
+                "No queries: define ROLES or TOPICS in data/settings.json "
+                "(panel → Settings). No search is started.",
+            )
         )
     dias_maximos = _max_antiguedad_dias(config)
 
@@ -936,19 +1053,25 @@ def _ejecutar_run(config, args):
     usar_jobspy = _fuente_activa(config, "FUENTES_JOBSPY")
 
     log.info(
-        "Umbral de score: %s · consultas: %s (%s) · antigüedad máx.: %s días",
+        i18n.t(
+            "Umbral de score: %s · consultas: %s (%s) · antigüedad máx.: %s días",
+            "Score threshold: %s · queries: %s (%s) · max age: %s days",
+        ),
         umbral,
         len(consultas),
         ", ".join(consultas[:6]) or "-",
         dias_maximos,
     )
     log.info(
-        "Fuentes activas — LinkedIn: %s · boards: %s · JobSpy: %s",
-        "sí" if usar_linkedin else "no",
-        "sí" if usar_boards else "no",
-        "sí" if usar_jobspy else "no",
+        i18n.t(
+            "Fuentes activas — LinkedIn: %s · boards: %s · JobSpy: %s",
+            "Active sources — LinkedIn: %s · boards: %s · JobSpy: %s",
+        ),
+        i18n.t("sí", "yes") if usar_linkedin else "no",
+        i18n.t("sí", "yes") if usar_boards else "no",
+        i18n.t("sí", "yes") if usar_jobspy else "no",
     )
-    log.info("Idioma del scoring: %s", idioma_scoring)
+    log.info(i18n.t("Idioma del scoring: %s", "Scoring language: %s"), idioma_scoring)
 
     # LinkedIn is the main source but no longer essential: if it falls
     # (expired session, ERR_TOO_MANY_REDIRECTS, rate-limit) the run continues
@@ -958,15 +1081,28 @@ def _ejecutar_run(config, args):
     LinkedInError = None  # type: ignore[assignment]
     search_jobs = None
     if not consultas:
-        log.info("LinkedIn omitido: no hay consultas configuradas (ROLES/TOPICS).")
+        log.info(
+            i18n.t(
+                "LinkedIn omitido: no hay consultas configuradas (ROLES/TOPICS).",
+                "LinkedIn skipped: no queries configured (ROLES/TOPICS).",
+            )
+        )
     elif not usar_linkedin:
-        log.info("LinkedIn desactivado en la configuración (FUENTES_LINKEDIN=false); se omite.")
+        log.info(
+            i18n.t(
+                "LinkedIn desactivado en la configuración (FUENTES_LINKEDIN=false); se omite.",
+                "LinkedIn disabled in the config (FUENTES_LINKEDIN=false); skipped.",
+            )
+        )
     else:
         try:
             from search.linkedin import LinkedInError, search_jobs  # noqa: F811
         except ImportError as err:
             log.error(
-                "No se pudo importar search.linkedin (%s); se sigue con las demás fuentes.",
+                i18n.t(
+                    "No se pudo importar search.linkedin (%s); se sigue con las demás fuentes.",
+                    "Could not import search.linkedin (%s); continuing with the other sources.",
+                ),
                 err,
             )
             linkedin_disponible = False
@@ -978,11 +1114,17 @@ def _ejecutar_run(config, args):
                 from search.linkedin import configurar_cooldown
 
                 log.info(
-                    "Cooldown de LinkedIn: %s s", configurar_cooldown(_cooldown_segundos(config))
+                    i18n.t("Cooldown de LinkedIn: %s s", "LinkedIn cooldown: %s s"),
+                    configurar_cooldown(_cooldown_segundos(config)),
                 )
             except ImportError:
                 log.warning(
-                    "search.linkedin sin configurar_cooldown(); se usa el cooldown del entorno."
+                    i18n.t(
+                        "search.linkedin sin configurar_cooldown(); "
+                        "se usa el cooldown del entorno.",
+                        "search.linkedin has no configurar_cooldown(); "
+                        "using the environment cooldown.",
+                    )
                 )
 
     if search_jobs is not None:
@@ -997,8 +1139,12 @@ def _ejecutar_run(config, args):
         except Exception as err:  # noqa: BLE001 — a failure does not abort the run.
             es_linkedin = LinkedInError is not None and isinstance(err, LinkedInError)
             log.error(
-                "La búsqueda en LinkedIn falló (%s): %s. Se continúa con las "
-                "fuentes alternativas (ATS y portales remotos).",
+                i18n.t(
+                    "La búsqueda en LinkedIn falló (%s): %s. Se continúa con las "
+                    "fuentes alternativas (ATS y portales remotos).",
+                    "The LinkedIn search failed (%s): %s. Continuing with the "
+                    "alternative sources (ATS and remote boards).",
+                ),
                 "LinkedInError" if es_linkedin else type(err).__name__,
                 err,
             )
@@ -1014,9 +1160,19 @@ def _ejecutar_run(config, args):
     # LinkedIn's rate limit. Their failure does not kill the run either.
     ofertas_boards = []
     if not consultas:
-        log.info("Boards omitidos: no hay consultas configuradas (ROLES/TOPICS).")
+        log.info(
+            i18n.t(
+                "Boards omitidos: no hay consultas configuradas (ROLES/TOPICS).",
+                "Boards skipped: no queries configured (ROLES/TOPICS).",
+            )
+        )
     elif not usar_boards:
-        log.info("Boards desactivados en la configuración (FUENTES_BOARDS=false); se omite.")
+        log.info(
+            i18n.t(
+                "Boards desactivados en la configuración (FUENTES_BOARDS=false); se omite.",
+                "Boards disabled in the config (FUENTES_BOARDS=false); skipped.",
+            )
+        )
     else:
         try:
             from search.boards import buscar_ofertas_boards
@@ -1033,7 +1189,13 @@ def _ejecutar_run(config, args):
                 or []
             )
         except Exception as err:  # noqa: BLE001
-            log.error("Las fuentes alternativas fallaron: %s", err)
+            log.error(
+                i18n.t(
+                    "Las fuentes alternativas fallaron: %s",
+                    "The alternative sources failed: %s",
+                ),
+                err,
+            )
 
     # Third source: Indeed/ZipRecruiter/Glassdoor via JobSpy (python-jobspy
     # library, no browser or session). Complements LinkedIn and the boards
@@ -1041,9 +1203,19 @@ def _ejecutar_run(config, args):
     # either: the function isolates each site and each query.
     ofertas_jobspy = []
     if not consultas:
-        log.info("JobSpy omitido: no hay consultas configuradas (ROLES/TOPICS).")
+        log.info(
+            i18n.t(
+                "JobSpy omitido: no hay consultas configuradas (ROLES/TOPICS).",
+                "JobSpy skipped: no queries configured (ROLES/TOPICS).",
+            )
+        )
     elif not usar_jobspy:
-        log.info("JobSpy desactivado en la configuración (FUENTES_JOBSPY=false); se omite.")
+        log.info(
+            i18n.t(
+                "JobSpy desactivado en la configuración (FUENTES_JOBSPY=false); se omite.",
+                "JobSpy disabled in the config (FUENTES_JOBSPY=false); skipped.",
+            )
+        )
     else:
         try:
             from search.jobspy import UBICACION_POR_DEFECTO, buscar_ofertas_jobspy
@@ -1068,7 +1240,13 @@ def _ejecutar_run(config, args):
                 or []
             )
         except Exception as err:  # noqa: BLE001
-            log.error("La fuente JobSpy (Indeed/ZipRecruiter/Glassdoor) falló: %s", err)
+            log.error(
+                i18n.t(
+                    "La fuente JobSpy (Indeed/ZipRecruiter/Glassdoor) falló: %s",
+                    "The JobSpy source (Indeed/ZipRecruiter/Glassdoor) failed: %s",
+                ),
+                err,
+            )
 
     # Merge with priority for LinkedIn (same offer: LinkedIn's one wins).
     ofertas = _fusionar_fuentes(ofertas_linkedin, ofertas_boards, ofertas_jobspy)
@@ -1083,17 +1261,24 @@ def _ejecutar_run(config, args):
     ofertas = _filtrar_keywords_negativas(ofertas, config=config)
 
     log.info(
-        "Ofertas recibidas: %s (LinkedIn: %s%s, boards: %s, jobspy: %s).",
+        i18n.t(
+            "Ofertas recibidas: %s (LinkedIn: %s%s, boards: %s, jobspy: %s).",
+            "Offers received: %s (LinkedIn: %s%s, boards: %s, jobspy: %s).",
+        ),
         len(ofertas),
         len(ofertas_linkedin),
-        "" if linkedin_disponible or not usar_linkedin else ", caído",
+        "" if linkedin_disponible or not usar_linkedin else i18n.t(", caído", ", down"),
         len(ofertas_boards),
         len(ofertas_jobspy),
     )
     if not ofertas:
         log.error(
-            "Ninguna oferta quedó tras la fusión y los filtros (antigüedad/keywords); "
-            "se termina sin procesar nada."
+            i18n.t(
+                "Ninguna oferta quedó tras la fusión y los filtros (antigüedad/keywords); "
+                "se termina sin procesar nada.",
+                "No offer survived the merge and the filters (age/keywords); "
+                "finishing without processing anything.",
+            )
         )
         return 0
 
@@ -1119,7 +1304,13 @@ def _ejecutar_run(config, args):
     # and messages stay ordered.
     from concurrent.futures import ThreadPoolExecutor, as_completed
 
-    log.info("Puntuando %d ofertas nuevas con %d hilos…", len(pendientes), HILOS_SCORING)
+    log.info(
+        i18n.t(
+            "Puntuando %d ofertas nuevas con %d hilos…", "Scoring %d new offers with %d threads…"
+        ),
+        len(pendientes),
+        HILOS_SCORING,
+    )
     resueltas = []
     if pendientes:
         with ThreadPoolExecutor(max_workers=HILOS_SCORING) as pool:
@@ -1132,7 +1323,9 @@ def _ejecutar_run(config, args):
                 try:
                     resueltas.append((clave, futuro.result()))
                 except Exception as err:  # noqa: BLE001 — isolate each offer.
-                    log.exception("Error procesando %s: %s", clave, err)
+                    log.exception(
+                        i18n.t("Error procesando %s: %s", "Error processing %s: %s"), clave, err
+                    )
 
     for _clave, op in resueltas:
         if not op:
@@ -1142,16 +1335,28 @@ def _ejecutar_run(config, args):
                 notify.enviar_oferta(op)
                 enviadas += 1
             except Exception as err:  # noqa: BLE001
-                log.error("No se pudo enviar %s a Telegram: %s", op["id"], err)
+                log.error(
+                    i18n.t(
+                        "No se pudo enviar %s a Telegram: %s",
+                        "Could not send %s to Telegram: %s",
+                    ),
+                    op["id"],
+                    err,
+                )
         else:
             para_confirmar.append(op)
 
     confirmadas = enviadas if args.modo == "manual" else len(para_confirmar)
     log.info(
-        "Run terminado: %s nuevas evaluadas, %s %s.",
+        i18n.t(
+            "Run terminado: %s nuevas evaluadas, %s %s.",
+            "Run finished: %s new evaluated, %s %s.",
+        ),
         len(vistas),
         confirmadas,
-        "enviadas al bot" if args.modo == "manual" else "para confirmar",
+        i18n.t("enviadas al bot", "sent to the bot")
+        if args.modo == "manual"
+        else i18n.t("para confirmar", "to confirm"),
     )
 
     if args.modo == "manual":
@@ -1159,15 +1364,32 @@ def _ejecutar_run(config, args):
             try:
                 notify.enviar_resumen([])  # "no offers" alert
             except Exception as err:  # noqa: BLE001
-                log.error("No se pudo enviar el aviso por Telegram: %s", err)
+                log.error(
+                    i18n.t(
+                        "No se pudo enviar el aviso por Telegram: %s",
+                        "Could not send the Telegram alert: %s",
+                    ),
+                    err,
+                )
                 return 1
         return 0
 
     try:
         notify.enviar_resumen(para_confirmar)
-        log.info("Resumen enviado (Telegram si está habilitado + webhook).")
+        log.info(
+            i18n.t(
+                "Resumen enviado (Telegram si está habilitado + webhook).",
+                "Summary sent (Telegram if enabled + webhook).",
+            )
+        )
     except Exception as err:  # noqa: BLE001
-        log.error("No se pudo enviar el resumen por Telegram: %s", err)
+        log.error(
+            i18n.t(
+                "No se pudo enviar el resumen por Telegram: %s",
+                "Could not send the summary via Telegram: %s",
+            ),
+            err,
+        )
         return 1
 
     return 0
