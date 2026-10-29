@@ -195,6 +195,23 @@ def set_estado(id_, estado, path=None):
         conn.close()
 
 
+def borrar(id_, path=None):
+    """Delete opportunity ``id_`` and return whether a row was removed.
+
+    Args:
+        id_: Offer id.
+        path: Optional DB path (defaults to ``DB_PATH``).
+    """
+    path = _resolver_path(path)
+    conn = _conectar(path)
+    try:
+        cur = conn.execute("DELETE FROM oportunidades WHERE id = ?", (id_,))
+        conn.commit()
+        return cur.rowcount > 0
+    finally:
+        conn.close()
+
+
 def listar(estado=None, path=None):
     """Return the opportunities as a list of dicts.
 

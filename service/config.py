@@ -127,6 +127,9 @@ _CONFIG_DEFS = {
     "IDIOMA_SCORING": ("str", "en"),
     # Language of the framework log messages: "es" (default) or "en".
     "IDIOMA_LOGS": ("str", "es"),
+    # Language of generated materials (cover letter, CV, message):
+    # "en" (default), "es", or "auto" to follow the offer's language.
+    "IDIOMA_GENERACION": ("str", "en"),
     "RANGO_DUDOSO_MIN": ("int", 55),
     "RANGO_DUDOSO_MAX": ("int", 79),
     "MAX_ANTIGUEDAD_DIAS": ("int", 30),
@@ -173,6 +176,7 @@ _RANGOS = {
 # Allowed values for enumerated textual keys (compared case-insensitively).
 _VALORES_PERMITIDOS = {
     "IDIOMA_LOGS": ("en", "es"),
+    "IDIOMA_GENERACION": ("en", "es", "auto"),
 }
 
 # Public aliases for the web layer (validation and key listing).

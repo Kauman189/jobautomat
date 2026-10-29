@@ -147,6 +147,23 @@ def idioma_oferta(job):
     return "en" if inglesas > espanolas else "es"
 
 
+def _idioma_generacion(job):
+    """Language for generated materials, honoring ``IDIOMA_GENERACION``.
+
+    ``en``/``es`` force that language; ``auto`` falls back to the offer's
+    detected language. Defaults to English (the candidate's target language).
+    """
+    try:
+        from config import load_config
+
+        pref = str(load_config(estricto=False).get("IDIOMA_GENERACION") or "en").lower()
+    except Exception:  # noqa: BLE001 — config is best-effort here.
+        pref = "en"
+    if pref in ("en", "es"):
+        return pref
+    return idioma_oferta(job)
+
+
 def _directorio_candidatura(job):
     """Return ``../candidaturas/<id>``, sanitizing the offer id.
 
@@ -791,7 +808,7 @@ def generar_cover_letter(job, perfil):
     ``../candidaturas/<id>/cover.pdf`` and its path to ``job["cover_pdf"]``.
     A PDF render failure does not change the returned text.
     """
-    idioma = idioma_oferta(job)
+    idioma = _idioma_generacion(job)
     nombre_idioma = "inglés" if idioma == "en" else "español"
     usuario = f"""PERFIL DEL CANDIDATO
 {_resumen_perfil(perfil)}
@@ -850,7 +867,7 @@ def generar_cv_adaptado(job, perfil):
     ``../candidaturas/<id>/cv.pdf`` and its path to ``job["cv_pdf"]``. A PDF
     render failure does not change the returned text.
     """
-    idioma = idioma_oferta(job)
+    idioma = _idioma_generacion(job)
     cv_base = _leer_cv(idioma)
     usuario = f"""CV BASE
 {cv_base}
@@ -885,6 +902,25 @@ más relevantes. No inventes nada. Devuelve el CV completo en markdown."""
         )
         cv = cv_base
     ruta_cv = _adjuntar_pdf(job, cv, "cv.pdf", "cv_pdf", _funcion_pdf("generar_pdf_cv"))
+    # Hard cap: the tailored CV must fit 2 A4 pages. When the LLM produces a
+    # longer CV, fall back to the base CV (which already fits 2 pages) so the
+    # candidate never sends a 3-page CV.
+    contar = _funcion_pdf("contar_paginas")
+    if contar is not None and ruta_cv:
+        try:
+            paginas = contar(ruta_cv)[0]
+        except Exception:  # noqa: BLE001 — the count is best-effort
+            paginas = None
+        if paginas and paginas > 2:
+            _log.warning(
+                t(
+                    "CV adaptado ocupa %d páginas (> 2): se usa el CV base.",
+                    "Tailored CV is %d pages (> 2): using the base CV.",
+                ),
+                paginas,
+            )
+            cv = cv_base
+            ruta_cv = _adjuntar_pdf(job, cv, "cv.pdf", "cv_pdf", _funcion_pdf("generar_pdf_cv"))
     # Deterministic (non-blocking) gate: checks the PDF keeps the profile's
     # hard data and stores the result in job["pdf_check"].
     _verificar_pdf_cv(job, cv, perfil, ruta_cv)
@@ -913,7 +949,7 @@ def generar_mensaje(job, perfil):
     ``_verificar_y_humanizar`` (one extra call) and the original text is
     returned if that verification fails.
     """
-    idioma = idioma_oferta(job)
+    idioma = _idioma_generacion(job)
     nombre_idioma = "inglés" if idioma == "en" else "español"
     usuario = f"""PERFIL
 {_resumen_perfil(perfil)}

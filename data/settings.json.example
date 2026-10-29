@@ -14,6 +14,8 @@
   "TEMPERATURA": 0.4,
   "_nota_idioma": "IDIOMA_SCORING: language of the descriptive scoring texts ('en' by default, 'es'). 'recomendacion' is never translated (aplicar/dudoso/descartar).",
   "IDIOMA_SCORING": "en",
+  "_nota_idioma_gen": "IDIOMA_GENERACION: language of the generated materials ('en' by default, 'es', or 'auto' to follow the offer).",
+  "IDIOMA_GENERACION": "en",
   "_nota_idioma_logs": "IDIOMA_LOGS: language of the framework log messages ('es' by default, 'en'). Does not affect user texts, prompts or IDIOMA_SCORING.",
   "IDIOMA_LOGS": "es",
   "RANGO_DUDOSO_MIN": 55,

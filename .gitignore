@@ -7,7 +7,11 @@
 .linkedin-mcp/
 data/linkedin_session.json
 data/linkedin_cooldown.json
+data/linkedin_usage.json
 *.tmp
+
+# Lock de búsqueda (estado efímero local)
+service/.buscar.lock
 
 # macOS
 .DS_Store
