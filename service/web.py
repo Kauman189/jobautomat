@@ -13,6 +13,9 @@ GET  /api/ofertas?estado=           list (id, titulo, empresa, score, ...).
 GET  /api/oferta/<id>               detail with generated materials.
 POST /api/oferta/<id>/aprobar       approve and generate the pack.
 POST /api/oferta/<id>/descartar     discard.
+POST /api/oferta/manual             create an offer by hand (URL or pasted
+                                    text), extract it with the LLM and
+                                    generate the pack.
 GET  /api/perfil                    full profile (data/perfil.json).
 POST /api/perfil/agregar            merge a new fact into the profile (LLM).
 POST /api/perfil/borrar             delete a profile key or index.
@@ -20,6 +23,8 @@ PUT  /api/perfil                    replace the full profile (technical JSON mod
 POST /api/preguntar                 answer application questions with the LLM.
 GET  /api/config                    effective config (secrets masked).
 PUT  /api/config                    update data/settings.json (atomic).
+GET  /api/linkedin/sesion           LinkedIn session status (file age, expired).
+POST /api/linkedin/conectar         open a browser on the host to renew it.
 GET  /api/metrics                   counts by status and by source (read-only).
 GET  /api/salud                     self-host diagnostics (LLM, Telegram,
                                     LinkedIn, /data, Chromium).
@@ -27,7 +32,9 @@ GET  /api/export                    profile + settings (secrets masked).
 POST /api/import                    restore profile and/or settings from an export.
 POST /api/fuente/probar             probe a board with one real request.
 POST /api/busquedas/limpiar         delete search results, keep approved ones.
-GET  /candidaturas/<path>           serve cv.pdf, cover.pdf, cover.txt.
+GET  /candidaturas/<path>           serve cv.pdf, cover.pdf, cover.txt
+                                    (downloaded with a company-based name).
+POST /api/oferta/<id>/estado        move the offer to a pipeline state.
 
 Authentication: HTTP Basic, user ``casa`` and the ``WEB_PASSWORD`` password
 (environment or ``service/.env``). Without a configured password no auth is
@@ -45,7 +52,9 @@ Startup: ``python web.py`` (port 8085, configurable with ``WEB_PORT``).
 """
 
 import copy
+import hashlib
 import hmac
+import html
 import json
 import os
 import re
@@ -56,6 +65,9 @@ import sys
 import tempfile
 import threading
 import time
+import unicodedata
+import urllib.request
+from datetime import UTC, datetime
 from urllib.parse import urlsplit
 
 # Lock shared with main.py so the "Buscar ahora" button cannot overlap two
@@ -84,6 +96,9 @@ INDEX_HTML = os.path.join(WEB_DIR, "index.html")
 # hour and IP).
 RATE_LIMIT_PREGUNTAS = 30  # max POST /api/preguntar per window and IP
 RATE_LIMIT_ACCIONES = 120  # max approve/discard calls per window and IP
+# Connecting LinkedIn opens a real browser window on the host, so the ceiling
+# is deliberately low: this is not something a person does dozens of times.
+RATE_LIMIT_CONECTAR = 5  # max POST /api/linkedin/conectar per window and IP
 RATE_LIMIT_VENTANA = 3600  # sliding window length in seconds
 
 # Extra origins allowed for POST (besides the request Host itself).
@@ -97,6 +112,18 @@ _ORIGENES_PERMITIDOS = tuple(
 
 ESTADO_APROBADA = "aprobada"
 ESTADO_DESCARTADA = "descartada"
+
+# Pipeline states accepted by POST /api/oferta/<id>/estado. The panel uses the
+# same list to render the state selector.
+_ESTADOS_VALIDOS = (
+    "para_confirmar",
+    "aprobada",
+    "aplicada",
+    "entrevista",
+    "oferta",
+    "rechazada",
+    "descartada",
+)
 
 # Database states that count as "pending" in the panel.
 _ESTADOS_PENDIENTES = ("para_confirmar", "pendiente", "nueva", None, "")
@@ -149,6 +176,10 @@ def _exigir_auth():
     pwd = _password()
     if not pwd:
         return None
+    # Docker/uptime health probe stays public so the container is not marked
+    # unhealthy when a password is configured.
+    if request.path.startswith("/healthz"):
+        return None
     auth = request.authorization
     valida = (
         auth is not None
@@ -179,8 +210,11 @@ _LIMITES_POR_ENDPOINT = {
     "api_perfil_agregar": (RATE_LIMIT_PREGUNTAS, RATE_LIMIT_VENTANA),
     "api_perfil_borrar": (RATE_LIMIT_ACCIONES, RATE_LIMIT_VENTANA),
     "api_perfil_put": (RATE_LIMIT_ACCIONES, RATE_LIMIT_VENTANA),
+    "api_oferta_manual": (RATE_LIMIT_PREGUNTAS, RATE_LIMIT_VENTANA),
     "api_aprobar": (RATE_LIMIT_ACCIONES, RATE_LIMIT_VENTANA),
     "api_descartar": (RATE_LIMIT_ACCIONES, RATE_LIMIT_VENTANA),
+    "api_borrar_oferta": (RATE_LIMIT_ACCIONES, RATE_LIMIT_VENTANA),
+    "api_oferta_estado": (RATE_LIMIT_ACCIONES, RATE_LIMIT_VENTANA),
     # Health diagnostics make network calls (up to 5s per block), export reads
     # two files, and import/probar write or reach the internet.
     "api_salud": (RATE_LIMIT_ACCIONES, RATE_LIMIT_VENTANA),
@@ -192,6 +226,8 @@ _LIMITES_POR_ENDPOINT = {
     "api_buscar": (RATE_LIMIT_ACCIONES, RATE_LIMIT_VENTANA),
     # Destructive: wipes the search results (only the approved ones survive).
     "api_limpiar_busquedas": (RATE_LIMIT_ACCIONES, RATE_LIMIT_VENTANA),
+    # Spawns a browser on the host: same low ceiling as a manual action.
+    "api_linkedin_conectar": (RATE_LIMIT_CONECTAR, RATE_LIMIT_VENTANA),
     # NOTE: ``api_buscar_estado`` (GET) is deliberately absent: the panel polls
     # it every ~10 s to render the button, just like /api/log every 3 s; at
     # 120/h per IP the button would lock within minutes. It is a side-effect
@@ -451,7 +487,7 @@ def _respuestas_formulario(op):
     return detalle, None
 
 
-def _generar_pack(op):
+def _generar_pack(op, forzar=False):
     """Generate the missing materials and persist them (same as notify).
 
     Reuses ``notify._cargar_perfil`` and ``generate.*``. ``generate`` stores the
@@ -479,9 +515,9 @@ def _generar_pack(op):
             errores.append(f"{etiqueta}: {err}")
             return ""
 
-    cover = op.get("cover_letter") or _gen(generate_mod.generar_cover_letter, "cover_letter")
-    cv = op.get("cv_adaptado") or _gen(generate_mod.generar_cv_adaptado, "cv")
-    mensaje = op.get("mensaje") or _gen(generate_mod.generar_mensaje, "mensaje")
+    cover = (None if forzar else op.get("cover_letter")) or _gen(generate_mod.generar_cover_letter, "cover_letter")
+    cv = (None if forzar else op.get("cv_adaptado")) or _gen(generate_mod.generar_cv_adaptado, "cv")
+    mensaje = (None if forzar else op.get("mensaje")) or _gen(generate_mod.generar_mensaje, "mensaje")
 
     try:
         db.guardar_materiales(op["id"], cover, cv, mensaje)
@@ -554,6 +590,72 @@ def _id_url(id_):
     """
     ident = str(id_ or "").strip() or "sin-id"
     return re.sub(r"[^A-Za-z0-9._-]+", "_", ident).strip("._") or "sin-id"
+
+
+# Material file name -> download name template (``{slug}`` is the company).
+_NOMBRES_DESCARGA = {
+    "cv.pdf": "{slug}-cv.pdf",
+    "cover.pdf": "{slug}-cover-letter.pdf",
+    "cover.txt": "{slug}-cover-letter.txt",
+}
+
+
+def _slug_empresa(empresa):
+    """Turn a company name into an ASCII filename slug.
+
+    Args:
+        empresa: Company name as stored in the offer.
+
+    Returns:
+        A lowercase, accent-free, dash-separated slug of at most 40 chars, or
+        ``"oferta"`` when nothing usable is left.
+    """
+    texto = unicodedata.normalize("NFD", str(empresa or ""))
+    texto = "".join(c for c in texto if unicodedata.category(c) != "Mn")
+    texto = re.sub(r"[^a-z0-9]+", "-", texto.lower())
+    return re.sub(r"-+", "-", texto).strip("-")[:40].strip("-") or "oferta"
+
+
+def _id_real(id_url):
+    """Map the URL-safe id back to the stored offer id.
+
+    Args:
+        id_url: Id as it appears in ``/candidaturas/...`` URLs.
+
+    Returns:
+        The real id, or ``None`` when no offer matches.
+    """
+    if db.get(id_url):
+        return id_url
+    try:
+        ofertas = db.listar() or []
+    except Exception:  # noqa: BLE001 — no match just means no friendly name.
+        return None
+    for op in ofertas:
+        ident = (op or {}).get("id")
+        if ident and _id_url(ident) == id_url:
+            return ident
+    return None
+
+
+def _nombre_descarga(filename):
+    """Build the friendly download name for a materials path.
+
+    Args:
+        filename: Path relative to the materials directory, e.g. ``<id>/cv.pdf``.
+
+    Returns:
+        The ``Content-Disposition`` filename, or ``None`` for unknown paths.
+    """
+    partes = [p for p in str(filename or "").replace("\\", "/").split("/") if p]
+    if len(partes) != 2:
+        return None
+    plantilla = _NOMBRES_DESCARGA.get(partes[1])
+    if not plantilla:
+        return None
+    id_real = _id_real(partes[0])
+    op = db.get(id_real) if id_real else None
+    return plantilla.format(slug=_slug_empresa((op or {}).get("empresa")))
 
 
 def _filtro_estado(valor):
@@ -723,7 +825,7 @@ def api_aprobar(id_):
     if not db.set_estado(id_, ESTADO_APROBADA):
         return jsonify({"error": "no se pudo actualizar el estado"}), 500
 
-    pack = _generar_pack(op)
+    pack = _generar_pack(op, forzar=request.args.get("forzar") == "1")
 
     respuestas, error_formulario = ({}, None)
     if request.args.get("formulario", "1") != "0":
@@ -754,6 +856,32 @@ def api_aprobar(id_):
     )
 
 
+@app.post("/api/oferta/<path:id_>/estado")
+def api_oferta_estado(id_):
+    """Move an offer to another state of the pipeline.
+
+    Args:
+        id_: Offer id.
+
+    Body (JSON):
+        estado: One of ``_ESTADOS_VALIDOS``.
+
+    Returns:
+        JSON ``{"id", "estado"}``, 400 when the state is not valid, 404 when
+        the offer does not exist, or 500 when the update fails.
+    """
+    datos = request.get_json(silent=True) or {}
+    estado = datos.get("estado")
+    estado = estado.strip() if isinstance(estado, str) else estado
+    if estado not in _ESTADOS_VALIDOS:
+        return jsonify({"error": "estado no válido"}), 400
+    if not db.get(id_):
+        return jsonify({"error": "oferta no encontrada"}), 404
+    if not db.set_estado(id_, estado):
+        return jsonify({"error": "no se pudo actualizar el estado"}), 500
+    return jsonify({"id": id_, "estado": estado})
+
+
 @app.post("/api/oferta/<path:id_>/descartar")
 def api_descartar(id_):
     """Mark the offer as discarded.
@@ -769,6 +897,314 @@ def api_descartar(id_):
     if not db.set_estado(id_, ESTADO_DESCARTADA):
         return jsonify({"error": "no se pudo actualizar el estado"}), 500
     return jsonify({"id": id_, "estado": ESTADO_DESCARTADA})
+
+
+@app.post("/api/oferta/<path:id_>/borrar")
+def api_borrar_oferta(id_):
+    """Delete an offer and its generated materials.
+
+    Args:
+        id_: Offer id.
+
+    Returns:
+        JSON with the deletion result, 404 when missing, 500 on failure.
+    """
+    op = db.get(id_)
+    if not op:
+        return jsonify({"error": "oferta no encontrada"}), 404
+    # Remove the generated materials directory (best-effort: the row is what
+    # matters; an orphaned PDF folder is harmless).
+    try:
+        import shutil
+
+        shutil.rmtree(generate_mod._directorio_candidatura(op), ignore_errors=True)
+    except Exception:  # noqa: BLE001 — materials are secondary to the row.
+        pass
+    if not db.borrar(id_):
+        return jsonify({"error": "no se pudo borrar la oferta"}), 500
+    return jsonify({"id": id_, "estado": "borrada"})
+
+
+# ---------------------------------------------------------------------------
+# Manual offers (URL or pasted text)
+# ---------------------------------------------------------------------------
+
+# A manual offer needs enough text for the LLM to extract something useful.
+_MIN_TEXTO_MANUAL = 40
+# Pasted text is capped to keep prompt size (and cost) bounded.
+_MAX_TEXTO_MANUAL = 200000
+_RE_URL_HTTP = re.compile(r"^https?://", re.IGNORECASE)
+_CABECERAS_NAVEGADOR = {
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+    ),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
+}
+_RE_BLOQUES_RUIDO = re.compile(r"(?is)<(script|style|noscript|svg|template)\b[^>]*>.*?</\1>")
+_RE_CORTES = re.compile(r"(?i)<br\s*/?>|</(?:p|li|div|h[1-6]|tr|section|article|td)>")
+_RE_ETIQUETAS_MANUAL = re.compile(r"<[^>]+>")
+_RE_ESPACIOS_MANUAL = re.compile(r"[ \t\u00a0]+")
+_RE_SALTOS_MANUAL = re.compile(r"\n{3,}")
+
+SYSTEM_OFERTA_MANUAL = (
+    "Extract the fields of a single job offer. Answer ONLY with a JSON object "
+    "with these keys: titulo (job title), empresa (company), ubicacion (city "
+    "or location), salario (salary text, as written), remoto (exactly one of "
+    "'Remoto', 'Híbrido', 'Presencial'), contrato (indefinido, temporal, "
+    "practicas, freelance...). "
+    "Use null for anything that does not appear in the text. Never invent or "
+    "guess a value. Keep every value short; do not echo the offer text back."
+)
+
+
+def _limpiar_texto(crudo):
+    """Turn HTML (or plain text) into readable plain text using stdlib only.
+
+    Args:
+        crudo: HTML or plain text.
+
+    Returns:
+        Collapsed plain text, never ``None``.
+    """
+    if not crudo:
+        return ""
+    texto = _RE_BLOQUES_RUIDO.sub(" ", str(crudo))
+    texto = _RE_CORTES.sub("\n", texto)
+    texto = _RE_ETIQUETAS_MANUAL.sub(" ", texto)
+    texto = html.unescape(texto)
+    texto = _RE_ESPACIOS_MANUAL.sub(" ", texto)
+    texto = _RE_SALTOS_MANUAL.sub("\n\n", texto)
+    return texto.strip()
+
+
+def _descargar_oferta(url):
+    """Download an offer page and return its plain text.
+
+    Args:
+        url: Absolute http(s) URL.
+
+    Returns:
+        A ``(texto, error)`` tuple; ``texto`` is empty when the download or
+        the decoding fails.
+    """
+    peticion = urllib.request.Request(url, headers=_CABECERAS_NAVEGADOR)
+    try:
+        with urllib.request.urlopen(peticion, timeout=30) as respuesta:
+            crudo = respuesta.read()
+            charset = (respuesta.headers.get_content_charset() or "").strip().lower()
+    except Exception as err:  # noqa: BLE001 — reported to the caller as 400.
+        return "", f"no se pudo descargar la URL: {err}"
+
+    decodificado = None
+    for codec in (charset, "utf-8", "latin-1"):
+        if not codec:
+            continue
+        try:
+            decodificado = crudo.decode(codec)
+            break
+        except (UnicodeDecodeError, LookupError):
+            continue
+    if decodificado is None:
+        decodificado = crudo.decode("utf-8", errors="replace")
+
+    texto = _limpiar_texto(decodificado)
+    if not texto:
+        return "", "la página no contiene texto legible"
+    return texto, None
+
+
+def _campo_texto(valor):
+    """Normalize an extracted string field.
+
+    Args:
+        valor: Raw model value (string, number or ``None``).
+
+    Returns:
+        A stripped string, or ``None`` when empty/absent.
+    """
+    if valor is None:
+        return None
+    if isinstance(valor, (int, float)):
+        valor = str(valor)
+    if not isinstance(valor, str):
+        return None
+    limpio = " ".join(valor.split())
+    return limpio or None
+
+
+def _campo_remoto(valor):
+    """Normalize the work-mode field to one of three known values.
+
+    Args:
+        valor: Raw model value.
+
+    Returns:
+        ``"Remoto"``, ``"Híbrido"``, ``"Presencial"`` or ``None``.
+    """
+    texto = (_campo_texto(valor) or "").lower()
+    if not texto:
+        return None
+    # Accents out: "híbrido" and "hibrido" must match the same rule.
+    texto = "".join(
+        c for c in unicodedata.normalize("NFD", texto) if unicodedata.category(c) != "Mn"
+    )
+    if "hibrid" in texto or "hybrid" in texto or "mixto" in texto:
+        return "Híbrido"
+    if "remot" in texto or "teletrabajo" in texto or "distance" in texto:
+        return "Remoto"
+    if "presencial" in texto or "on-site" in texto or "onsite" in texto or "oficina" in texto:
+        return "Presencial"
+    return None
+
+
+def _extraer_oferta(texto):
+    """Extract the offer fields from its text with the LLM.
+
+    Args:
+        texto: Clean plain text of the offer.
+
+    Returns:
+        A dict with ``titulo``, ``empresa``, ``ubicacion``, ``salario``,
+        ``remoto``, ``contrato`` and ``descripcion``.
+
+    Raises:
+        ValueError: When the model answer is not a JSON object.
+    """
+    mensajes = [
+        {"role": "system", "content": SYSTEM_OFERTA_MANUAL},
+        {"role": "user", "content": f"TEXTO DE LA OFERTA:\n{texto}"},
+    ]
+    respuesta = llm.chat(mensajes, temperature=0.3, max_tokens=3000, json_mode=True)
+    datos = _parsear_json_modelo(respuesta)
+    if not isinstance(datos, dict):
+        raise ValueError("el modelo no devolvió un objeto JSON")
+    # descripcion is the cleaned source text itself: the LLM only extracts the
+    # short fields, so the JSON never overflows max_tokens (the full text can).
+    descripcion = texto
+    return {
+        "titulo": _campo_texto(datos.get("titulo")),
+        "empresa": _campo_texto(datos.get("empresa")),
+        "ubicacion": _campo_texto(datos.get("ubicacion")),
+        "salario": _campo_texto(datos.get("salario")),
+        "remoto": _campo_remoto(datos.get("remoto")),
+        "contrato": _campo_texto(datos.get("contrato")),
+        "descripcion": descripcion,
+    }
+
+
+@app.post("/api/oferta/manual")
+def api_oferta_manual():
+    """Create an offer by hand from a URL or pasted text.
+
+    The LLM extracts the fields, the offer is stored as ``aprobada`` and the
+    materials pack is generated, same as ``/api/oferta/<id>/aprobar``.
+
+    Body:
+        ``{"url": "https://...", "texto": "..."}``; at least one is required.
+
+    Returns:
+        The pack as JSON, or 400 (bad body / unreachable URL), 502 (LLM) or
+        500 (could not store the offer) with an ``error`` message.
+    """
+    datos = request.get_json(silent=True)
+    if not isinstance(datos, dict):
+        return jsonify({"error": "el body debe ser un objeto JSON"}), 400
+
+    url = (datos.get("url") or "").strip() if isinstance(datos.get("url"), str) else ""
+    texto_pegado = (datos.get("texto") or "").strip() if isinstance(datos.get("texto"), str) else ""
+    if not url and not texto_pegado:
+        return jsonify({"error": "falta 'url' o 'texto' con la oferta"}), 400
+    if url and not _RE_URL_HTTP.match(url):
+        return jsonify({"error": "la URL debe empezar por http:// o https://"}), 400
+    if len(texto_pegado) > _MAX_TEXTO_MANUAL:
+        return jsonify({"error": "'texto' es demasiado largo"}), 400
+
+    fuente, error_url = "", None
+    if url:
+        fuente, error_url = _descargar_oferta(url)
+        if error_url:
+            print(
+                t(
+                    f"[web] oferta manual: {error_url}",
+                    f"[web] manual offer: {error_url}",
+                )
+            )
+    if not fuente:
+        fuente = _limpiar_texto(texto_pegado)
+    if len(fuente) < _MIN_TEXTO_MANUAL:
+        # The download failed and no usable text was provided.
+        return jsonify({"error": error_url or "el texto de la oferta es demasiado corto"}), 400
+
+    try:
+        campos = _extraer_oferta(fuente)
+    except llm.LLMError as err:
+        return jsonify({"error": f"el LLM no pudo leer la oferta: {err}"}), 502
+    except ValueError as err:
+        return jsonify({"error": str(err)}), 502
+    except Exception as err:  # noqa: BLE001 — surface a readable error.
+        return jsonify({"error": f"el LLM no pudo leer la oferta: {err}"}), 502
+
+    id_ = "m-" + hashlib.sha1(
+        ((url or texto_pegado[:200]) + str(time.time())).encode("utf-8")
+    ).hexdigest()[:16]
+    ahora = datetime.now(UTC).isoformat()
+
+    try:
+        insertada = db.insertar(
+            {
+                "id": id_,
+                "url": url or None,
+                "titulo": campos["titulo"],
+                "empresa": campos["empresa"],
+                "salario": campos["salario"],
+                "ubicacion": campos["ubicacion"],
+                "remoto": campos["remoto"],
+                "contrato": campos["contrato"],
+                "descripcion": campos["descripcion"],
+                "estado": ESTADO_APROBADA,
+                "score": None,
+                "justificacion": None,
+                "cover_letter": None,
+                "cv_adaptado": None,
+                "mensaje": None,
+                "created_at": ahora,
+                "updated_at": ahora,
+            }
+        )
+    except Exception as err:  # noqa: BLE001
+        return jsonify({"error": f"no se pudo guardar la oferta: {err}"}), 500
+    if not insertada:
+        return jsonify({"error": "ya existe una oferta con ese id"}), 409
+
+    op = db.get(id_)
+    if not op:
+        return jsonify({"error": "la oferta no quedó guardada"}), 500
+
+    pack = _generar_pack(op)
+    rutas = {
+        "cv_pdf": pack.get("cv_pdf"),
+        "cover_pdf": pack.get("cover_pdf"),
+        "cover_txt": pack.get("cover_txt"),
+    }
+    return jsonify(
+        {
+            "id": id_,
+            "estado": ESTADO_APROBADA,
+            "titulo": op.get("titulo"),
+            "empresa": op.get("empresa"),
+            "url": op.get("url"),
+            "cover_letter": pack.get("cover_letter") or "",
+            "cv_adaptado": pack.get("cv_adaptado") or "",
+            "mensaje": pack.get("mensaje") or "",
+            "cv_pdf": pack.get("cv_pdf"),
+            "cover_pdf": pack.get("cover_pdf"),
+            "cover_txt": pack.get("cover_txt"),
+            "enlaces": _enlaces(id_, rutas),
+            "errores": pack.get("errores") or [],
+        }
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -1625,6 +2061,113 @@ def api_config_put():
     return _respuesta_config({"guardado": sorted(cambios)})
 
 
+# ---------------------------------------------------------------------------
+# LinkedIn session (Settings view)
+# ---------------------------------------------------------------------------
+
+# Exporter that opens a visible browser on the host and writes the session.
+_SCRIPT_SESION_LINKEDIN = os.path.join("scripts", "export_linkedin_session.py")
+
+
+def _raiz_repo() -> str:
+    """Repo root: the parent of the ``service/`` directory this file lives in."""
+    return os.path.dirname(BASE_DIR)
+
+
+@app.get("/api/linkedin/sesion")
+def api_linkedin_sesion():
+    """Session diagnostics from ``search.linkedin.sesion_estado()``.
+
+    Reports whether the ``storage_state`` file exists, its age in days and
+    whether it is considered expired. The file contents are never read, so no
+    cookie is ever exposed.
+
+    Returns:
+        The JSON response, or 500 with ``error`` if the module cannot answer.
+    """
+    try:
+        # Local import: search.linkedin pulls in the whole search package (and
+        # its optional dependencies), which the rest of the panel does not need.
+        import search.linkedin as linkedin_mod
+
+        return jsonify(linkedin_mod.sesion_estado())
+    except Exception as err:  # noqa: BLE001 — surface a readable error.
+        return (
+            jsonify(
+                {
+                    "error": t(
+                        f"no se pudo leer el estado de la sesión de LinkedIn: {err}",
+                        f"could not read the LinkedIn session status: {err}",
+                    )
+                }
+            ),
+            500,
+        )
+
+
+@app.post("/api/linkedin/conectar")
+def api_linkedin_conectar():
+    """Start ``scripts/export_linkedin_session.py --auto`` in the background.
+
+    The exporter opens a visible Chromium window on the host and waits for the
+    user to sign in; the panel only launches it and returns right away (the
+    status endpoint reflects the file once it is written). Output goes to
+    ``data/linkedin_conectar.log`` so a failure without a GUI can be diagnosed.
+
+    Returns:
+        ``{"lanzado": True, "pid": <pid>}``, or 500 with ``error`` when the
+        process cannot be started.
+    """
+    raiz = _raiz_repo()
+    script = os.path.join(raiz, _SCRIPT_SESION_LINKEDIN)
+    if not os.path.isfile(script):
+        return (
+            jsonify(
+                {
+                    "error": t(
+                        f"no se encontró el exportador de sesión: {script}",
+                        f"session exporter not found: {script}",
+                    )
+                }
+            ),
+            500,
+        )
+
+    ruta_log = os.path.join(raiz, "data", "linkedin_conectar.log")
+    try:
+        os.makedirs(os.path.dirname(ruta_log), exist_ok=True)
+        with open(ruta_log, "a", encoding="utf-8") as log_fh:
+            proceso = subprocess.Popen(  # noqa: S603 — fixed argv, no shell.
+                [sys.executable, script, "--auto"],
+                cwd=raiz,
+                stdin=subprocess.DEVNULL,
+                stdout=log_fh,
+                stderr=subprocess.STDOUT,
+                start_new_session=True,
+                close_fds=True,
+            )
+    except OSError as err:
+        return (
+            jsonify(
+                {
+                    "error": t(
+                        f"no se pudo abrir el navegador: {err}",
+                        f"could not open the browser: {err}",
+                    )
+                }
+            ),
+            500,
+        )
+
+    print(
+        t(
+            f"[web] sesión LinkedIn: exportador lanzado (pid {proceso.pid})",
+            f"[web] LinkedIn session: exporter started (pid {proceso.pid})",
+        )
+    )
+    return jsonify({"lanzado": True, "pid": proceso.pid})
+
+
 @app.get("/candidaturas/<path:filename>")
 def candidaturas(filename):
     """Serve the generated PDFs and cover.txt.
@@ -1633,12 +2176,17 @@ def candidaturas(filename):
         filename: Path relative to the materials directory.
 
     Returns:
-        The requested file, or 404 when the directory does not exist.
+        The requested file, or 404 when the directory does not exist. Known
+        materials are sent as attachments named after the company.
     """
     directorio = _directorio_candidaturas()
     if not os.path.isdir(directorio):
         return jsonify({"error": "no hay candidaturas generadas"}), 404
-    return send_from_directory(directorio, filename)
+    respuesta = send_from_directory(directorio, filename)
+    nombre = _nombre_descarga(filename)
+    if nombre:
+        respuesta.headers["Content-Disposition"] = f'attachment; filename="{nombre}"'
+    return respuesta
 
 
 @app.get("/healthz")
