@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>jobautomat · job board panel</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%232d325b'/><stop offset='1' stop-color='%236d5bd0'/></linearGradient></defs><rect width='64' height='64' rx='14' fill='url(%23g)'/><path d='M34 8 L14 36 L32 36 L30 56 L50 28 L32 28 Z' fill='%23fff'/></svg>">
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -18,6 +19,7 @@
   textarea { field-sizing: content; }
   summary::-webkit-details-marker { display: none; }
   .filtro.activo { background: #2d325b; color: #fff; }
+  .filtro.activo:hover { background: #2d325b; color: #fff; }
   .vista.activo { background: #2d325b; color: #fff; }
   .vista.activo:hover { color: #fff; }
   /* "Buscar ahora" button while a search is running. */
@@ -27,25 +29,41 @@
 </head>
 <body class="h-full bg-[#fafafa] font-['Inter'] text-[#2d325b]">
 
-<header class="sticky top-0 z-10 border-b border-[#ddd] bg-white/95 backdrop-blur">
-  <div class="mx-auto flex max-w-[86rem] items-center gap-x-3 px-6 py-3">
-    <h1 class="font-['Oswald'] text-xl font-medium uppercase tracking-[0.08em] text-[#2d325b]">jobautomat</h1>
+<header class="sticky top-0 z-30 border-b border-[#ddd] bg-white/95 backdrop-blur">
+  <div class="mx-auto flex max-w-[86rem] flex-wrap items-center gap-x-4 gap-y-2 px-6 py-3">
+    <h1 class="flex items-center gap-2.5 font-['Oswald'] text-xl font-medium uppercase tracking-[0.08em] text-[#2d325b]">
+      <svg width="26" height="26" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="logo-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2d325b"/><stop offset="1" stop-color="#6d5bd0"/></linearGradient></defs><rect width="64" height="64" rx="14" fill="url(#logo-g)"/><path d="M34 8 L14 36 L32 36 L30 56 L50 28 L32 28 Z" fill="#fff"/></svg>
+      jobautomat
+    </h1>
 
-    <nav id="vistas" class="flex shrink-0 items-center gap-1 rounded-full border border-[#ddd] bg-white p-1 text-sm">
-      <button data-vista="ofertas" data-i18n="nav_ofertas" class="vista rounded-full px-3 py-1.5 whitespace-nowrap text-[#999] transition hover:text-[#2d325b]">Ofertas</button>
+    <nav id="vistas" class="flex shrink-0 items-center gap-1 overflow-visible rounded-full border border-[#ddd] bg-white p-1 text-sm">
+      <button data-vista="pipeline" data-i18n="nav_pipeline" class="vista rounded-full px-3 py-1.5 whitespace-nowrap text-[#999] transition hover:text-[#2d325b]">Pipeline</button>
+
+      <div class="relative shrink-0">
+        <button id="btn-menu-ofertas" data-vista="ofertas" type="button" aria-haspopup="true" aria-expanded="false"
+          class="vista flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-[#999] transition hover:text-[#2d325b]">
+          <span data-i18n="nav_ofertas">Ofertas</span>
+          <span id="filtro-actual" class="rounded-full bg-[#fafafa] px-2 py-0.5 text-[0.62rem] font-semibold uppercase tracking-[0.08em] text-[#999]">Pendientes</span>
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 opacity-60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div id="filtros" class="absolute left-0 top-full z-40 mt-2 hidden w-56 rounded-xl border border-[#ddd] bg-white p-1.5 text-sm shadow-[0_10px_30px_rgba(45,50,91,0.14)]">
+          <p class="px-3 pb-1 pt-1.5 text-[0.6rem] font-semibold uppercase tracking-[0.16em] text-[#999]" data-i18n="menu_ofertas_titulo">Filtrar por estado</p>
+          <button data-estado="pendientes" data-i18n="filtro_pendientes" class="filtro block w-full rounded-lg px-3 py-2 text-left whitespace-nowrap text-[#2d325b] transition hover:bg-[#fafafa]">Pendientes</button>
+          <button data-estado="aprobadas" data-i18n="filtro_aprobadas" class="filtro block w-full rounded-lg px-3 py-2 text-left whitespace-nowrap text-[#2d325b] transition hover:bg-[#fafafa]">Aprobadas</button>
+          <button data-estado="descartadas" data-i18n="filtro_descartadas" class="filtro block w-full rounded-lg px-3 py-2 text-left whitespace-nowrap text-[#2d325b] transition hover:bg-[#fafafa]">Descartadas</button>
+          <button data-estado="todas" data-i18n="filtro_todas" class="filtro block w-full rounded-lg px-3 py-2 text-left whitespace-nowrap text-[#2d325b] transition hover:bg-[#fafafa]">Todas</button>
+        </div>
+      </div>
+
       <button data-vista="perfil" data-i18n="nav_perfil" class="vista rounded-full px-3 py-1.5 whitespace-nowrap text-[#999] transition hover:text-[#2d325b]">Mi perfil</button>
       <button data-vista="preguntar" data-i18n="nav_preguntar" class="vista rounded-full px-3 py-1.5 whitespace-nowrap text-[#999] transition hover:text-[#2d325b]">Preguntar</button>
       <button data-vista="config" data-i18n="nav_config" class="vista rounded-full px-3 py-1.5 whitespace-nowrap text-[#999] transition hover:text-[#2d325b]">Configuración</button>
     </nav>
 
-    <nav id="filtros" class="flex shrink-0 items-center gap-1 rounded-full border border-[#ddd] bg-white p-1 text-sm">
-      <button data-estado="pendientes" data-i18n="filtro_pendientes" class="filtro rounded-full px-3 py-1.5 whitespace-nowrap text-[#999] transition hover:text-[#2d325b]">Pendientes</button>
-      <button data-estado="aprobadas" data-i18n="filtro_aprobadas" class="filtro rounded-full px-3 py-1.5 whitespace-nowrap text-[#999] transition hover:text-[#2d325b]">Aprobadas</button>
-      <button data-estado="descartadas" data-i18n="filtro_descartadas" class="filtro rounded-full px-3 py-1.5 whitespace-nowrap text-[#999] transition hover:text-[#2d325b]">Descartadas</button>
-      <button data-estado="todas" data-i18n="filtro_todas" class="filtro rounded-full px-3 py-1.5 whitespace-nowrap text-[#999] transition hover:text-[#2d325b]">Todas</button>
-    </nav>
-
     <div class="ml-auto flex shrink-0 items-center gap-2 text-sm text-[#999]">
+      <button id="btn-log" type="button" data-i18n="nav_log" title="Log" data-i18n-title="nav_log"
+        class="rounded-full px-3 py-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-[#999] transition hover:text-[#2d325b]">Log</button>
+      <span id="contador" class="tabular-nums">—</span>
       <button id="btn-linkedin" type="button" title="LinkedIn" aria-label="LinkedIn"
         class="flex items-center gap-1.5 rounded-full border border-[#ddd] bg-white px-3 py-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-[#999] transition hover:border-[#3898ec] hover:text-[#3898ec] disabled:cursor-not-allowed disabled:opacity-60">
         <span id="btn-linkedin-dot" class="h-2 w-2 shrink-0 rounded-full bg-[#999]"></span>
@@ -65,19 +83,32 @@
         class="vista rounded-full border border-[#ddd] bg-white p-2 text-[#2d325b] transition hover:border-[#3898ec] hover:text-[#3898ec]">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
       </button>
-      <span id="contador" class="tabular-nums">—</span>
       <button id="refrescar" title="Recargar" data-i18n-title="btn_recargar"
         class="rounded-full border border-[#ddd] px-3 py-1.5 text-[#2d325b] transition hover:border-[#3898ec] hover:text-[#3898ec]">↻</button>
     </div>
   </div>
 </header>
 
+<!-- ===================== View: pipeline (kanban) ===================== -->
+<div id="vista-pipeline" class="hidden">
+  <div class="mx-auto max-w-[86rem] px-6 py-8">
+    <div class="mb-5 flex flex-wrap items-center gap-3">
+      <h2 class="font-['Oswald'] text-sm uppercase tracking-[0.18em] text-[#999]" data-i18n="pipeline_titulo">Pipeline</h2>
+      <p class="text-xs text-[#999]" data-i18n="pipeline_desc">Arrastra una tarjeta o usa las flechas para mover la oferta entre estados.</p>
+      <button id="pipeline-refrescar" type="button" title="Recargar" data-i18n-title="btn_recargar"
+        class="ml-auto rounded-full border border-[#ddd] px-2.5 py-1 text-xs text-[#999] transition hover:border-[#3898ec] hover:text-[#3898ec]">↻</button>
+    </div>
+    <div id="pipeline-aviso" class="mb-4 hidden rounded-lg border px-4 py-3 text-xs"></div>
+    <div id="pipeline-tablero" class="flex items-stretch gap-4 overflow-x-auto pb-4" data-i18n="pipeline_cargando">Cargando tablero…</div>
+  </div>
+</div>
+
 <!-- ===================== View: offers ===================== -->
 <div id="vista-ofertas">
 
 <!-- Live activity -->
 <div class="mx-auto max-w-[86rem] px-6 pt-8">
-  <details open class="rounded-xl border border-[#ddd] bg-white">
+  <details id="panel-actividad" open class="scroll-mt-24 rounded-xl border border-[#ddd] bg-white">
     <summary class="flex cursor-pointer items-center gap-3 px-5 py-3">
       <span id="estado-run" class="h-2.5 w-2.5 rounded-full bg-[#999]"></span>
       <h2 class="font-['Oswald'] text-sm uppercase tracking-[0.18em] text-[#999]" data-i18n="titulo_actividad">Actividad en vivo</h2>
@@ -111,8 +142,13 @@
 
   <!-- List -->
   <section>
-    <div class="mb-4 flex items-baseline justify-between">
+    <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
       <h2 class="font-['Oswald'] text-sm uppercase tracking-[0.18em] text-[#999]" data-i18n="titulo_ofertas">Ofertas</h2>
+      <button id="btn-subir-oferta" type="button"
+        class="hidden items-center gap-2 rounded-full border border-[#3898ec] px-4 py-2 text-sm font-medium text-[#3898ec] transition hover:bg-[#3898ec] hover:text-white">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
+        <span data-i18n="btn_subir_oferta">Subir oferta</span>
+      </button>
     </div>
     <div id="estado-carga" class="hidden rounded-xl border border-[#ddd] bg-white px-5 py-4 text-sm text-[#999]" data-i18n="cargando_ofertas">Loading jobs…</div>
     <div id="sin-ofertas" class="hidden rounded-xl border border-dashed border-[#ddd] bg-white px-5 py-16 text-center text-sm text-[#999]" data-i18n="sin_ofertas">
@@ -171,6 +207,23 @@
           <ul id="j-motivos" class="space-y-1.5"></ul>
           <ul id="j-gaps" class="space-y-1.5"></ul>
         </div>
+
+        <!-- Inline ask-about-this-job chat (context is auto-attached) -->
+        <section id="chat-oferta" class="space-y-3 border-t border-[#ddd] pt-5">
+          <div class="flex items-baseline justify-between gap-3">
+            <h3 class="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[#999]" data-i18n="chat_titulo">Ask about this job</h3>
+            <button id="chat-limpiar" type="button" class="hidden text-xs font-medium text-[#3898ec] hover:underline" data-i18n="chat_limpiar">Clear</button>
+          </div>
+          <div id="chat-historial" class="hidden max-h-72 space-y-3 overflow-y-auto rounded-lg border border-[#ddd] bg-[#fafafa]/60 p-4"></div>
+          <p id="chat-vacio" class="rounded-lg border border-dashed border-[#ddd] px-4 py-3 text-xs leading-relaxed text-[#999]" data-i18n="chat_vacio">Ask anything about this offer.</p>
+          <div class="flex items-center gap-2">
+            <input id="chat-input" type="text" autocomplete="off" placeholder="Ask something…" data-i18n-ph="chat_ph"
+              class="min-w-0 flex-1 rounded-lg border border-[#ddd] bg-[#fafafa]/60 px-4 py-2.5 text-sm text-[#2d325b] placeholder:text-[#bbb] focus:border-[#3898ec] focus:outline-none" />
+            <button id="chat-enviar" type="button" data-i18n="chat_enviar"
+              class="shrink-0 rounded-full bg-[#3898ec] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#2b83d1] disabled:opacity-50">Send</button>
+          </div>
+          <div id="chat-error" class="hidden rounded-lg border border-[#f66d6d]/50 bg-[#f66d6d]/5 px-4 py-3 text-xs text-[#c94f4f]"></div>
+        </section>
 
         <!-- Materials -->
         <div id="materiales" class="hidden space-y-5">
@@ -319,6 +372,40 @@
   </div>
 </div>
 
+<!-- Modal: upload a job offer by hand (URL and/or pasted text) -->
+<div id="oferta-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-[#2d325b]/40 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="oferta-modal-titulo">
+  <div class="flex max-h-[90vh] w-full max-w-xl flex-col rounded-2xl border border-[#ddd] bg-white shadow-2xl">
+    <div class="flex items-start justify-between gap-4 border-b border-[#ddd] p-6 pb-4">
+      <div>
+        <h2 id="oferta-modal-titulo" class="font-['Oswald'] text-lg font-medium tracking-[0.02em] text-[#2d325b]" data-i18n="oferta_manual_titulo">Upload job offer</h2>
+        <p class="mt-1 text-xs leading-relaxed text-[#999]" data-i18n-html="oferta_manual_desc">
+          Paste the job URL or its text. It is approved and the pack is generated.
+        </p>
+      </div>
+      <button id="btn-oferta-modal-cerrar" type="button" class="-mr-1 -mt-1 rounded-full p-1.5 text-[#999] transition hover:bg-[#fafafa] hover:text-[#2d325b]" aria-label="Cerrar" data-i18n-aria="btn_cerrar">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+    <div class="flex-1 overflow-y-auto p-6">
+      <label for="oferta-url" class="mb-1 block text-xs font-medium text-[#999]" data-i18n="oferta_url_lbl">Job URL</label>
+      <input id="oferta-url" type="url" autocomplete="off" spellcheck="false"
+        placeholder="https://…" data-i18n-ph="oferta_url_ph"
+        class="w-full rounded-lg border border-[#ddd] bg-[#fafafa]/60 px-4 py-3 text-sm text-[#2d325b] placeholder:text-[#bbb] focus:border-[#3898ec] focus:outline-none">
+      <label for="oferta-texto" class="mt-4 mb-1 block text-xs font-medium text-[#999]" data-i18n="oferta_texto_lbl">or paste the job description</label>
+      <textarea id="oferta-texto" rows="7" maxlength="20000"
+        placeholder="Paste the job description here..." data-i18n-ph="oferta_texto_ph"
+        class="w-full resize-y rounded-lg border border-[#ddd] bg-[#fafafa]/60 p-4 text-sm leading-relaxed text-[#2d325b] placeholder:text-[#bbb] focus:border-[#3898ec] focus:outline-none"></textarea>
+      <div id="oferta-modal-aviso" class="mt-4 hidden whitespace-pre-line rounded-lg border px-4 py-3 text-xs"></div>
+    </div>
+    <div class="flex flex-wrap items-center gap-3 border-t border-[#ddd] px-6 py-4">
+      <button id="btn-oferta-generar" type="button"
+        class="rounded-full bg-[#3898ec] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#2b83d1] disabled:opacity-50" data-i18n="btn_generar_cv">Generate CV</button>
+      <button id="btn-oferta-modal-cancelar" type="button"
+        class="rounded-full border border-[#ddd] px-5 py-2.5 text-sm text-[#2d325b] transition hover:border-[#3898ec] hover:text-[#3898ec]" data-i18n="btn_cancelar">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===================== View: Ask ===================== -->
 <div id="vista-preguntar" class="mx-auto hidden max-w-[86rem] px-6 py-10">
   <div class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,30rem)]">
@@ -435,6 +522,22 @@
           class="rounded-full border border-[#f66d6d]/50 px-3 py-1.5 text-xs text-[#c94f4f] transition hover:bg-[#f66d6d]/10 disabled:opacity-50">Borrar búsquedas</button>
       </div>
     </div>
+  </section>
+
+  <!-- LinkedIn session -->
+  <section id="cfg-linkedin-sesion" class="mb-5 rounded-xl border border-[#ddd] bg-white p-5">
+    <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+      <h2 class="font-['Oswald'] text-sm uppercase tracking-[0.18em] text-[#999]" data-i18n="linkedin_titulo">Sesión de LinkedIn</h2>
+      <span id="linkedin-sesion-estado" class="rounded-full border border-[#ddd] bg-[#f4f4f4] px-2.5 py-1 text-[0.68rem] text-[#999]">…</span>
+      <div class="ml-auto flex flex-wrap items-center gap-2">
+        <button id="btn-linkedin-conectar" type="button" data-i18n="linkedin_conectar"
+          class="rounded-full bg-[#3898ec] px-4 py-2 text-xs font-medium text-white transition hover:bg-[#2b83d1] disabled:opacity-50">Conectar LinkedIn</button>
+      </div>
+    </div>
+    <p class="mt-3 text-[0.68rem] leading-relaxed text-[#999]" data-i18n="linkedin_hint">
+      Abre una ventana de Chromium en este equipo: inicia sesión (2FA incluido) y la sesión se guarda sola.
+      Caduca a los 14 días; si aparece como caducada, vuelve a conectarla.
+    </p>
   </section>
 
   <div id="cfg-aviso" class="mb-5 hidden rounded-lg border px-4 py-3 text-xs"></div>
@@ -930,6 +1033,7 @@ function pintarLista() {
 
 async function abrir(id) {
   state.actual = { id };
+  reiniciarChatOferta(id);
   pintarLista();
   $("panel-vacio").classList.add("hidden");
   $("panel-detalle").classList.remove("hidden");
@@ -980,6 +1084,8 @@ function pintarBotones(estado) {
 }
 
 function pintarDetalle(d) {
+  // Never let one offer's chat leak into another's.
+  if (String(d.id) !== chatOfertaId) reiniciarChatOferta(d.id);
   $("d-titulo").textContent = d.titulo || tr("sin_titulo");
   $("d-empresa").textContent = d.empresa || "";
   const sc = $("d-score");
@@ -1058,6 +1164,135 @@ function pintarMateriales(pack) {
 
 const TIEMPO_MAX_ACCION_MS = 5 * 60 * 1000;
 
+/* ------------------ Inline "ask about this job" chat ------------------ */
+
+const TIEMPO_MAX_CHAT_MS = 5 * 60 * 1000;
+let chatOfertaId = null;   // offer the history belongs to
+let chatHistorial = [];    // [{ pregunta, respuesta, error, pendiente }]
+let chatOcupado = false;
+
+/* Compact single-line job context sent to /api/preguntar. */
+function contextoOferta(d) {
+  const campo = (v) => {
+    const t = v == null ? "" : String(v).trim();
+    return t ? t.replace(/\s+/g, " ") : "–";
+  };
+  return (
+    "TITLE: " + campo(d && d.titulo) +
+    " / COMPANY: " + campo(d && d.empresa) +
+    " / DESCRIPTION: " + campo(d && d.descripcion) +
+    " / REQUIREMENTS: " + campo(d && d.requisitos)
+  );
+}
+
+/* Wipe the history (new offer, or the Clear button). */
+function reiniciarChatOferta(id) {
+  chatOfertaId = id == null ? null : String(id);
+  chatHistorial = [];
+  chatOcupado = false;
+  const caja = $("chat-historial");
+  if (caja) { caja.innerHTML = ""; caja.classList.add("hidden"); }
+  const vacio = $("chat-vacio");
+  if (vacio) vacio.classList.remove("hidden");
+  const err = $("chat-error");
+  if (err) { err.textContent = ""; err.classList.add("hidden"); }
+  const inp = $("chat-input");
+  if (inp) inp.value = "";
+  const limp = $("chat-limpiar");
+  if (limp) limp.classList.add("hidden");
+  const btn = $("chat-enviar");
+  if (btn) { btn.disabled = false; btn.textContent = tr("chat_enviar"); }
+}
+
+function pintarChatOferta() {
+  const caja = $("chat-historial");
+  if (!caja) return;
+  const hay = !!chatHistorial.length;
+  caja.classList.toggle("hidden", !hay);
+  $("chat-vacio").classList.toggle("hidden", hay);
+  $("chat-limpiar").classList.toggle("hidden", !hay);
+  caja.innerHTML = "";
+  for (const turno of chatHistorial) {
+    let respuesta;
+    if (turno.pendiente) {
+      respuesta = `<div class="rounded-lg border border-[#ddd] bg-white px-3 py-2 text-xs text-[#999]">${esc(tr("chat_pensando"))}</div>`;
+    } else if (turno.error) {
+      respuesta = `<div class="rounded-lg border border-[#f66d6d]/50 bg-white px-3 py-2 text-xs text-[#c94f4f]">${esc(turno.error)}</div>`;
+    } else {
+      respuesta = `<div class="whitespace-pre-wrap rounded-lg border border-[#ddd] bg-white px-3 py-2 text-sm leading-relaxed text-[#2d325b]/90">${esc(turno.respuesta || tr("chat_sin_respuesta"))}</div>`;
+    }
+    const bloque = document.createElement("div");
+    bloque.className = "space-y-1.5";
+    bloque.innerHTML =
+      `<p class="text-sm font-medium leading-snug text-[#2d325b]">${esc(turno.pregunta)}</p>` + respuesta;
+    caja.appendChild(bloque);
+  }
+  caja.scrollTop = caja.scrollHeight;
+}
+
+/* One question at a time; the offer context goes along automatically. */
+async function preguntarOferta() {
+  if (chatOcupado) return;
+  const inp = $("chat-input");
+  const pregunta = (inp.value || "").trim();
+  if (!pregunta) {
+    aviso(tr("chat_vacio_error"), "info");
+    return;
+  }
+  if (!state.actual) return;
+
+  const idOferta = chatOfertaId;
+  const btn = $("chat-enviar");
+  chatOcupado = true;
+  btn.disabled = true;
+  btn.textContent = tr("chat_pensando");
+  $("chat-error").classList.add("hidden");
+  inp.value = "";
+
+  const turno = { pregunta, respuesta: "", error: "", pendiente: true };
+  chatHistorial.push(turno);
+  pintarChatOferta();
+
+  const terminar = () => {
+    chatOcupado = false;
+    btn.disabled = false;
+    btn.textContent = tr("chat_enviar");
+  };
+
+  try {
+    const opciones = {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pregunta, contexto: contextoOferta(state.actual) }),
+    };
+    if (typeof AbortSignal !== "undefined" && AbortSignal.timeout) {
+      opciones.signal = AbortSignal.timeout(TIEMPO_MAX_CHAT_MS);
+    }
+    const res = await fetch("/api/preguntar", opciones);
+    let datos = {};
+    try { datos = await res.json(); } catch (e) { datos = {}; }
+    if (!res.ok) throw new Error(datos.error || ("HTTP " + res.status));
+
+    const respuestas = Array.isArray(datos.respuestas) ? datos.respuestas : [];
+    const errores = Array.isArray(datos.errores) ? datos.errores : [];
+    const texto = String(respuestas[0] || "").trim();
+    if (!texto) throw new Error(errores.length ? errores.join("; ") : tr("chat_sin_respuesta"));
+    turno.respuesta = texto;
+  } catch (err) {
+    const mensaje = err && err.message ? err.message : String(err);
+    turno.error = tr("chat_error") + mensaje;
+    const cajaErr = $("chat-error");
+    cajaErr.textContent = turno.error;
+    cajaErr.classList.remove("hidden");
+  } finally {
+    turno.pendiente = false;
+    // Do not paint into another offer's chat if the user moved on meanwhile.
+    if (chatOfertaId === idOferta) pintarChatOferta();
+    terminar();
+  }
+}
+
+
 async function accion(tipo) {
   if (!state.actual || !state.actual.id) {
     aviso(tr("selecciona_oferta"), "error");
@@ -1083,7 +1318,9 @@ async function accion(tipo) {
     if (typeof AbortSignal !== "undefined" && AbortSignal.timeout) {
       opciones.signal = AbortSignal.timeout(TIEMPO_MAX_ACCION_MS);
     }
-    const res = await fetch(`/api/oferta/${encodeURIComponent(id)}/${tipo}`, opciones);
+    const regenerar = tipo === "aprobar" && state.actual && state.actual.estado === "aprobada";
+    const qs = regenerar ? "?forzar=1" : "";
+    const res = await fetch(`/api/oferta/${encodeURIComponent(id)}/${tipo}${qs}`, opciones);
     let datos = {};
     try { datos = await res.json(); } catch (e) { datos = {}; }
     if (!res.ok) throw new Error(datos.error || ("HTTP " + res.status));
@@ -1133,27 +1370,438 @@ async function copiar(clave) {
   }
 }
 
+/* ------------------- Manual offer upload (Approved tab) ------------------- */
+
+function actualizarBotonSubir() {
+  const b = $("btn-subir-oferta");
+  if (!b) return;
+  const ver = state.filtro === "aprobadas";
+  b.classList.toggle("hidden", !ver);
+  b.classList.toggle("flex", ver);
+}
+
+function ofertaAviso(texto, tipo = "error") {
+  const el = $("oferta-modal-aviso");
+  if (!texto) {
+    el.className = "mt-4 hidden whitespace-pre-line rounded-lg border px-4 py-3 text-xs";
+    el.textContent = "";
+    return;
+  }
+  const tonos = {
+    info: "border-[#ddd] bg-[#fafafa] text-[#2d325b]/80",
+    error: "border-[#f66d6d]/50 bg-[#f66d6d]/10 text-[#c94f4f]",
+    ok: "border-[#0d927d]/40 bg-[#0d927d]/10 text-[#0d927d]",
+  };
+  el.className = "mt-4 whitespace-pre-line rounded-lg border px-4 py-3 text-xs " + (tonos[tipo] || tonos.error);
+  el.textContent = texto;
+  el.classList.remove("hidden");
+}
+
+function abrirModalOferta() {
+  $("oferta-url").value = "";
+  $("oferta-texto").value = "";
+  ofertaAviso("");
+  $("btn-oferta-generar").disabled = false;
+  const m = $("oferta-modal");
+  m.classList.remove("hidden");
+  m.classList.add("flex");
+  $("oferta-url").focus();
+}
+
+function cerrarModalOferta() {
+  const m = $("oferta-modal");
+  m.classList.add("hidden");
+  m.classList.remove("flex");
+}
+
+/* Self-hiding notice with the pack links. Lives outside the detail panel so
+   it is visible right after the modal closes. Hovering pauses the timer. */
+function ofertaToast(titulo, enlaces) {
+  const el = $("oferta-toast");
+  const enl = enlaces || {};
+  const links = [
+    ["cv_pdf", "oferta_link_cv"],
+    ["cover_pdf", "oferta_link_cover"],
+    ["cover_txt", "oferta_link_cover_txt"],
+  ].filter(([k]) => enl[k]);
+  el.innerHTML = `<p class="font-semibold">${esc(titulo)}</p>` +
+    (links.length
+      ? `<div class="mt-2 flex flex-wrap gap-x-4 gap-y-1">` + links.map(([k, clave]) =>
+          `<a href="${esc(enl[k])}" target="_blank" rel="noopener" class="font-medium underline hover:no-underline">${esc(tr(clave))}</a>`).join("") + `</div>`
+      : "");
+  el.className = "fixed bottom-6 left-1/2 z-[60] w-[min(30rem,calc(100vw-2rem))] -translate-x-1/2 rounded-xl border border-[#0d927d]/40 bg-[#0d927d]/10 px-4 py-3 text-xs text-[#0d927d] shadow-xl";
+  el.classList.remove("hidden");
+  clearTimeout(ofertaToast._t);
+  const ocultar = () => {
+    clearTimeout(ofertaToast._t);
+    ofertaToast._t = setTimeout(() => el.classList.add("hidden"), 6000);
+  };
+  el.onmouseenter = () => clearTimeout(ofertaToast._t);
+  el.onmouseleave = ocultar;
+  ocultar();
+}
+
+async function enviarOfertaManual() {
+  const url = $("oferta-url").value.trim();
+  const texto = $("oferta-texto").value.trim();
+  if (!url && !texto) {
+    ofertaAviso(tr("oferta_err_vacio"), "error");
+    return;
+  }
+  const btn = $("btn-oferta-generar");
+  btn.disabled = true;
+  ofertaAviso(tr("oferta_generando"), "info");
+  const opciones = {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url, texto }),
+  };
+  if (typeof AbortSignal !== "undefined" && AbortSignal.timeout) {
+    opciones.signal = AbortSignal.timeout(5 * 60 * 1000);
+  }
+  try {
+    const res = await fetch("/api/oferta/manual", opciones);
+    let datos = {};
+    try { datos = await res.json(); } catch (e) { datos = {}; }
+    if (!res.ok) throw new Error(datos.error || ("HTTP " + res.status));
+
+    cerrarModalOferta();
+    // The new offer is approved: switch to that filter and repaint with the
+    // existing loader so it shows up in the list without a manual reload.
+    state.filtro = "aprobadas";
+    document.querySelectorAll(".filtro").forEach((x) =>
+      x.classList.toggle("activo", x.dataset.estado === "aprobadas"));
+    actualizarBotonSubir();
+    await cargar();
+    if (datos.id) { try { await abrir(datos.id); } catch (e) { /* list is already refreshed */ } }
+
+    const enlaces = datos.enlaces || {};
+    ofertaToast(
+      tr("oferta_cv_generado") + (datos.titulo ? " · " + datos.titulo : ""),
+      {
+        cv_pdf: enlaces.cv_pdf || datos.cv_pdf,
+        cover_pdf: enlaces.cover_pdf || datos.cover_pdf,
+        cover_txt: enlaces.cover_txt || datos.cover_txt,
+      }
+    );
+  } catch (err) {
+    ofertaAviso(tr("oferta_err") + (err && err.message ? err.message : err), "error");
+  } finally {
+    btn.disabled = false;
+  }
+}
+
 /* =====================================================================
-   Panel views: offers | profile | ask | config | help
+   Panel views: pipeline | ofertas | perfil | preguntar | config | ayuda
    ===================================================================== */
-const VISTAS = ["ofertas", "perfil", "preguntar", "config", "ayuda"];
+const VISTAS = ["pipeline", "ofertas", "perfil", "preguntar", "config", "ayuda"];
+
+/* ---------------------- "Jobs" dropdown (filters) ---------------------- */
+
+function abrirMenuOfertas() {
+  const menu = $("filtros");
+  const btn = $("btn-menu-ofertas");
+  if (!menu || !btn) return;
+  menu.classList.remove("hidden");
+  btn.setAttribute("aria-expanded", "true");
+}
+
+function cerrarMenuOfertas() {
+  const menu = $("filtros");
+  const btn = $("btn-menu-ofertas");
+  if (!menu || !btn) return;
+  menu.classList.add("hidden");
+  btn.setAttribute("aria-expanded", "false");
+}
+
+function toggleMenuOfertas() {
+  const menu = $("filtros");
+  if (!menu) return;
+  if (menu.classList.contains("hidden")) abrirMenuOfertas(); else cerrarMenuOfertas();
+}
+
+/* The chip inside the "Jobs" button shows which filter is active. */
+function actualizarEtiquetaFiltro() {
+  const el = $("filtro-actual");
+  if (el) el.textContent = tr("filtro_" + state.filtro, state.filtro);
+}
 
 function cambiarVista(nombre, actualizarHash = true) {
   if (!VISTAS.includes(nombre)) nombre = "ofertas";
+  const vistaAnterior = state.vista;
+  state.vista = nombre;
   for (const v of VISTAS) {
     const el = $("vista-" + v);
     if (el) el.classList.toggle("hidden", v !== nombre);
   }
   document.querySelectorAll(".vista").forEach((b) =>
     b.classList.toggle("activo", b.dataset.vista === nombre));
+  if (nombre !== "ofertas") cerrarMenuOfertas();
   const esOfertas = nombre === "ofertas";
-  $("filtros").style.display = esOfertas ? "" : "none";
   $("contador").style.display = esOfertas ? "" : "none";
   if (nombre === "perfil") cargarPerfil();
   if (nombre === "config") cargarConfig();
-  if (nombre === "ofertas") cargarMetricas();
+  if (nombre === "pipeline") cargarPipeline();
+  if (nombre === "ofertas") {
+    cargarMetricas();
+    // Only refetch when actually entering the view (the "Jobs" button also
+    // toggles the dropdown and must not reload the list on every click).
+    if (vistaAnterior !== "ofertas" || !state.ofertas.length) cargar();
+  }
   if (actualizarHash) history.replaceState(null, "", "#" + nombre);
 }
+
+/* =====================================================================
+   Pipeline board (kanban, Notion-like)
+   ===================================================================== */
+const PIPELINE_COLUMNAS = [
+  { estado: "para_confirmar", clave: "pipeline_col_pendientes", punto: "bg-[#3898ec]" },
+  { estado: "aprobada", clave: "pipeline_col_aprobadas", punto: "bg-[#0d927d]" },
+  { estado: "aplicada", clave: "pipeline_col_aplicadas", punto: "bg-[#7c76c9]" },
+  { estado: "entrevista", clave: "pipeline_col_entrevista", punto: "bg-[#d99b2b]" },
+  { estado: "oferta", clave: "pipeline_col_oferta", punto: "bg-[#f0669b]" },
+  { estado: "rechazada", clave: "pipeline_col_rechazadas", punto: "bg-[#c94f4f]" },
+];
+
+const statePipeline = { ofertas: [], cargando: false };
+
+/* Older rows use `pendiente` / `nueva`; the board only knows pipeline states. */
+function normalizarEstadoPipeline(e) {
+  if (!e || e === "pendiente" || e === "nueva") return "para_confirmar";
+  return e;
+}
+
+function pipelineAviso(texto, tipo = "info") {
+  const el = $("pipeline-aviso");
+  if (!el) return;
+  const tonos = {
+    info: "border-[#ddd] bg-[#fafafa] text-[#2d325b]/80",
+    error: "border-[#f66d6d]/50 bg-[#f66d6d]/10 text-[#c94f4f]",
+    ok: "border-[#0d927d]/40 bg-[#0d927d]/10 text-[#0d927d]",
+  };
+  el.className = "mb-4 rounded-lg border px-4 py-3 text-xs " + (tonos[tipo] || tonos.info);
+  el.textContent = texto;
+  el.classList.remove("hidden");
+  clearTimeout(pipelineAviso._t);
+  pipelineAviso._t = setTimeout(() => el.classList.add("hidden"), 6000);
+}
+
+async function cargarPipeline() {
+  if (statePipeline.cargando) return;
+  statePipeline.cargando = true;
+  try {
+    const res = await fetch("/api/ofertas");
+    const datos = await res.json();
+    if (!res.ok) throw new Error(datos.error || res.statusText);
+    statePipeline.ofertas = (datos.ofertas || []).map((o) => ({
+      ...o, estado: normalizarEstadoPipeline(o.estado),
+    }));
+    pintarPipeline();
+  } catch (err) {
+    const tab = $("pipeline-tablero");
+    if (tab) {
+      tab.removeAttribute("data-i18n");
+      tab.className = "rounded-xl border border-dashed border-[#ddd] bg-white px-5 py-12 text-center text-sm text-[#999]";
+      tab.textContent = tr("pipeline_err_cargar") + (err && err.message ? err.message : err);
+    }
+  } finally {
+    statePipeline.cargando = false;
+  }
+}
+
+function tarjetaPipeline(o) {
+  const idx = PIPELINE_COLUMNAS.findIndex((c) => c.estado === o.estado);
+  const prev = idx > 0 ? PIPELINE_COLUMNAS[idx - 1] : null;
+  const next = idx >= 0 && idx < PIPELINE_COLUMNAS.length - 1 ? PIPELINE_COLUMNAS[idx + 1] : null;
+  const id = esc(String(o.id));
+  const flecha = (destino, etiqueta, glifo) => `
+    <button type="button" data-mover="${id}" data-destino="${destino || ""}" ${destino ? "" : "disabled"}
+      title="${esc(etiqueta)}" aria-label="${esc(etiqueta)}"
+      class="rounded-md border border-[#ddd] px-2 py-0.5 text-xs leading-none text-[#999] transition hover:border-[#3898ec] hover:text-[#3898ec] disabled:cursor-not-allowed disabled:opacity-30">${glifo}</button>`;
+  return `
+    <article draggable="true" data-id="${id}" data-estado="${esc(o.estado)}"
+      class="rounded-lg border border-[#ddd] bg-white px-3 py-2.5 transition hover:border-[#3898ec]/60 hover:shadow-[0_4px_14px_rgba(45,50,91,0.08)] active:cursor-grabbing">
+      <button type="button" data-abrir="${id}" class="block w-full cursor-pointer text-left">
+        <div class="flex items-start gap-2">
+          ${o.score != null ? `<span class="mt-0.5 shrink-0 rounded-full border px-2 py-0.5 text-[0.65rem] font-semibold tabular-nums ${claseScore(o.score)}">${esc(o.score)}</span>` : ""}
+          <p class="min-w-0 flex-1 text-[0.82rem] font-medium leading-snug text-[#2d325b]">${esc(o.titulo || tr("sin_titulo"))}</p>
+        </div>
+        <p class="mt-1 truncate text-[0.72rem] text-[#999]">${esc(o.empresa || "")}</p>
+        ${o.ubicacion ? `<p class="mt-1 truncate text-[0.68rem] text-[#b3b3b3]">${esc(o.ubicacion)}</p>` : ""}
+      </button>
+      <div class="mt-2 flex items-center justify-between gap-2">
+        ${flecha(prev ? prev.estado : "", tr("pipeline_mover_retroceder"), "←")}
+        <div class="flex items-center gap-1.5">
+          ${flecha(next ? next.estado : "", tr("pipeline_mover_avanzar"), "→")}
+          <button type="button" data-borrar="${id}" title="${esc(tr("pipeline_borrar"))}" aria-label="${esc(tr("pipeline_borrar"))}"
+            class="rounded-md border border-[#ddd] px-2 py-0.5 text-xs leading-none text-[#999] transition hover:border-red-400 hover:text-red-500">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+          </button>
+        </div>
+      </div>
+    </article>`;
+}
+
+function pintarPipeline() {
+  const tab = $("pipeline-tablero");
+  if (!tab) return;
+  tab.removeAttribute("data-i18n");
+  tab.className = "flex cursor-grab items-stretch gap-4 overflow-x-auto pb-4";
+  tab.innerHTML = PIPELINE_COLUMNAS.map((col) => {
+    const items = statePipeline.ofertas.filter((o) => o.estado === col.estado);
+    const vacio = `<p class="px-2 py-6 text-center text-[0.7rem] text-[#c9c9c9]">${esc(tr("pipeline_vacio"))}</p>`;
+    return `
+      <section class="flex min-w-[13.5rem] flex-1 basis-0 flex-col rounded-xl border border-[#ddd] bg-[#fafafa]/70" data-columna="${col.estado}">
+        <header class="flex items-center gap-2 border-b border-[#ececec] px-4 py-2.5">
+          <span class="h-2 w-2 shrink-0 rounded-full ${col.punto}"></span>
+          <h3 class="font-['Oswald'] text-[0.7rem] uppercase tracking-[0.14em] text-[#2d325b]">${esc(tr(col.clave))}</h3>
+          <span class="ml-auto rounded-full bg-white px-2 py-0.5 text-[0.62rem] font-semibold tabular-nums text-[#999]">${items.length}</span>
+        </header>
+        <div class="pipeline-drop flex min-h-[7rem] flex-col gap-2 p-2.5" data-estado="${col.estado}">
+          ${items.length ? items.map(tarjetaPipeline).join("") : vacio}
+        </div>
+      </section>`;
+  }).join("");
+  cablearPipeline();
+}
+
+function cablearPipeline() {
+  const tab = $("pipeline-tablero");
+  if (!tab) return;
+
+  tab.querySelectorAll("[data-abrir]").forEach((b) => {
+    b.addEventListener("click", () => {
+      cambiarVista("ofertas");
+      abrir(b.dataset.abrir);
+    });
+  });
+
+  tab.querySelectorAll("[data-mover]").forEach((b) => {
+    b.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      if (b.disabled || !b.dataset.destino) return;
+      moverEstado(b.dataset.mover, b.dataset.destino);
+    });
+  });
+
+  tab.querySelectorAll("[data-borrar]").forEach((b) => {
+    b.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      borrarOferta(b.dataset.borrar);
+    });
+  });
+
+  tab.querySelectorAll("article[data-id]").forEach((card) => {
+    card.addEventListener("dragstart", (ev) => {
+      ev.dataTransfer.effectAllowed = "move";
+      try { ev.dataTransfer.setData("text/plain", card.dataset.id); } catch (e) { /* older browsers */ }
+      card.classList.add("opacity-40");
+    });
+    card.addEventListener("dragend", () => card.classList.remove("opacity-40"));
+  });
+
+  tab.querySelectorAll(".pipeline-drop").forEach((zona) => {
+    zona.addEventListener("dragover", (ev) => {
+      ev.preventDefault();
+      ev.dataTransfer.dropEffect = "move";
+      zona.classList.add("bg-[#3898ec]/10", "rounded-lg", "ring-2", "ring-[#3898ec]/40");
+    });
+    zona.addEventListener("dragleave", () => {
+      zona.classList.remove("bg-[#3898ec]/10", "rounded-lg", "ring-2", "ring-[#3898ec]/40");
+    });
+    zona.addEventListener("drop", (ev) => {
+      ev.preventDefault();
+      zona.classList.remove("bg-[#3898ec]/10", "rounded-lg", "ring-2", "ring-[#3898ec]/40");
+      let id = "";
+      try { id = ev.dataTransfer.getData("text/plain"); } catch (e) { id = ""; }
+      if (!id) {
+        const arrastrada = tab.querySelector("article.opacity-40");
+        id = arrastrada ? arrastrada.dataset.id : "";
+      }
+      if (id) moverEstado(id, zona.dataset.estado);
+    });
+  });
+}
+
+async function moverEstado(id, destino) {
+  if (!id || !destino) return;
+  const oferta = statePipeline.ofertas.find((o) => String(o.id) === String(id));
+  const anterior = oferta ? oferta.estado : null;
+  if (oferta && anterior === destino) return;
+  if (oferta) oferta.estado = destino; // optimistic
+  pintarPipeline();
+  try {
+    const res = await fetch("/api/oferta/" + encodeURIComponent(id) + "/estado", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ estado: destino }),
+    });
+    let datos = {};
+    try { datos = await res.json(); } catch (e) { datos = {}; }
+    if (!res.ok) throw new Error(datos.error || ("HTTP " + res.status));
+    const final = normalizarEstadoPipeline(datos.estado || destino);
+    if (oferta) oferta.estado = final;
+    pintarPipeline();
+    pipelineAviso(tr("pipeline_ok") + " · " + etiquetaEstado(final), "ok");
+    if (state.actual && String(state.actual.id) === String(id)) {
+      state.actual = { ...state.actual, estado: final };
+      pintarBotones(final);
+    }
+    if (state.vista === "ofertas") cargar();
+  } catch (err) {
+    if (oferta && anterior) oferta.estado = anterior;
+    pintarPipeline();
+    pipelineAviso(tr("pipeline_err") + (err && err.message ? err.message : err), "error");
+  }
+}
+
+async function borrarOferta(id) {
+  const oferta = statePipeline.ofertas.find((o) => String(o.id) === String(id));
+  const nombre = oferta ? (oferta.titulo || oferta.empresa || id) : id;
+  if (!confirm(tr("pipeline_borrar_confirm") + "\n\n" + nombre)) return;
+  try {
+    const res = await fetch("/api/oferta/" + encodeURIComponent(id) + "/borrar", { method: "POST" });
+    let datos = {};
+    try { datos = await res.json(); } catch (e) { datos = {}; }
+    if (!res.ok) throw new Error(datos.error || ("HTTP " + res.status));
+    statePipeline.ofertas = statePipeline.ofertas.filter((o) => String(o.id) !== String(id));
+    pintarPipeline();
+    pipelineAviso(tr("pipeline_borrar_ok"), "ok");
+    if (state.actual && String(state.actual.id) === String(id)) {
+      $("panel-detalle").classList.add("hidden");
+      $("panel-vacio").classList.remove("hidden");
+      state.actual = null;
+    }
+    if (state.vista === "ofertas") cargar();
+  } catch (err) {
+    pipelineAviso(tr("pipeline_borrar_err") + (err && err.message ? err.message : err), "error");
+  }
+}
+
+/* Drag-to-scroll the pipeline board: hold click on empty space and move. */
+function habilitarDragScrollPipeline() {
+  const tab = $("pipeline-tablero");
+  if (!tab) return;
+  let activo = false, x0 = 0, s0 = 0;
+  tab.addEventListener("mousedown", (ev) => {
+    if (ev.target.closest("article[data-id], button, a, input")) return;
+    activo = true; x0 = ev.pageX; s0 = tab.scrollLeft;
+    tab.classList.add("cursor-grabbing");
+    document.body.classList.add("select-none");
+    ev.preventDefault();
+  });
+  window.addEventListener("mousemove", (ev) => {
+    if (!activo) return;
+    tab.scrollLeft = s0 - (ev.pageX - x0);
+  });
+  window.addEventListener("mouseup", () => {
+    if (!activo) return;
+    activo = false;
+    tab.classList.remove("cursor-grabbing");
+    document.body.classList.remove("select-none");
+  });
+}
+
 
 /* ------------------------------ My profile ------------------------------ */
 
@@ -1767,6 +2415,10 @@ const COLORES_ESTADO = {
   aprobada: "border-[#0d927d]/40 bg-[#0d927d]/10 text-[#0d927d]",
   enviada: "border-[#2d325b]/30 bg-[#2d325b]/10 text-[#2d325b]",
   descartada: "border-[#f66d6d]/40 bg-[#f66d6d]/10 text-[#c94f4f]",
+  aplicada: "border-[#7c76c9]/40 bg-[#7c76c9]/10 text-[#5b559f]",
+  entrevista: "border-[#d99b2b]/40 bg-[#d99b2b]/10 text-[#a8731a]",
+  oferta: "border-[#f0669b]/40 bg-[#f0669b]/10 text-[#c9497a]",
+  rechazada: "border-[#c94f4f]/40 bg-[#c94f4f]/10 text-[#a83c3c]",
 };
 
 function etiquetaEstado(clave) {
@@ -2008,6 +2660,7 @@ async function cargarConfig() {
   if (stateConfig.cargando) return;
   stateConfig.cargando = true;
   cargarSalud();
+  cargarSesionLinkedin();
   $("cfg-carga").classList.remove("hidden");
   $("cfg-form").classList.add("hidden");
   $("cfg-aviso").classList.add("hidden");
@@ -2074,6 +2727,79 @@ async function guardarConfig() {
     $("cfg-estado").textContent = "";
   }
 }
+
+/* ---------------------- LinkedIn session (settings) ---------------------- */
+
+// Last payload from GET /api/linkedin/sesion, so a language change can repaint.
+let stateLinkedinSesion = null;
+
+function pintarSesionLinkedin(datos) {
+  stateLinkedinSesion = datos || null;
+  const chip = $("linkedin-sesion-estado");
+  if (!chip) return;
+  const tonos = {
+    ok: "border-[#0d927d]/40 bg-[#0d927d]/10 text-[#0d927d]",
+    error: "border-[#f66d6d]/40 bg-[#f66d6d]/10 text-[#c94f4f]",
+    gris: "border-[#ddd] bg-[#f4f4f4] text-[#999]",
+  };
+  let texto;
+  let tono;
+  if (!datos || !datos.presente) {
+    texto = tr("linkedin_sesion_no");
+    tono = "error";
+  } else if (datos.caducada) {
+    texto = tr("linkedin_sesion_caducada");
+    tono = "error";
+  } else {
+    const dias = datos.antiguedad_dias == null ? 0 : datos.antiguedad_dias;
+    texto = tr("linkedin_sesion_ok").replace("{d}", String(dias));
+    tono = "ok";
+  }
+  chip.className = "rounded-full border px-2.5 py-1 text-[0.68rem] " + (tonos[tono] || tonos.gris);
+  chip.textContent = texto;
+  chip.title = datos && datos.ruta ? String(datos.ruta) : "";
+}
+
+async function cargarSesionLinkedin() {
+  if (!$("linkedin-sesion-estado")) return;
+  try {
+    const res = await fetch("/api/linkedin/sesion");
+    let datos = {};
+    try { datos = await res.json(); } catch (e) { datos = {}; }
+    if (!res.ok) throw new Error(datos.error || ("HTTP " + res.status));
+    pintarSesionLinkedin(datos);
+  } catch (err) {
+    pintarSesionLinkedin(null);
+  }
+}
+
+async function conectarLinkedin() {
+  const btn = $("btn-linkedin-conectar");
+  if (!btn || btn.disabled) return;
+  const etiqueta = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = tr("linkedin_conectando");
+  try {
+    const res = await fetch("/api/linkedin/conectar", { method: "POST" });
+    let datos = {};
+    try { datos = await res.json(); } catch (e) { datos = {}; }
+    if (!res.ok) throw new Error(datos.error || ("HTTP " + res.status));
+    aviso(tr("linkedin_abriendo_navegador"), "ok");
+    // The user needs a moment to sign in: check again a couple of times.
+    setTimeout(cargarSesionLinkedin, 15000);
+    setTimeout(cargarSesionLinkedin, 45000);
+  } catch (err) {
+    aviso(tr("linkedin_error") + " " + (err && err.message ? err.message : err), "error");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = etiqueta;
+    cargarSesionLinkedin();
+  }
+}
+
+const btnLinkedinConectar = $("btn-linkedin-conectar");
+if (btnLinkedinConectar) btnLinkedinConectar.addEventListener("click", conectarLinkedin);
+cargarSesionLinkedin();
 
 /* ------------------- System status / export / import ------------------- */
 
@@ -2301,11 +3027,41 @@ const I18N = {
   es: {
     subtitulo: "panel de ofertas",
     nav_ofertas: "Ofertas", nav_perfil: "Mi perfil", nav_preguntar: "Preguntar",
-    nav_config: "Configuración", nav_ayuda: "Ayuda",
+    nav_config: "Configuración", nav_ayuda: "Ayuda", nav_log: "Log",
+    nav_pipeline: "Pipeline",
+    menu_ofertas_titulo: "Filtrar por estado",
+    pipeline_titulo: "Pipeline",
+    pipeline_desc: "Arrastra una tarjeta o usa las flechas para mover la oferta entre estados.",
+    pipeline_cargando: "Cargando tablero…",
+    pipeline_vacio: "Sin ofertas",
+    pipeline_col_pendientes: "Pendientes", pipeline_col_aprobadas: "Aprobadas",
+    pipeline_col_aplicadas: "Aplicadas", pipeline_col_entrevista: "Entrevista",
+    pipeline_col_oferta: "Oferta", pipeline_col_rechazadas: "Rechazadas",
+    pipeline_mover_avanzar: "Avanzar de estado", pipeline_mover_retroceder: "Volver al estado anterior",
+    pipeline_ok: "Estado actualizado", pipeline_err: "No se pudo cambiar el estado: ",
+    pipeline_err_cargar: "No se pudo cargar el tablero: ",
+    pipeline_borrar: "Borrar oferta", pipeline_borrar_confirm: "¿Borrar esta oferta de forma permanente?",
+    pipeline_borrar_ok: "Oferta borrada", pipeline_borrar_err: "No se pudo borrar la oferta: ",
     filtro_pendientes: "Pendientes", filtro_aprobadas: "Aprobadas",
     filtro_descartadas: "Descartadas", filtro_todas: "Todas",
     titulo_ofertas: "Ofertas", titulo_actividad: "Actividad en vivo",
     auto_actualiza: "se actualiza solo",
+    // --- Manual offer upload (Aprobadas) ---
+    btn_subir_oferta: "Subir oferta",
+    oferta_manual_titulo: "Subir oferta",
+    oferta_manual_desc: "Pega la URL de la oferta o su texto. Se aprueba y se genera el pack: CV, carta y mensaje.",
+    oferta_url_lbl: "URL de la oferta",
+    oferta_url_ph: "https://...",
+    oferta_texto_lbl: "o pega el texto de la oferta",
+    oferta_texto_ph: "Pega aquí la descripción del puesto...",
+    btn_generar_cv: "Generar CV",
+    oferta_generando: "Generando el pack... puede tardar.",
+    oferta_err_vacio: "Rellena la URL o pega el texto de la oferta.",
+    oferta_err: "No se pudo generar el pack: ",
+    oferta_cv_generado: "CV generado",
+    oferta_link_cv: "CV (PDF)",
+    oferta_link_cover: "Carta (PDF)",
+    oferta_link_cover_txt: "Carta (texto)",
     btn_buscar: "Buscar ahora", btn_buscando: "buscando…",
     ln_on: "LinkedIn activado", ln_off: "LinkedIn desactivado",
     ln_titulo_on: "Desactivar LinkedIn (fuente menos segura)",
@@ -2319,6 +3075,8 @@ const I18N = {
     estado_pendiente: "pendientes", estado_para_confirmar: "por confirmar",
     estado_nueva: "nuevas", estado_aprobada: "aprobadas",
     estado_enviada: "enviadas", estado_descartada: "descartadas",
+    estado_aplicada: "aplicadas", estado_entrevista: "en entrevista",
+    estado_oferta: "con oferta", estado_rechazada: "rechazadas",
     config_titulo: "Configuración",
     config_sub: "Valores efectivos del servicio. Se guardan en <code class=\"rounded bg-white px-1 py-0.5 text-[#2d325b]\">data/settings.json</code> y ganan sobre el <code class=\"rounded bg-white px-1 py-0.5 text-[#2d325b]\">.env</code> sin reiniciar. Sólo se envían las claves que cambian.",
     btn_guardar: "Guardar", btn_restablecer: "Restablecer", btn_responder: "Responder",
@@ -2343,6 +3101,15 @@ const I18N = {
     cfg_sec_antiguedad: "Antigüedad y cooldown", cfg_lbl_antiguedad: "Máx. antigüedad (días)",
     cfg_lbl_cooldown: "Cooldown LinkedIn (s)",
     cfg_hint_cooldown: "21600 s = 6 h entre visitas a LinkedIn. Súbelo si ves avisos de límite.",
+    linkedin_titulo: "Sesión de LinkedIn",
+    linkedin_sesion_ok: "Sesión activa ({d} días)",
+    linkedin_sesion_no: "Sin sesión",
+    linkedin_sesion_caducada: "Sesión caducada",
+    linkedin_conectar: "Conectar LinkedIn",
+    linkedin_conectando: "Conectando…",
+    linkedin_abriendo_navegador: "Se abrió un navegador: inicia sesión y la sesión se guarda sola.",
+    linkedin_error: "No se pudo conectar con LinkedIn.",
+    linkedin_hint: "Abre una ventana de Chromium en este equipo: inicia sesión (2FA incluido) y la sesión se guarda sola. Caduca a los 14 días; si aparece como caducada, vuelve a conectarla.",
     cfg_sec_ia: "IA", cfg_lbl_modelo: "Modelo DeepSeek",
     cfg_hint_modelo: "Se usa para el scoring y las respuestas del asistente. Un modelo más potente tarda y cuesta más.",
     cfg_sec_api: "API y notificaciones",
@@ -2502,6 +3269,16 @@ const I18N = {
     preguntando_estado: "{n} pregunta(s) · puede tardar",
     algunas_fallaron: "Algunas preguntas fallaron: ",
     listo_revisa: "Listo. Revisa y copia cada respuesta.",
+    // --- Inline offer chat (detail panel) ---
+    chat_titulo: "Preguntar sobre esta oferta",
+    chat_limpiar: "Limpiar",
+    chat_vacio: "Pregunta lo que quieras sobre esta oferta: requisitos, encaje o qué destacar en la candidatura.",
+    chat_ph: "Pregunta algo…",
+    chat_enviar: "Enviar",
+    chat_pensando: "Pensando…",
+    chat_sin_respuesta: "El modelo no devolvió texto.",
+    chat_vacio_error: "Escribe una pregunta.",
+    chat_error: "No se pudo obtener la respuesta: ",
     // --- Settings extras / health ---
     modalidad_remoto: "remoto", modalidad_hibrido: "híbrido",
     modalidad_presencial: "presencial", modalidad_indiferente: "indiferente",
@@ -2525,11 +3302,41 @@ const I18N = {
   en: {
     subtitulo: "job board panel",
     nav_ofertas: "Jobs", nav_perfil: "My profile", nav_preguntar: "Ask",
-    nav_config: "Settings", nav_ayuda: "Help",
+    nav_config: "Settings", nav_ayuda: "Help", nav_log: "Log",
+    nav_pipeline: "Pipeline",
+    menu_ofertas_titulo: "Filter by status",
+    pipeline_titulo: "Pipeline",
+    pipeline_desc: "Drag a card or use the arrows to move the job between stages.",
+    pipeline_cargando: "Loading board…",
+    pipeline_vacio: "No jobs",
+    pipeline_col_pendientes: "Pending", pipeline_col_aprobadas: "Approved",
+    pipeline_col_aplicadas: "Applied", pipeline_col_entrevista: "Interview",
+    pipeline_col_oferta: "Offer", pipeline_col_rechazadas: "Rejected",
+    pipeline_mover_avanzar: "Advance stage", pipeline_mover_retroceder: "Back to previous stage",
+    pipeline_ok: "Status updated", pipeline_err: "Could not change status: ",
+    pipeline_err_cargar: "Could not load the board: ",
+    pipeline_borrar: "Delete job", pipeline_borrar_confirm: "Delete this job permanently?",
+    pipeline_borrar_ok: "Job deleted", pipeline_borrar_err: "Could not delete the job: ",
     filtro_pendientes: "Pending", filtro_aprobadas: "Approved",
     filtro_descartadas: "Discarded", filtro_todas: "All",
     titulo_ofertas: "Jobs", titulo_actividad: "Live activity",
     auto_actualiza: "auto-refreshing",
+    // --- Manual offer upload (Approved) ---
+    btn_subir_oferta: "Upload offer",
+    oferta_manual_titulo: "Upload job offer",
+    oferta_manual_desc: "Paste the job URL or its text. It is approved and the pack is generated: CV, cover letter and message.",
+    oferta_url_lbl: "Job URL",
+    oferta_url_ph: "https://...",
+    oferta_texto_lbl: "or paste the job description",
+    oferta_texto_ph: "Paste the job description here...",
+    btn_generar_cv: "Generate CV",
+    oferta_generando: "Generating the pack... this can take a while.",
+    oferta_err_vacio: "Fill in the URL or paste the job text.",
+    oferta_err: "Could not generate the pack: ",
+    oferta_cv_generado: "CV generated",
+    oferta_link_cv: "CV (PDF)",
+    oferta_link_cover: "Cover letter (PDF)",
+    oferta_link_cover_txt: "Cover letter (text)",
     btn_buscar: "Search now", btn_buscando: "searching…",
     ln_on: "LinkedIn enabled", ln_off: "LinkedIn disabled",
     ln_titulo_on: "Disable LinkedIn (less safe source)",
@@ -2543,6 +3350,8 @@ const I18N = {
     estado_pendiente: "pending", estado_para_confirmar: "to confirm",
     estado_nueva: "new", estado_aprobada: "approved",
     estado_enviada: "sent", estado_descartada: "discarded",
+    estado_aplicada: "applied", estado_entrevista: "interviewing",
+    estado_oferta: "offer", estado_rechazada: "rejected",
     config_titulo: "Settings",
     config_sub: "Effective service values. They are saved to <code class=\"rounded bg-white px-1 py-0.5 text-[#2d325b]\">data/settings.json</code> and override the <code class=\"rounded bg-white px-1 py-0.5 text-[#2d325b]\">.env</code> without a restart. Only changed keys are sent.",
     btn_guardar: "Save", btn_restablecer: "Reset", btn_responder: "Answer",
@@ -2567,6 +3376,15 @@ const I18N = {
     cfg_sec_antiguedad: "Age and cooldown", cfg_lbl_antiguedad: "Max age (days)",
     cfg_lbl_cooldown: "LinkedIn cooldown (s)",
     cfg_hint_cooldown: "21600 s = 6 h between LinkedIn visits. Raise it if you see rate-limit warnings.",
+    linkedin_titulo: "LinkedIn session",
+    linkedin_sesion_ok: "Session active ({d} days old)",
+    linkedin_sesion_no: "No session",
+    linkedin_sesion_caducada: "Session expired",
+    linkedin_conectar: "Connect LinkedIn",
+    linkedin_conectando: "Connecting…",
+    linkedin_abriendo_navegador: "A browser opened — sign in and the session is saved automatically.",
+    linkedin_error: "Could not connect to LinkedIn.",
+    linkedin_hint: "Opens a Chromium window on this machine: sign in (2FA included) and the session is saved automatically. It expires after 14 days; if it shows as expired, connect it again.",
     cfg_sec_ia: "AI", cfg_lbl_modelo: "DeepSeek model",
     cfg_hint_modelo: "Used for scoring and assistant answers. A stronger model is slower and costs more.",
     cfg_sec_api: "API and notifications",
@@ -2726,6 +3544,16 @@ const I18N = {
     preguntando_estado: "{n} question(s) · may take a while",
     algunas_fallaron: "Some questions failed: ",
     listo_revisa: "Done. Review and copy each answer.",
+    // --- Inline offer chat (detail panel) ---
+    chat_titulo: "Ask about this job",
+    chat_limpiar: "Clear",
+    chat_vacio: "Ask anything about this offer: requirements, fit, or what to highlight in your application.",
+    chat_ph: "Ask something…",
+    chat_enviar: "Send",
+    chat_pensando: "Thinking…",
+    chat_sin_respuesta: "The model returned no text.",
+    chat_vacio_error: "Type a question first.",
+    chat_error: "Could not get an answer: ",
     // --- Settings extras / health ---
     modalidad_remoto: "remote", modalidad_hibrido: "hybrid",
     modalidad_presencial: "on-site", modalidad_indiferente: "no preference",
@@ -2793,10 +3621,17 @@ function aplicarIdioma(idioma, persistir = true) {
   }
   pintarBadgesSecretos();
   if (stateLinkedin !== null) pintarLinkedin(stateLinkedin);
+  if (stateLinkedinSesion !== null) pintarSesionLinkedin(stateLinkedinSesion);
   if (stateMetricas) pintarMetricas(stateMetricas);
   // Repaint the parts that are built in JS so they follow the new language.
   if (typeof pintarLista === "function") pintarLista();
+  if (typeof actualizarEtiquetaFiltro === "function") actualizarEtiquetaFiltro();
+  if (typeof pintarPipeline === "function" && statePipeline.ofertas.length) pintarPipeline();
   if (state.actual && state.actual.estado) pintarBotones(state.actual.estado);
+  // Inline offer chat: keep the send label in sync (busy label while in flight).
+  const btnChat = $("chat-enviar");
+  if (btnChat) btnChat.textContent = chatOcupado ? tr("chat_pensando") : tr("chat_enviar");
+  if (chatHistorial.length && !chatOcupado) pintarChatOferta();
   if (statePerfil.datos) pintarPerfil(statePerfil.datos);
 }
 
@@ -2832,6 +3667,13 @@ $("btn-perfil-json-abrir").addEventListener("click", abrirModalJson);
 $("btn-perfil-json-cerrar").addEventListener("click", cerrarModalJson);
 $("btn-perfil-json-cancelar").addEventListener("click", cerrarModalJson);
 $("btn-perfil-json-guardar").addEventListener("click", guardarJson);
+$("btn-subir-oferta").addEventListener("click", abrirModalOferta);
+$("btn-oferta-modal-cerrar").addEventListener("click", cerrarModalOferta);
+$("btn-oferta-modal-cancelar").addEventListener("click", cerrarModalOferta);
+$("btn-oferta-generar").addEventListener("click", enviarOfertaManual);
+$("oferta-modal").addEventListener("click", (ev) => {
+  if (ev.target === $("oferta-modal")) cerrarModalOferta();
+});
 $("perfil-modal").addEventListener("click", (ev) => {
   if (ev.target === $("perfil-modal")) cerrarModalPerfil();
 });
@@ -2843,7 +3685,8 @@ $("perfil-modal-json").addEventListener("click", (ev) => {
 });
 document.addEventListener("keydown", (ev) => {
   if (ev.key !== "Escape") return;
-  if (!$("perfil-modal").classList.contains("hidden")) cerrarModalPerfil();
+  if (!$("oferta-modal").classList.contains("hidden")) cerrarModalOferta();
+  else if (!$("perfil-modal").classList.contains("hidden")) cerrarModalPerfil();
   else if (!$("perfil-modal-borrar").classList.contains("hidden")) cerrarModalBorrar();
   else if (!$("perfil-modal-json").classList.contains("hidden")) cerrarModalJson();
 });
@@ -2862,16 +3705,56 @@ $("btn-limpiar-preguntas").addEventListener("click", () => {
 });
 
 document.querySelectorAll(".filtro").forEach((b) => {
-  b.addEventListener("click", () => {
+  b.addEventListener("click", (ev) => {
+    ev.stopPropagation();
     state.filtro = b.dataset.estado;
     document.querySelectorAll(".filtro").forEach((x) => x.classList.toggle("activo", x === b));
-    cargar();
+    cerrarMenuOfertas();
+    actualizarEtiquetaFiltro();
+    actualizarBotonSubir();
+    if (state.vista !== "ofertas") cambiarVista("ofertas"); else cargar();
   });
 });
+
+/* "Jobs" button: switches to the list view and toggles the filter dropdown. */
+const btnMenuOfertas = $("btn-menu-ofertas");
+if (btnMenuOfertas) {
+  btnMenuOfertas.addEventListener("click", (ev) => {
+    ev.stopPropagation();
+    toggleMenuOfertas();
+  });
+}
+document.addEventListener("click", (ev) => {
+  const t = ev.target;
+  if (t && t.closest && (t.closest("#filtros") || t.closest("#btn-menu-ofertas"))) return;
+  cerrarMenuOfertas();
+});
+
+/* "Log": jump to the live activity panel inside the jobs view. */
+const btnLog = $("btn-log");
+if (btnLog) {
+  btnLog.addEventListener("click", () => {
+    cambiarVista("ofertas");
+    const panel = $("panel-actividad");
+    if (panel) {
+      panel.open = true;
+      panel.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  });
+}
+
+const btnPipelineRefrescar = $("pipeline-refrescar");
+if (btnPipelineRefrescar) btnPipelineRefrescar.addEventListener("click", cargarPipeline);
+habilitarDragScrollPipeline();
 
 $("refrescar").addEventListener("click", cargar);
 $("btn-aprobar").addEventListener("click", () => accion("aprobar"));
 $("btn-descartar").addEventListener("click", () => accion("descartar"));
+$("chat-enviar").addEventListener("click", preguntarOferta);
+$("chat-limpiar").addEventListener("click", () => reiniciarChatOferta(chatOfertaId));
+$("chat-input").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") { e.preventDefault(); preguntarOferta(); }
+});
 $("cerrar").addEventListener("click", () => {
   $("panel-detalle").classList.add("hidden");
   $("panel-vacio").classList.remove("hidden");
@@ -2883,7 +3766,8 @@ document.querySelectorAll("[data-copiar]").forEach((b) => {
 });
 
 document.querySelector('.filtro[data-estado="pendientes"]').classList.add("activo");
-cargar();
+actualizarEtiquetaFiltro();
+actualizarBotonSubir();
 
 // Initial view from the hash (#perfil / #preguntar), offers by default.
 const vistaInicial = (location.hash || "").replace("#", "");
@@ -2980,5 +3864,8 @@ pintarBotonBuscar(false);
 consultarBusqueda();
 setInterval(consultarBusqueda, 10000);
 </script>
+
+<!-- Toast: result of a manual offer upload (self-hiding) -->
+<div id="oferta-toast" role="status" aria-live="polite" class="fixed bottom-6 left-1/2 z-[60] hidden w-[min(30rem,calc(100vw-2rem))] -translate-x-1/2 rounded-xl border border-[#0d927d]/40 bg-[#0d927d]/10 px-4 py-3 text-xs text-[#0d927d] shadow-xl"></div>
 </body>
 </html>
